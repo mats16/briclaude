@@ -9,9 +9,10 @@ on:
       - 'packages/types/**'
       - 'packages/eslint-config/**'
       - 'packages/typescript-config/**'
+      - 'turbo.json'
       - 'package.json'
       - 'package-lock.json'
-      - '.github/workflows/backend-lint.yml'
+      - '.github/workflows/backend-ci.yml'
   pull_request:
     branches:
       - main
@@ -20,9 +21,10 @@ on:
       - 'packages/types/**'
       - 'packages/eslint-config/**'
       - 'packages/typescript-config/**'
+      - 'turbo.json'
       - 'package.json'
       - 'package-lock.json'
-      - '.github/workflows/backend-lint.yml'
+      - '.github/workflows/backend-ci.yml'
 
 jobs:
   lint:
@@ -38,6 +40,14 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
+
+      - name: Cache Turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-backend-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-backend-
 
       - name: Install dependencies
         run: npm ci
@@ -62,6 +72,14 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      - name: Cache Turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-backend-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-backend-
+
       - name: Install dependencies
         run: npm ci
 
@@ -70,3 +88,34 @@ jobs:
 
       - name: Run tests
         run: npx turbo run test --filter=@repo/backend
+
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Cache Turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-backend-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-backend-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared packages
+        run: npx turbo run build --filter=@repo/types
+
+      - name: Run type check
+        run: npx turbo run type-check --filter=@repo/backend
