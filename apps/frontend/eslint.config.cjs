@@ -3,6 +3,9 @@ const reactPlugin = require('eslint-plugin-react');
 const reactHooksPlugin = require('eslint-plugin-react-hooks');
 
 module.exports = [
+  {
+    ignores: ['eslint.config.cjs', 'dist/**'],
+  },
   ...baseConfig,
   {
     files: ['**/*.{ts,tsx}'],

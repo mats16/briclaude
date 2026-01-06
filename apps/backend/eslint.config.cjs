@@ -1,6 +1,9 @@
 const baseConfig = require('@repo/eslint-config/base');
 
 module.exports = [
+  {
+    ignores: ['eslint.config.cjs', 'dist/**'],
+  },
   ...baseConfig,
   {
     languageOptions: {
