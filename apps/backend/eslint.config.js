@@ -1,20 +1,15 @@
 import baseConfig from '@repo/eslint-config/base';
+import globals from 'globals';
 
 export default [
   {
-    ignores: ['eslint.config.js', 'dist/**'],
+    ignores: ['dist/**'],
   },
   ...baseConfig,
   {
     languageOptions: {
       globals: {
-        console: 'readonly',
-        process: 'readonly',
-        Buffer: 'readonly',
-        __dirname: 'readonly',
-        __filename: 'readonly',
-        module: 'readonly',
-        require: 'readonly',
+        ...globals.node,
       },
     },
   },

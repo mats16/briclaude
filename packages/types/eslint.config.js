@@ -2,10 +2,7 @@ import baseConfig from '@repo/eslint-config/base';
 
 export default [
   {
-    ignores: ['eslint.config.js', 'dist/**'],
+    ignores: ['dist/**'],
   },
   ...baseConfig,
-  {
-    files: ['src/**/*.ts'],
-  },
 ];
