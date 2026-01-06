@@ -1,0 +1,26 @@
+{
+  "name": "@repo/backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "lint": "eslint . --ext ts --report-unused-disable-directives --max-warnings 0",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist .turbo node_modules"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.1",
+    "@repo/types": "*",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.2.0"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "*",
+    "@repo/typescript-config": "*",
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2"
+  }
+}

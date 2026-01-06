@@ -47,6 +47,15 @@ web_modules/
 # TypeScript cache
 *.tsbuildinfo
 
+# TypeScript compiled files (excluding source .d.ts files)
+*.d.ts.map
+**/src/**/*.d.ts
+!**/src/vite-env.d.ts
+
+# Compiled JS files in src directories (but keep config files)
+**/src/**/*.js
+!**/*.config.js
+
 # Optional npm cache directory
 .npm
 
@@ -81,6 +90,9 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
+
+# Turborepo cache
+.turbo
 
 # Gatsby files
 .cache/
