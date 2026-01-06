@@ -14,8 +14,6 @@ on:
       - 'package-lock.json'
       - '.github/workflows/frontend-ci.yml'
   pull_request:
-    branches:
-      - main
     paths:
       - 'apps/frontend/**'
       - 'packages/types/**'
