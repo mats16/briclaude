@@ -1,0 +1,166 @@
+name: Frontend CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/frontend/**'
+      - 'packages/types/**'
+      - 'packages/eslint-config/**'
+      - 'packages/typescript-config/**'
+      - 'turbo.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    paths:
+      - 'apps/frontend/**'
+      - 'packages/types/**'
+      - 'packages/eslint-config/**'
+      - 'packages/typescript-config/**'
+      - 'turbo.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/frontend-ci.yml'
+
+env:
+  DEPS_CACHE_KEY: deps-frontend-${{ hashFiles('**/package-lock.json') }}
+  TURBO_CACHE_KEY: turbo-frontend-${{ hashFiles('**/package-lock.json', 'turbo.json') }}
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Restore dependencies cache
+        id: deps-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ env.DEPS_CACHE_KEY }}
+          restore-keys: |
+            ${{ runner.os }}-deps-frontend-
+
+      - name: Install dependencies
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-${{ env.TURBO_CACHE_KEY }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-frontend-
+
+      - name: Build shared packages
+        run: npx turbo run build --filter=@repo/types
+
+      - name: Cache build artifacts
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+            packages/types/dist
+            .turbo
+          key: ${{ runner.os }}-build-frontend-${{ github.sha }}
+
+  lint:
+    name: Lint
+    needs: setup
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Restore build artifacts
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+            packages/types/dist
+            .turbo
+          key: ${{ runner.os }}-build-frontend-${{ github.sha }}
+
+      - name: Run lint
+        run: npx turbo run lint --filter=@repo/frontend
+
+  test:
+    name: Test
+    needs: setup
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Restore build artifacts
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+            packages/types/dist
+            .turbo
+          key: ${{ runner.os }}-build-frontend-${{ github.sha }}
+
+      - name: Run tests
+        run: npx turbo run test --filter=@repo/frontend
+
+  type-check:
+    name: Type Check
+    needs: setup
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Restore build artifacts
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+            packages/types/dist
+            .turbo
+          key: ${{ runner.os }}-build-frontend-${{ github.sha }}
+
+      - name: Run type check
+        run: npx turbo run type-check --filter=@repo/frontend
