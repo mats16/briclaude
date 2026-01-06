@@ -1,10 +1,10 @@
-const baseConfig = require('@repo/eslint-config/base');
-const reactPlugin = require('eslint-plugin-react');
-const reactHooksPlugin = require('eslint-plugin-react-hooks');
+import baseConfig from '@repo/eslint-config/base';
+import reactPlugin from 'eslint-plugin-react';
+import reactHooksPlugin from 'eslint-plugin-react-hooks';
 
-module.exports = [
+export default [
   {
-    ignores: ['eslint.config.cjs', 'dist/**'],
+    ignores: ['eslint.config.js', 'dist/**'],
   },
   ...baseConfig,
   {
