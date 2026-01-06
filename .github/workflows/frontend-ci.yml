@@ -27,7 +27,7 @@ on:
       - '.github/workflows/frontend-ci.yml'
 
 env:
-  CACHE_KEY: deps-frontend-${{ github.sha }}
+  DEPS_CACHE_KEY: deps-frontend-${{ hashFiles('**/package-lock.json') }}
   TURBO_CACHE_KEY: turbo-frontend-${{ hashFiles('**/package-lock.json', 'turbo.json') }}
 
 jobs:
@@ -45,7 +45,20 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      - name: Restore dependencies cache
+        id: deps-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ env.DEPS_CACHE_KEY }}
+          restore-keys: |
+            ${{ runner.os }}-deps-frontend-
+
       - name: Install dependencies
+        if: steps.deps-cache.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Restore Turbo cache
@@ -59,7 +72,7 @@ jobs:
       - name: Build shared packages
         run: npx turbo run build --filter=@repo/types
 
-      - name: Cache dependencies
+      - name: Cache build artifacts
         uses: actions/cache/save@v4
         with:
           path: |
@@ -68,7 +81,7 @@ jobs:
             packages/*/node_modules
             packages/types/dist
             .turbo
-          key: ${{ env.CACHE_KEY }}
+          key: ${{ runner.os }}-build-frontend-${{ github.sha }}
 
   lint:
     name: Lint
@@ -84,7 +97,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Restore dependencies
+      - name: Restore build artifacts
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -93,7 +106,7 @@ jobs:
             packages/*/node_modules
             packages/types/dist
             .turbo
-          key: ${{ env.CACHE_KEY }}
+          key: ${{ runner.os }}-build-frontend-${{ github.sha }}
 
       - name: Run lint
         run: npx turbo run lint --filter=@repo/frontend
@@ -112,7 +125,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Restore dependencies
+      - name: Restore build artifacts
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -121,7 +134,7 @@ jobs:
             packages/*/node_modules
             packages/types/dist
             .turbo
-          key: ${{ env.CACHE_KEY }}
+          key: ${{ runner.os }}-build-frontend-${{ github.sha }}
 
       - name: Run tests
         run: npx turbo run test --filter=@repo/frontend
@@ -140,7 +153,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Restore dependencies
+      - name: Restore build artifacts
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -149,7 +162,7 @@ jobs:
             packages/*/node_modules
             packages/types/dist
             .turbo
-          key: ${{ env.CACHE_KEY }}
+          key: ${{ runner.os }}-build-frontend-${{ github.sha }}
 
       - name: Run type check
         run: npx turbo run type-check --filter=@repo/frontend
