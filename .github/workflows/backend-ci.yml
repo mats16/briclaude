@@ -26,9 +26,13 @@ on:
       - 'package-lock.json'
       - '.github/workflows/backend-ci.yml'
 
+env:
+  CACHE_KEY: deps-backend-${{ github.sha }}
+  TURBO_CACHE_KEY: turbo-backend-${{ hashFiles('**/package-lock.json', 'turbo.json') }}
+
 jobs:
-  lint:
-    name: Lint
+  setup:
+    name: Setup
     runs-on: ubuntu-latest
 
     steps:
@@ -41,25 +45,62 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Cache Turbo
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: ${{ runner.os }}-turbo-backend-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-turbo-backend-
-
       - name: Install dependencies
         run: npm ci
 
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-${{ env.TURBO_CACHE_KEY }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-backend-
+
       - name: Build shared packages
         run: npx turbo run build --filter=@repo/types
+
+      - name: Cache dependencies
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+            packages/types/dist
+            .turbo
+          key: ${{ env.CACHE_KEY }}
+
+  lint:
+    name: Lint
+    needs: setup
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Restore dependencies
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+            packages/types/dist
+            .turbo
+          key: ${{ env.CACHE_KEY }}
 
       - name: Run lint
         run: npx turbo run lint --filter=@repo/backend
 
   test:
     name: Test
+    needs: setup
     runs-on: ubuntu-latest
 
     steps:
@@ -70,27 +111,24 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
 
-      - name: Cache Turbo
-        uses: actions/cache@v4
+      - name: Restore dependencies
+        uses: actions/cache/restore@v4
         with:
-          path: .turbo
-          key: ${{ runner.os }}-turbo-backend-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-turbo-backend-
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build shared packages
-        run: npx turbo run build --filter=@repo/types
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+            packages/types/dist
+            .turbo
+          key: ${{ env.CACHE_KEY }}
 
       - name: Run tests
         run: npx turbo run test --filter=@repo/backend
 
   type-check:
     name: Type Check
+    needs: setup
     runs-on: ubuntu-latest
 
     steps:
@@ -101,21 +139,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
 
-      - name: Cache Turbo
-        uses: actions/cache@v4
+      - name: Restore dependencies
+        uses: actions/cache/restore@v4
         with:
-          path: .turbo
-          key: ${{ runner.os }}-turbo-backend-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-turbo-backend-
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build shared packages
-        run: npx turbo run build --filter=@repo/types
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+            packages/types/dist
+            .turbo
+          key: ${{ env.CACHE_KEY }}
 
       - name: Run type check
         run: npx turbo run type-check --filter=@repo/backend
