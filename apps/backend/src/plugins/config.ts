@@ -163,9 +163,12 @@ export default fp(
       await fastify.register(fastifyEnv, {
         confKey: 'config',
         schema,
-        dotenv: {
-          path: path.join(__dirname, '../../../../.env'), // -> project root .env
-        },
+        dotenv:
+          process.env.NODE_ENV === 'development'
+            ? {
+                path: path.join(__dirname, '../../../../.env'), // -> project root .env
+              }
+            : false, // テスト環境・本番環境では.envファイルを読み込まない
       });
       fastify.config.ANTHROPIC_BASE_URL = `https://${fastify.config.DATABRICKS_HOST}/serving-endpoints/anthropic`;
       fastify.log.info('Configuration loaded and validated');
