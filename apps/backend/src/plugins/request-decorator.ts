@@ -30,12 +30,12 @@ declare module 'fastify' {
 }
 
 export default fp(
-  async (fastify) => {
+  async (fastify, _record) => {
     // Add request context decorator
     fastify.decorateRequest('ctx', null);
 
     // Add preHandler hook for extracting request context
-    fastify.addHook('preHandler', async (req) => {
+    fastify.addHook('preHandler', async (req, _reply) => {
       req.ctx = {
         host: (req.headers['x-forwarded-host'] as string) ?? req.hostname,
         requestId: (req.headers['x-request-id'] as string) ?? crypto.randomUUID(),
