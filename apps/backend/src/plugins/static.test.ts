@@ -4,7 +4,6 @@ import fastifyStatic from '@fastify/static';
 import staticPlugin from './static.js';
 import fs from 'fs';
 import path from 'path';
-import type { ServerResponse } from 'http';
 
 const TEST_DIST_DIR = path.join(import.meta.dirname, '../../../frontend/dist-test');
 
@@ -252,7 +251,7 @@ describe('static plugin', () => {
           root: TEST_DIST_DIR,
           prefix: '/',
           cacheControl: false,
-          setHeaders: (res: ServerResponse, filePath: string) => {
+          setHeaders: (res, filePath) => {
             const LONG_CACHE_PATTERN = /\.(js|css|woff2?|ttf|eot)$/;
             if (LONG_CACHE_PATTERN.test(filePath)) {
               res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
@@ -279,7 +278,7 @@ describe('static plugin', () => {
           root: TEST_DIST_DIR,
           prefix: '/',
           cacheControl: false,
-          setHeaders: (res: ServerResponse, filePath: string) => {
+          setHeaders: (res, filePath) => {
             const LONG_CACHE_PATTERN = /\.(js|css|woff2?|ttf|eot)$/;
             if (LONG_CACHE_PATTERN.test(filePath)) {
               res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
@@ -306,7 +305,7 @@ describe('static plugin', () => {
           root: TEST_DIST_DIR,
           prefix: '/',
           cacheControl: false,
-          setHeaders: (res: ServerResponse, filePath: string) => {
+          setHeaders: (res, filePath) => {
             const LONG_CACHE_PATTERN = /\.(js|css|woff2?|ttf|eot)$/;
             if (LONG_CACHE_PATTERN.test(filePath)) {
               res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
@@ -332,7 +331,7 @@ describe('static plugin', () => {
           root: TEST_DIST_DIR,
           prefix: '/',
           cacheControl: false,
-          setHeaders: (res: ServerResponse, filePath: string) => {
+          setHeaders: (res, filePath) => {
             const LONG_CACHE_PATTERN = /\.(js|css|woff2?|ttf|eot)$/;
             if (LONG_CACHE_PATTERN.test(filePath)) {
               res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
