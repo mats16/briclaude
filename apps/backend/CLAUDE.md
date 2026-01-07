@@ -353,7 +353,7 @@ The plugin automatically decorates every incoming request with a `ctx` property 
   - **id**: User identifier
   - **name**: User name
   - **email**: User email
-  - **accessToken**: OAuth access token for on-behalf-of authorization
+  - **oboAccessToken**: OAuth access token for on-behalf-of authorization
 
 ### Accessing Request Context
 
@@ -385,13 +385,13 @@ The plugin extracts information from these Databricks Apps headers:
 
 | Header                             | Context Property       | Fallback                   |
 | ---------------------------------- | ---------------------- | -------------------------- |
-| `x-forwarded-host`                 | `ctx.host`             | `req.hostname`             |
-| `x-request-id`                     | `ctx.requestId`        | Generated UUID             |
-| `x-real-ip`                        | `ctx.realIp`           | `req.ip`                   |
-| `x-forwarded-user`                 | `ctx.user.id`          | Empty string               |
-| `x-forwarded-preferred-username`   | `ctx.user.name`        | Empty string               |
-| `x-forwarded-email`                | `ctx.user.email`       | Empty string               |
-| `x-forwarded-access-token`         | `ctx.user.accessToken` | Empty string               |
+| `x-forwarded-host`                 | `ctx.host`                | `req.hostname`             |
+| `x-request-id`                     | `ctx.requestId`           | Generated UUID             |
+| `x-real-ip`                        | `ctx.realIp`              | `req.ip`                   |
+| `x-forwarded-user`                 | `ctx.user.id`             | Empty string               |
+| `x-forwarded-preferred-username`   | `ctx.user.name`           | Empty string               |
+| `x-forwarded-email`                | `ctx.user.email`          | Empty string               |
+| `x-forwarded-access-token`         | `ctx.user.oboAccessToken` | Empty string               |
 
 ### Type Safety
 

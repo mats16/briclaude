@@ -9,7 +9,7 @@ interface RequestUser {
   /** The user email provided by the IdP. */
   email: string;
   /** The user's access token as on-behalf-of-user authorization */
-  accessToken: string;
+  oboAccessToken: string;
 }
 
 interface RequestContext {
@@ -44,7 +44,7 @@ export default fp(
           id: (req.headers['x-forwarded-user'] as string) ?? '',
           name: (req.headers['x-forwarded-preferred-username'] as string) ?? '',
           email: (req.headers['x-forwarded-email'] as string) ?? '',
-          accessToken: (req.headers['x-forwarded-access-token'] as string) ?? '',
+          oboAccessToken: (req.headers['x-forwarded-access-token'] as string) ?? '',
         },
       };
     });

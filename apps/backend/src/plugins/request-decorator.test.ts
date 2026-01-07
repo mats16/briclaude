@@ -29,7 +29,7 @@ describe('request-decorator plugin', () => {
           userId: request.ctx?.user.id,
           userName: request.ctx?.user.name,
           userEmail: request.ctx?.user.email,
-          accessToken: request.ctx?.user.accessToken,
+          oboAccessToken: request.ctx?.user.oboAccessToken,
         };
       });
 
@@ -56,7 +56,7 @@ describe('request-decorator plugin', () => {
       expect(body.userId).toBe('user-123');
       expect(body.userName).toBe('john.doe');
       expect(body.userEmail).toBe('john.doe@example.com');
-      expect(body.accessToken).toBe('token-abc-xyz');
+      expect(body.oboAccessToken).toBe('token-abc-xyz');
     });
 
     it('should make ctx accessible in routes', async () => {
@@ -90,7 +90,7 @@ describe('request-decorator plugin', () => {
           userId: request.ctx?.user.id,
           userName: request.ctx?.user.name,
           userEmail: request.ctx?.user.email,
-          accessToken: request.ctx?.user.accessToken,
+          oboAccessToken: request.ctx?.user.oboAccessToken,
         };
       });
 
@@ -111,7 +111,7 @@ describe('request-decorator plugin', () => {
       expect(body.userId).toBe('');
       expect(body.userName).toBe('');
       expect(body.userEmail).toBe('');
-      expect(body.accessToken).toBe('');
+      expect(body.oboAccessToken).toBe('');
 
       // requestId should be a valid UUID
       expect(body.requestId).toMatch(
@@ -192,7 +192,7 @@ describe('request-decorator plugin', () => {
           userId: request.ctx?.user.id,
           userName: request.ctx?.user.name,
           userEmail: request.ctx?.user.email,
-          accessToken: request.ctx?.user.accessToken,
+          oboAccessToken: request.ctx?.user.oboAccessToken,
         };
       });
 
@@ -212,7 +212,7 @@ describe('request-decorator plugin', () => {
       expect(body.userId).toBe('user-456');
       expect(body.userEmail).toBe('jane@example.com');
       expect(body.userName).toBe(''); // Should be empty string
-      expect(body.accessToken).toBe(''); // Should be empty string
+      expect(body.oboAccessToken).toBe(''); // Should be empty string
     });
   });
 
@@ -233,7 +233,7 @@ describe('request-decorator plugin', () => {
           expect(context.user.id).toBeDefined();
           expect(context.user.name).toBeDefined();
           expect(context.user.email).toBeDefined();
-          expect(context.user.accessToken).toBeDefined();
+          expect(context.user.oboAccessToken).toBeDefined();
         }
 
         return { success: true };
