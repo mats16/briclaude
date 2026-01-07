@@ -1,5 +1,5 @@
 import Fastify from 'fastify';
-import cors from '@fastify/cors';
+import configPlugin from './plugins/config.js';
 import healthRoute from './routes/health.js';
 
 export async function build() {
@@ -7,11 +7,8 @@ export async function build() {
     logger: true,
   });
 
-  // CORS設定
-  await app.register(cors, {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-    credentials: true,
-  });
+  // 設定プラグイン（最初に登録）
+  await app.register(configPlugin);
 
   // ルート登録
   await app.register(healthRoute, { prefix: '/api' });

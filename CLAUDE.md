@@ -24,7 +24,7 @@ claude-code-on-databricks/
 - **Backend**: Fastify 5
 - **Monorepo**: Turborepo 2.x, npm workspaces
 - **Code Quality**: ESLint 9 (Flat Config), Prettier
-- **Runtime**: Node.js 22.12+ (LTS)
+- **Runtime**: Node.js 22.16 (LTS)
 
 ## Development Workflow
 
@@ -126,9 +126,9 @@ This project uses ESLint 9 with Flat Config (`eslint.config.js`). Do NOT use leg
 
 ### Vite 7
 
-- Node.js 22.12+ is required
+- Node.js 22.16 is required
 - Use `import.meta.env` for environment variables
-- Proxy setup: `/api` → `http://localhost:3001` (development only)
+- Proxy setup: `/api` → `http://localhost:8000` (development only)
 
 ### Fastify 5
 
@@ -163,7 +163,9 @@ export interface UserResponse {
 
 // 2. Backend route
 fastify.get<{ Reply: UserResponse }>('/user/:id', async (request, reply) => {
-  const user: UserResponse = { /* ... */ };
+  const user: UserResponse = {
+    /* ... */
+  };
   return reply.send(user);
 });
 
@@ -198,6 +200,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 ## Testing (Future)
 
 When adding tests:
+
 - Use Vitest for unit tests
 - Use Testing Library for React component tests
 - Place tests next to source files with `.test.ts` or `.spec.ts` extension
@@ -265,7 +268,7 @@ npm run clean && npm install && npm run build
 ### CORS Errors
 
 1. Check `apps/backend/.env` has correct `CORS_ORIGIN`
-2. Ensure backend is running on port 3001
+2. Ensure backend is running on port 8000
 3. Check Vite proxy configuration in `apps/frontend/vite.config.ts`
 
 ## Additional Resources
@@ -279,5 +282,6 @@ npm run clean && npm install && npm run build
 ## App-Specific Guidelines
 
 For detailed guidelines specific to each application, see:
+
 - Frontend: [apps/frontend/CLAUDE.md](./apps/frontend/CLAUDE.md)
 - Backend: [apps/backend/CLAUDE.md](./apps/backend/CLAUDE.md)
