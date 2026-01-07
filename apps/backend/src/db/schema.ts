@@ -8,7 +8,6 @@ import {
   integer,
   index,
   uniqueIndex,
-  primaryKey,
   customType,
   pgPolicy,
 } from 'drizzle-orm/pg-core';
@@ -122,9 +121,11 @@ export const userSettingsPolicy = pgPolicy('user_settings_user_isolation_policy'
 export const oauthTokens = pgTable(
   'oauth_tokens',
   {
-    userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
-    authType: text('auth_type'),
-    provider: text('provider'),
+    userId: text('user_id')
+      .primaryKey()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    provider: text('provider').notNull(),
+    authType: text('auth_type').notNull(),
     accessToken: encryptedText('access_token').notNull(),
     refreshToken: encryptedTextNullable('refresh_token'),
     expiresAt: timestamp('expires_at', { mode: 'date', withTimezone: true }),
@@ -137,10 +138,12 @@ export const oauthTokens = pgTable(
       .$onUpdate(() => new Date()),
   },
   table => ({
-    // 複合主キー（PostgreSQLのPRIMARY KEY制約が自動的にNOT NULLを保証）
-    pk: primaryKey({ columns: [table.userId, table.authType, table.provider] }),
-    // userIdインデックス
-    userIdIdx: index('oauth_tokens_user_id_idx').on(table.userId),
+    // (user_id, provider, auth_type) ユニーク制約
+    userProviderAuthUnique: uniqueIndex('oauth_tokens_user_provider_auth_unique').on(
+      table.userId,
+      table.provider,
+      table.authType
+    ),
   })
 ).enableRLS();
 
@@ -162,7 +165,7 @@ export const oauthTokensPolicy = pgPolicy('oauth_tokens_user_isolation_policy', 
 export const sessions = pgTable(
   'sessions',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
+    id: uuid('id').primaryKey(),
     userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
     title: text('title').notNull(),
     isArchived: boolean('is_archived').notNull().default(false),
@@ -198,7 +201,7 @@ export const sessionsPolicy = pgPolicy('sessions_user_isolation_policy', {
 export const sessionEvents = pgTable(
   'session_events',
   {
-    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    uuid: uuid('uuid').primaryKey(),
     sessionId: uuid('session_id')
       .notNull()
       .references(() => sessions.id, { onDelete: 'cascade' }),

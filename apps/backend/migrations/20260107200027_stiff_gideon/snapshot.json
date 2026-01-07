@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "1227bb09-7caa-4024-a781-5e893b8b6400",
+  "id": "fc87b4e2-c425-4b41-b081-63987f1a7e46",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -57,7 +57,7 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "auth_type",
+      "name": "provider",
       "entityType": "columns",
       "schema": "public",
       "table": "oauth_tokens"
@@ -70,7 +70,7 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "provider",
+      "name": "auth_type",
       "entityType": "columns",
       "schema": "public",
       "table": "oauth_tokens"
@@ -145,7 +145,7 @@
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
-      "default": "gen_random_uuid()",
+      "default": null,
       "generated": null,
       "identity": null,
       "name": "uuid",
@@ -249,7 +249,7 @@
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
-      "default": "gen_random_uuid()",
+      "default": null,
       "generated": null,
       "identity": null,
       "name": "id",
@@ -422,14 +422,28 @@
           "asc": true,
           "nullsFirst": false,
           "opclass": null
+        },
+        {
+          "value": "provider",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "auth_type",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
         }
       ],
-      "isUnique": false,
+      "isUnique": true,
       "where": null,
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "oauth_tokens_user_id_idx",
+      "name": "oauth_tokens_user_provider_auth_unique",
       "entityType": "indexes",
       "schema": "public",
       "table": "oauth_tokens"
@@ -553,15 +567,13 @@
     },
     {
       "columns": [
-        "user_id",
-        "auth_type",
-        "provider"
+        "user_id"
       ],
       "nameExplicit": false,
       "name": "oauth_tokens_pkey",
-      "entityType": "pks",
       "schema": "public",
-      "table": "oauth_tokens"
+      "table": "oauth_tokens",
+      "entityType": "pks"
     },
     {
       "columns": [
