@@ -8,7 +8,7 @@ REST API server built with Fastify 5, TypeScript, and designed for high performa
 
 - **Framework**: Fastify 5.2.0 (5-10% faster than v4)
 - **Language**: TypeScript 5.8+ (strict mode)
-- **CORS**: @fastify/cors 10.0.1
+- **Plugins**: @fastify/static 9.0.0 (Static file serving)
 - **Runtime**: Node.js 22.16 (LTS)
 - **Development**: tsx 4.19.2 (TypeScript execution)
 
@@ -19,7 +19,10 @@ apps/backend/
 ├── src/
 │   ├── routes/           # Route handlers
 │   │   └── health.ts     # Health check endpoint
-│   ├── plugins/          # Fastify plugins (future)
+│   ├── plugins/          # Fastify plugins
+│   │   ├── config.ts     # Environment configuration
+│   │   ├── request-decorator.ts  # Request context extraction
+│   │   └── static.ts     # Static file serving
 │   ├── app.ts            # Fastify app setup
 │   └── server.ts         # Server entry point
 ├── .env.example          # Environment variable template
@@ -468,6 +471,139 @@ Request context functionality is tested in [src/plugins/request-decorator.test.t
 - User information extraction
 - Type safety and null handling
 - Multiple concurrent requests
+
+## Static File Serving
+
+### Overview
+
+このアプリケーションは、Databricks Appsの制約に対応するため、Fastifyから直接Reactフロントエンドを配信します。`@fastify/static`プラグインを使用して、単一ポート（8000）からAPIエンドポイント（`/api/*`）と静的ファイルの両方を配信します。
+
+### Static File Serving Plugin
+
+静的ファイル配信は`src/plugins/static.ts`で実装されています。
+
+#### 主要機能
+
+1. **静的ファイル配信**: `frontend/dist`ディレクトリの内容を配信
+2. **SPA Fallback**: すべての未知のルート（APIルート以外）で`index.html`を返す
+3. **APIルート優先**: `/api/*`パスはAPIエンドポイントとして処理
+4. **キャッシュ最適化**: アセットファイルは長期キャッシュ、`index.html`はキャッシュなし
+5. **エラーハンドリング**: APIルートとウェブルートで異なる404処理
+
+#### プラグイン登録順序
+
+Fastifyはルートを登録順序で処理するため、正しい順序で登録する必要があります：
+
+```typescript
+// app.ts
+export async function build() {
+  const app = Fastify({ logger: true });
+
+  // 1. 設定プラグイン
+  await app.register(configPlugin);
+
+  // 2. リクエストデコレータ
+  await app.register(requestDecoratorPlugin);
+
+  // 3. APIルート（静的ファイルより先に）
+  await app.register(healthRoute, { prefix: '/api' });
+
+  // 4. 静的ファイル配信（最後に登録）
+  await app.register(staticPlugin);
+
+  return app;
+}
+```
+
+#### キャッシュヘッダー設定
+
+静的ファイルのキャッシュ戦略：
+
+- **アセットファイル** (`/assets/*`): 1年間の長期キャッシュ（`immutable`）
+- **index.html**: キャッシュなし（常に最新版を取得）
+
+```typescript
+setHeaders: (res, filePath) => {
+  if (filePath.includes('/assets/')) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  } else {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  }
+}
+```
+
+#### エラーハンドリング
+
+404エラーの処理はリクエストパスによって異なります：
+
+```typescript
+fastify.setNotFoundHandler(async (request, reply) => {
+  // APIルートの場合はJSONエラーを返す
+  if (request.url.startsWith('/api/')) {
+    return reply.status(404).send({
+      error: 'NotFound',
+      message: 'Route not found',
+      statusCode: 404,
+    });
+  }
+
+  // SPA fallback（ウェブルート）
+  try {
+    return reply.sendFile('index.html');
+  } catch (error) {
+    fastify.log.error(error, 'Failed to send index.html');
+    return reply.status(500).send({
+      error: 'InternalServerError',
+      message: 'Failed to load application',
+      statusCode: 500,
+    });
+  }
+});
+```
+
+### 動作確認
+
+静的ファイル配信が正しく動作することを確認する方法：
+
+```bash
+# サーバーを起動
+npm run dev
+
+# ルートパス - Reactアプリが表示される
+curl http://localhost:8000/
+
+# APIエンドポイント - JSON responseが返る
+curl http://localhost:8000/api/health
+
+# SPA fallback - index.htmlが返る（404ではない）
+curl http://localhost:8000/unknown-route
+
+# アセットファイル - 長期キャッシュヘッダー付き
+curl -I http://localhost:8000/assets/index.js
+```
+
+### Testing
+
+静的ファイル配信のテストは[src/plugins/static.test.ts](./src/plugins/static.test.ts)にあります。以下をテスト：
+
+- 静的ファイルが正しく配信されること
+- SPA fallbackが動作すること
+- APIルートが静的ファイルより優先されること
+- APIルートとウェブルートで異なる404処理
+- キャッシュヘッダーが正しく設定されること
+
+```bash
+# テストを実行
+npm test -- src/plugins/static.test.ts
+```
+
+### Databricks Apps対応
+
+この実装により、以下のDatabricks Appsの要件を満たします：
+
+- **単一ポート配信**: フロントエンドとバックエンドを同じポート（8000）から配信
+- **追加のインフラ不要**: Nginx等のリバースプロキシが不要
+- **統合されたログ**: すべてのリクエストがFastifyのロガーで記録される
 
 ## Logging
 
