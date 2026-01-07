@@ -4,6 +4,9 @@ import path from 'path';
 
 const __dirname = import.meta.dirname;
 
+// 正規表現を事前にコンパイル（パフォーマンス最適化）
+const LONG_CACHE_PATTERN = /\.(js|css|woff2?|ttf|eot)$/;
+
 export default fp(
   async fastify => {
     const frontendDistPath = path.join(__dirname, '../../../frontend/dist');
@@ -15,7 +18,7 @@ export default fp(
       cacheControl: false, // デフォルトのキャッシュ制御を無効化
       setHeaders: (res, filePath) => {
         // JS/CSS/フォントファイルには長期キャッシュを設定（ハッシュ付きファイル名のため）
-        if (filePath.match(/\.(js|css|woff2?|ttf|eot)$/)) {
+        if (LONG_CACHE_PATTERN.test(filePath)) {
           res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         }
         // HTMLファイルと画像は短期キャッシュ
@@ -39,8 +42,10 @@ export default fp(
       // SPA fallback
       try {
         return reply.sendFile('index.html');
-      } catch (error) {
-        fastify.log.error(error, 'Failed to send index.html');
+      } catch (error: unknown) {
+        // 型安全なエラーハンドリング
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        fastify.log.error({ error, errorMessage }, 'Failed to send index.html');
         return reply.status(500).send({
           error: 'InternalServerError',
           message: 'Failed to load application',
