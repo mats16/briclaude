@@ -1,0 +1,37 @@
+name: Deploy Prod
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/**'
+      - 'turbo.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-prod.yml'
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    env
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@main
+
+      - name: Deploy asset bundles
+        run: databricks bundle deploy --auto-approve --target prod
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
+      - name: Deploy asset bundles
+        run: databricks bundle run claude-code-app --auto-approve --target prod
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}

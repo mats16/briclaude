@@ -1,0 +1,46 @@
+resources:
+  apps:
+    claude_code_app:
+      name: claude-code-app
+      description: Claude Code on Databricks
+      source_code_path: .
+      resources:
+        - name: encryption-key-secret
+          description: Encryption key
+          secret:
+            scope: claude-code-app-${bundle.target}
+            key: encryption-key
+            permission: READ
+        - name: database-url-secret
+          description: Database connection string
+          secret:
+            scope: claude-code-app-${bundle.target}
+            key: database-url
+            permission: READ
+        - name: sql-warehouse-2xs
+          sql_warehouse:
+            id: ${resources.sql_warehouses.claude_warehouse_2xs.id}
+            permission: CAN_USE
+      user_api_scopes:
+        - sql
+        - dashboards.genie
+        - files.files
+        - serving.serving-endpoints
+        - catalog.catalogs:read
+        - catalog.schemas:read
+        - catalog.tables:read
+      permissions:
+        - level: CAN_USE
+          group_name: users
+
+  sql_warehouses:
+    claude_warehouse_2xs:
+      name: claude-warehouse-2xs
+      cluster_size: 2X-Small
+      min_num_clusters: 0
+      max_num_clusters: 2
+      auto_stop_mins: 5
+      enable_serverless_compute: true
+      permissions:
+        - level: CAN_MONITOR
+          group_name: users

@@ -1,0 +1,9 @@
+command: ["npm", "run", "start", "--filter=@repo/backend"]
+
+env:
+  - name: ENCRYPTION_KEY
+    valueFrom: encryption-key-secret
+  - name: DATABASE_URL
+    valueFrom: database-url-secret
+  - name: SQL_WAREHOUSE_ID
+    valueFrom: sql-warehouse-2xs
