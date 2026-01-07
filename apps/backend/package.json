@@ -8,7 +8,10 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "eslint . --ext ts --report-unused-disable-directives --max-warnings 0",
-    "test": "echo 'No tests configured yet'",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist .turbo node_modules"
   },
@@ -22,6 +25,8 @@
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
     "@types/node": "^22.10.5",
-    "tsx": "^4.19.2"
+    "@vitest/ui": "^4.0.16",
+    "tsx": "^4.19.2",
+    "vitest": "^4.0.16"
   }
 }

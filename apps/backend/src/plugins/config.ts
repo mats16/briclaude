@@ -21,7 +21,8 @@ const schema = {
     PORT: {
       type: 'integer',
       default: 8000,
-      description: 'Server port (used in development, overridden by DATABRICKS_APP_PORT in production)',
+      description:
+        'Server port (used in development, overridden by DATABRICKS_APP_PORT in production)',
     },
     // Database (required)
     DATABASE_URL: {

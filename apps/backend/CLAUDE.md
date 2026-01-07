@@ -238,43 +238,103 @@ fastify.post(
 
 ## Environment Variables
 
-### Configuration
+### Configuration Plugin
 
-```typescript
-// .env
-PORT=8000
-NODE_ENV=development
-CORS_ORIGIN=http://localhost:3000
-DATABASE_URL=postgresql://localhost/mydb
+This project uses `@fastify/env` for type-safe environment variable validation and loading. The config plugin is registered automatically and validates all required environment variables on startup.
+
+### Required Environment Variables
+
+```bash
+# Database (required)
+DATABASE_URL=postgresql://localhost:5432/mydb
+
+# Encryption (required)
+ENCRYPTION_KEY=your-64-character-hex-key-here
+
+# Databricks Host (required)
+DATABRICKS_HOST=your-workspace.databricks.com
 ```
 
-### Usage
+### Optional Environment Variables
 
-```typescript
-import { config } from 'dotenv';
+```bash
+# Server Configuration
+NODE_ENV=development  # development | production | test (default: development)
+PORT=8000            # Server port (default: 8000)
 
-config(); // Load .env file
+# Directory Paths
+USER_BASE_DIR=/home/app/users      # User directories (default: $HOME/users)
+SESSION_BASE_DIR=/home/app/ws      # Working directories (default: $HOME/ws)
 
-const PORT = parseInt(process.env.PORT || '8000', 10);
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
+# Warehouse Configuration
+WAREHOUSE_ID=your-warehouse-id     # SQL Warehouse ID (default: '')
+
+# Databricks Apps Settings
+DATABRICKS_APP_NAME=my-app                    # App name (default: '')
+DATABRICKS_WORKSPACE_ID=workspace-123         # Workspace ID (default: '')
+DATABRICKS_APP_PORT=8000                      # App port (default: 8000)
+DATABRICKS_CLIENT_ID=client-id                # Service principal ID (default: '')
+DATABRICKS_CLIENT_SECRET=client-secret        # OAuth secret (default: '')
+
+# Anthropic API Configuration
+ANTHROPIC_BASE_URL=https://your-workspace.databricks.com/serving-endpoints/anthropic
+ANTHROPIC_DEFAULT_OPUS_MODEL=databricks-claude-opus-4-5    # (default)
+ANTHROPIC_DEFAULT_SONNET_MODEL=databricks-claude-sonnet-4-5  # (default)
+ANTHROPIC_DEFAULT_HAIKU_MODEL=databricks-claude-haiku-4-5    # (default)
+
+# System Configuration
+HOME=/home/app                       # Home directory (default: /home/app)
+PATH=/usr/local/bin:/usr/bin:/bin   # System PATH
 ```
 
-### Type Safety for Env Variables
+### Accessing Configuration
+
+The configuration is available via `fastify.config` after the plugin is registered:
 
 ```typescript
-// src/config.ts
-interface Config {
-  port: number;
-  nodeEnv: 'development' | 'production' | 'test';
-  corsOrigin: string;
-}
+// In any route or plugin
+fastify.get('/example', async (request, reply) => {
+  const databaseUrl = fastify.config.DATABASE_URL;
+  const port = fastify.config.PORT;
+  const nodeEnv = fastify.config.NODE_ENV;
 
-export const config: Config = {
-  port: parseInt(process.env.PORT || '8000', 10),
-  nodeEnv: (process.env.NODE_ENV as Config['nodeEnv']) || 'development',
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-};
+  return { databaseUrl, port, nodeEnv };
+});
 ```
+
+### Type Safety
+
+The config plugin provides full TypeScript type safety:
+
+```typescript
+// TypeScript knows all config properties and their types
+fastify.config.PORT; // type: number
+fastify.config.NODE_ENV; // type: 'development' | 'production' | 'test'
+fastify.config.DATABASE_URL; // type: string
+```
+
+### Validation
+
+The plugin validates all environment variables on startup:
+
+- **Required variables** must be present or the application will fail to start
+- **Type validation** ensures integers are valid numbers
+- **Enum validation** ensures NODE_ENV is one of: `development`, `production`, `test`
+
+If validation fails, you'll see an error like:
+
+```
+Failed to load configuration: "DATABASE_URL" is required!
+```
+
+### Testing
+
+Environment variables are tested in [src/plugins/config.test.ts](./src/plugins/config.test.ts). The tests verify:
+
+- Required variables validation
+- Default values for optional variables
+- Type validation (integers, enums)
+- Custom configuration values
 
 ## Logging
 
