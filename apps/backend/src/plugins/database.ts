@@ -40,15 +40,19 @@ export default fp(
       // Drizzle ORM初期化
       const db = drizzle({ client, schema });
 
-      // マイグレーション実行
-      const __filename = fileURLToPath(import.meta.url);
-      const __dirname = path.dirname(__filename);
-      const migrationsFolder = path.join(__dirname, '../../migrations');
-      fastify.log.info({ migrationsFolder }, 'Running database migrations...');
+      // マイグレーション実行（テスト環境ではスキップ）
+      if (fastify.config.NODE_ENV !== 'test') {
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = path.dirname(__filename);
+        const migrationsFolder = path.join(__dirname, '../../migrations');
+        fastify.log.info({ migrationsFolder }, 'Running database migrations...');
 
-      await migrate(db, { migrationsFolder });
+        await migrate(db, { migrationsFolder });
 
-      fastify.log.info('Database migrations completed');
+        fastify.log.info('Database migrations completed');
+      } else {
+        fastify.log.info('Skipping database migrations in test environment');
+      }
 
       // Fastifyインスタンスにデコレート
       fastify.decorate('db', db);

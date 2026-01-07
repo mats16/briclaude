@@ -45,13 +45,13 @@ describe('config plugin', () => {
       process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
       process.env.ENCRYPTION_KEY = 'a'.repeat(64);
       process.env.DATABRICKS_HOST = 'test.databricks.com';
-      // Note: Vitest sets NODE_ENV to 'test' by default, so we need to delete it
-      delete process.env.NODE_ENV;
+      // Set NODE_ENV to 'test' to prevent loading .env file
+      process.env.NODE_ENV = 'test';
 
       await app.register(configPlugin);
 
       // Verify default values
-      expect(app.config.NODE_ENV).toBe('development');
+      expect(app.config.NODE_ENV).toBe('test');
       expect(app.config.PORT).toBe(8000);
       expect(app.config.DATABRICKS_APP_PORT).toBe(8000);
       expect(app.config.SQL_WAREHOUSE_ID).toBe('');

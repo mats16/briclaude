@@ -7,10 +7,37 @@ import {
   boolean,
   integer,
   index,
+  uniqueIndex,
   primaryKey,
   pgEnum,
+  customType,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import { encrypt, decrypt } from '../utils/encryption.js';
+
+// =====================================================
+// Custom Types
+// =====================================================
+
+/**
+ * 暗号化テキスト型
+ * データベースには暗号化された文字列として保存され、
+ * アプリケーションでは自動的に復号化されます。
+ */
+const encryptedText = customType<{ data: string; notNull: boolean; default: boolean }>({
+  dataType() {
+    return 'text';
+  },
+  toDriver(value: string): string {
+    return encrypt(value);
+  },
+  fromDriver(value: unknown): string {
+    if (typeof value !== 'string') {
+      throw new Error('Expected string from database');
+    }
+    return decrypt(value);
+  },
+});
 
 // =====================================================
 // Enums
@@ -67,7 +94,8 @@ export const oauthTokens = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     authType: text('auth_type').notNull(),
     provider: text('provider').notNull(),
-    token: text('token').notNull(),
+    accessToken: encryptedText('access_token').notNull(),
+    refreshToken: encryptedText('refresh_token'),
     expiresAt: timestamp('expires_at', { mode: 'date', withTimezone: true }),
     createdAt: timestamp('created_at', { mode: 'date' })
       .notNull()
@@ -134,8 +162,11 @@ export const sessionEvents = pgTable(
       .$onUpdate(() => new Date()),
   },
   table => ({
-    // (session_id, seq) 複合インデックス（昇順取得用）
-    sessionSeqIdx: index('session_events_session_id_seq_idx').on(table.sessionId, table.seq),
+    // (session_id, seq) ユニーク制約（セッション内で seq は一意）
+    sessionSeqUnique: uniqueIndex('session_events_session_id_seq_unique').on(
+      table.sessionId,
+      table.seq
+    ),
   })
 );
 
