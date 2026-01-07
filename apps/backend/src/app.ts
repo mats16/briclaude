@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import compress from '@fastify/compress';
 import configPlugin from './plugins/config.js';
+import databasePlugin from './plugins/database.js';
 import requestDecoratorPlugin from './plugins/request-decorator.js';
 import staticPlugin from './plugins/static.js';
 import healthRoute from './routes/health.js';
@@ -12,6 +13,9 @@ export async function build() {
 
   // 設定プラグイン（最初に登録）
   await app.register(configPlugin);
+
+  // データベースプラグイン（configの後、他のプラグインの前）
+  await app.register(databasePlugin);
 
   // リクエストデコレータプラグイン
   await app.register(requestDecoratorPlugin);
