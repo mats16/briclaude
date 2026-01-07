@@ -13,8 +13,8 @@
     "start": "turbo run start",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx}\"",
     "clean": "turbo run clean && rm -rf node_modules",
     "type-check": "turbo run type-check"
   },

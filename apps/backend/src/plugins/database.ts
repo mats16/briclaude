@@ -2,8 +2,11 @@
 import fp from 'fastify-plugin';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import * as schema from '../db/schema.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Fastify型拡張
 declare module 'fastify' {
@@ -17,6 +20,9 @@ declare module 'fastify' {
  *
  * Drizzle ORMとPostgreSQLクライアントを初期化し、
  * `fastify.db`としてアクセス可能にします。
+ *
+ * サーバー起動時に自動的にマイグレーションを実行します。
+ * マイグレーションファイルは `migrations/` フォルダから読み込まれます。
  *
  * 依存関係:
  * - config: DATABASE_URLを取得するため
@@ -33,6 +39,16 @@ export default fp(
 
       // Drizzle ORM初期化
       const db = drizzle({ client, schema });
+
+      // マイグレーション実行
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      const migrationsFolder = path.join(__dirname, '../../migrations');
+      fastify.log.info({ migrationsFolder }, 'Running database migrations...');
+
+      await migrate(db, { migrationsFolder });
+
+      fastify.log.info('Database migrations completed');
 
       // Fastifyインスタンスにデコレート
       fastify.decorate('db', db);
