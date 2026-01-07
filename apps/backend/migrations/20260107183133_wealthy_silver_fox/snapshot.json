@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "b5977a03-59be-4abf-b7e1-8e5afc2fd828",
+  "id": "bba1f6ea-65a9-4d05-940e-c673d1cff123",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -92,7 +92,20 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "token",
+      "name": "access_token",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "oauth_tokens"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "refresh_token",
       "entityType": "columns",
       "schema": "public",
       "table": "oauth_tokens"
@@ -448,12 +461,12 @@
           "opclass": null
         }
       ],
-      "isUnique": false,
+      "isUnique": true,
       "where": null,
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "session_events_session_id_seq_idx",
+      "name": "session_events_session_id_seq_unique",
       "entityType": "indexes",
       "schema": "public",
       "table": "session_events"
