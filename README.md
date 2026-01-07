@@ -17,7 +17,7 @@ Turborepo + npm workspaces で管理され、TypeScript により型安全性を
 | UI ライブラリ | shadcn/ui, Tailwind CSS |
 | バックエンド | Fastify 5 |
 | コード品質 | ESLint 9 (Flat Config), Prettier |
-| 必須環境 | Node.js 22.12+ (LTS) |
+| 必須環境 | Node.js 22.16 (LTS) |
 
 ## プロジェクト構造
 
@@ -38,7 +38,7 @@ claude-code-on-databricks/
 
 ### 必須要件
 
-- Node.js 22.12+ (LTS)
+- Node.js 22.16 (LTS)
 - npm 10.0+
 
 ### インストール

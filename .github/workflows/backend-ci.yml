@@ -36,7 +36,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.16'
           cache: 'npm'
 
       - name: Restore dependencies cache
@@ -89,7 +89,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.16'
 
       - name: Restore build artifacts
         uses: actions/cache/restore@v4
@@ -117,7 +117,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.16'
 
       - name: Restore build artifacts
         uses: actions/cache/restore@v4
@@ -145,7 +145,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.16'
 
       - name: Restore build artifacts
         uses: actions/cache/restore@v4

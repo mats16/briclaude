@@ -24,7 +24,7 @@ claude-code-on-databricks/
 - **Backend**: Fastify 5
 - **Monorepo**: Turborepo 2.x, npm workspaces
 - **Code Quality**: ESLint 9 (Flat Config), Prettier
-- **Runtime**: Node.js 22.12+ (LTS)
+- **Runtime**: Node.js 22.16 (LTS)
 
 ## Development Workflow
 
@@ -126,7 +126,7 @@ This project uses ESLint 9 with Flat Config (`eslint.config.js`). Do NOT use leg
 
 ### Vite 7
 
-- Node.js 22.12+ is required
+- Node.js 22.16 is required
 - Use `import.meta.env` for environment variables
 - Proxy setup: `/api` → `http://localhost:3001` (development only)
 

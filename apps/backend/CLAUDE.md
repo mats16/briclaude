@@ -9,7 +9,7 @@ REST API server built with Fastify 5, TypeScript, and designed for high performa
 - **Framework**: Fastify 5.2.0 (5-10% faster than v4)
 - **Language**: TypeScript 5.8+ (strict mode)
 - **CORS**: @fastify/cors 10.0.1
-- **Runtime**: Node.js 22.12+ (LTS)
+- **Runtime**: Node.js 22.16 (LTS)
 - **Development**: tsx 4.19.2 (TypeScript execution)
 
 ## Directory Structure
