@@ -3,7 +3,7 @@ resources:
     claude_app:
       name: ${var.app_name}
       description: Claude Code on Databricks
-      source_code_path: .
+      source_code_path: ../
       resources:
         - name: encryption-key-secret
           description: Encryption key
