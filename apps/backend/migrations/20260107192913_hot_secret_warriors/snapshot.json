@@ -1,13 +1,13 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "eef64db3-04aa-4ecd-bcb3-169471c62711",
+  "id": "84b1da98-c2ad-4375-8105-231ddd95ae31",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
   "ddl": [
     {
-      "isRlsEnabled": false,
+      "isRlsEnabled": true,
       "name": "oauth_tokens",
       "entityType": "tables",
       "schema": "public"
@@ -19,13 +19,13 @@
       "schema": "public"
     },
     {
-      "isRlsEnabled": false,
+      "isRlsEnabled": true,
       "name": "sessions",
       "entityType": "tables",
       "schema": "public"
     },
     {
-      "isRlsEnabled": false,
+      "isRlsEnabled": true,
       "name": "user_settings",
       "entityType": "tables",
       "schema": "public"
@@ -602,6 +602,45 @@
       "schema": "public",
       "table": "users",
       "entityType": "pks"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "ALL",
+      "roles": [
+        "public"
+      ],
+      "using": "user_id = current_setting('app.user_id', true)::uuid",
+      "withCheck": "user_id = current_setting('app.user_id', true)::uuid",
+      "name": "oauth_tokens_user_isolation_policy",
+      "entityType": "policies",
+      "schema": "public",
+      "table": "oauth_tokens"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "ALL",
+      "roles": [
+        "public"
+      ],
+      "using": "user_id = current_setting('app.user_id', true)::uuid",
+      "withCheck": "user_id = current_setting('app.user_id', true)::uuid",
+      "name": "sessions_user_isolation_policy",
+      "entityType": "policies",
+      "schema": "public",
+      "table": "sessions"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "ALL",
+      "roles": [
+        "public"
+      ],
+      "using": "user_id = current_setting('app.user_id', true)::uuid",
+      "withCheck": "user_id = current_setting('app.user_id', true)::uuid",
+      "name": "user_settings_user_isolation_policy",
+      "entityType": "policies",
+      "schema": "public",
+      "table": "user_settings"
     }
   ],
   "renames": []

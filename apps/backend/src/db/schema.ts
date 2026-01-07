@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   primaryKey,
   customType,
+  pgPolicy,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { encrypt, decrypt } from '../utils/encryption.js';
@@ -78,7 +79,18 @@ export const userSettings = pgTable('user_settings', {
     .notNull()
     .default(sql`now()`)
     .$onUpdate(() => new Date()),
-});
+}).enableRLS();
+
+/**
+ * user_settings の RLS ポリシー
+ * ユーザーは自分のデータのみアクセス可能
+ */
+export const userSettingsPolicy = pgPolicy('user_settings_user_isolation_policy', {
+  for: 'all',
+  to: 'public',
+  using: sql`user_id = current_setting('app.user_id', true)::uuid`,
+  withCheck: sql`user_id = current_setting('app.user_id', true)::uuid`,
+}).link(userSettings);
 
 /**
  * oauth_tokens テーブル
@@ -107,7 +119,18 @@ export const oauthTokens = pgTable(
     // userIdインデックス
     userIdIdx: index('oauth_tokens_user_id_idx').on(table.userId),
   })
-);
+).enableRLS();
+
+/**
+ * oauth_tokens の RLS ポリシー
+ * ユーザーは自分のトークンのみアクセス可能
+ */
+export const oauthTokensPolicy = pgPolicy('oauth_tokens_user_isolation_policy', {
+  for: 'all',
+  to: 'public',
+  using: sql`user_id = current_setting('app.user_id', true)::uuid`,
+  withCheck: sql`user_id = current_setting('app.user_id', true)::uuid`,
+}).link(oauthTokens);
 
 /**
  * sessions テーブル
@@ -132,7 +155,18 @@ export const sessions = pgTable(
     // userIdインデックス
     userIdIdx: index('sessions_user_id_idx').on(table.userId),
   })
-);
+).enableRLS();
+
+/**
+ * sessions の RLS ポリシー
+ * ユーザーは自分のセッションのみアクセス可能
+ */
+export const sessionsPolicy = pgPolicy('sessions_user_isolation_policy', {
+  for: 'all',
+  to: 'public',
+  using: sql`user_id = current_setting('app.user_id', true)::uuid`,
+  withCheck: sql`user_id = current_setting('app.user_id', true)::uuid`,
+}).link(sessions);
 
 /**
  * session_events テーブル
