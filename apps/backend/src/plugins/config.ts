@@ -85,7 +85,7 @@ const schema = {
     // Anthropic
     ANTHROPIC_BASE_URL: {
       type: 'string',
-      default: `https://${process.env.DATABRICKS_HOST}/serving-endpoints/anthropic`,
+      default: '',
       description: 'The base URL for the Anthropic API.',
     },
     ANTHROPIC_DEFAULT_OPUS_MODEL: {
@@ -120,25 +120,30 @@ const schema = {
 declare module 'fastify' {
   interface FastifyInstance {
     config: {
-      // this should be the same as the confKey in options
-      // Server
       NODE_ENV: 'development' | 'production' | 'test';
+      /** The network port the app should listen on. (only used in development) */
       PORT: number;
-      // Database
+      /** The PostgreSQL connection string. */
       DATABASE_URL: string;
-      // Encryption
+      /** The AES-256-GCM encryption key (64 hex chars). Leave empty for plaintext mode (NOT recommended for production). */
       ENCRYPTION_KEY: string;
-      // User and working directories
+      /** The base directory for user directories (e.g. /home/app/users). */
       USER_BASE_DIR: string;
+      /** The base directory for working directories (e.g. /home/app/ws). */
       SESSION_BASE_DIR: string;
-      // Warehouse IDs
+      /** The SQL Warehouse ID for the app. */
       WAREHOUSE_ID: string;
-      // Databricks Apps defaults
+      /** The name of the running app. */
       DATABRICKS_APP_NAME: string;
+      /** The unique ID for the Databricks workspace the app belongs to. */
       DATABRICKS_WORKSPACE_ID: string;
+      /** The host of the Databricks workspace to which the app belongs. (without protocol) */
       DATABRICKS_HOST: string;
+      /** The network port the app should listen on. */
       DATABRICKS_APP_PORT: number;
+      /** The client ID for the Databricks service principal assigned to the app. */
       DATABRICKS_CLIENT_ID: string;
+      /** The OAuth secret for the Databricks service principal assigned to the app. */
       DATABRICKS_CLIENT_SECRET: string;
       // Anthropic
       ANTHROPIC_BASE_URL: string;
@@ -162,6 +167,7 @@ export default fp(
           path: path.join(__dirname, '../../.env'), // -> backend/.env
         },
       });
+      fastify.config.ANTHROPIC_BASE_URL = `https://${fastify.config.DATABRICKS_HOST}/serving-endpoints/anthropic`;
       fastify.log.info('Configuration loaded and validated');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
