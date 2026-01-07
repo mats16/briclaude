@@ -9,7 +9,7 @@ const homeDir = process.env.HOME ?? '/tmp';
 // JSON Schema for environment variables
 const schema = {
   type: 'object',
-  required: ['DATABASE_URL', 'DATABRICKS_HOST'],
+  required: ['DATABASE_URL', 'ENCRYPTION_KEY', 'DATABRICKS_HOST'],
   properties: {
     // Server
     NODE_ENV: {
@@ -28,10 +28,9 @@ const schema = {
       type: 'string',
       description: 'PostgreSQL connection string',
     },
-    // Encryption (optional - empty string = plaintext mode)
+    // Encryption (required)
     ENCRYPTION_KEY: {
       type: 'string',
-      default: '',
       description:
         'AES-256-GCM encryption key (64 hex chars). Leave empty for plaintext mode (NOT recommended for production).',
     },
@@ -47,20 +46,10 @@ const schema = {
       description: 'The base directory for working directories (e.g. /home/app/ws).',
     },
     // Warehouse IDs (optional)
-    WAREHOUSE_ID_2XS: {
+    WAREHOUSE_ID: {
       type: 'string',
       default: '',
-      description: 'SQL Warehouse ID for 2XS size',
-    },
-    WAREHOUSE_ID_XS: {
-      type: 'string',
-      default: '',
-      description: 'SQL Warehouse ID for XS size',
-    },
-    WAREHOUSE_ID_S: {
-      type: 'string',
-      default: '',
-      description: 'SQL Warehouse ID for S size',
+      description: 'SQL Warehouse ID',
     },
     // Databricks Apps defaults
     DATABRICKS_APP_NAME: {
@@ -142,9 +131,7 @@ declare module 'fastify' {
       USER_BASE_DIR: string;
       SESSION_BASE_DIR: string;
       // Warehouse IDs
-      WAREHOUSE_ID_2XS: string;
-      WAREHOUSE_ID_XS: string;
-      WAREHOUSE_ID_S: string;
+      WAREHOUSE_ID: string;
       // Databricks Apps defaults
       DATABRICKS_APP_NAME: string;
       DATABRICKS_WORKSPACE_ID: string;
