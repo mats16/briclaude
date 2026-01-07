@@ -1,7 +1,7 @@
 resources:
   apps:
-    claude_code_app:
-      name: claude-code-app
+    claude_app:
+      name: ${var.app_name}
       description: Claude Code on Databricks
       source_code_path: .
       resources:
@@ -19,7 +19,7 @@ resources:
             permission: READ
         - name: sql-warehouse-2xs
           sql_warehouse:
-            id: ${resources.sql_warehouses.claude_warehouse_2xs.id}
+            id: ${resources.sql_warehouses.claude_app_sql_2xs.id}
             permission: CAN_USE
       user_api_scopes:
         - sql
@@ -34,8 +34,8 @@ resources:
           group_name: users
 
   sql_warehouses:
-    claude_warehouse_2xs:
-      name: claude-warehouse-2xs
+    claude_app_sql_2xs:
+      name: claude-app-sql-2xs
       cluster_size: 2X-Small
       min_num_clusters: 0
       max_num_clusters: 2

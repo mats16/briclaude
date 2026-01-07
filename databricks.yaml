@@ -20,6 +20,11 @@ sync:
     - "**/*.spec.ts"       # テストファイル
     - "**/coverage"        # カバレッジレポート
 
+variables:
+  app_name:
+    description: The name of the app.
+    default: claude-${bundle.target}-${workspace.current_user.id}
+
 targets:
   dev:
     mode: development

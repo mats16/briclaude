@@ -24,7 +24,7 @@ jobs:
         uses: databricks/setup-cli@main
 
       - name: Deploy asset bundles
-        run: databricks bundle deploy --auto-approve --target prod
+        run: databricks bundle deploy --auto-approve --target prod --var="app_name=claude-code-app-prod"
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
