@@ -158,18 +158,18 @@ describe('static plugin', () => {
       expect(response.headers['cache-control']).toBeDefined();
     });
 
-    it('should set no-cache for other file types', async () => {
+    it('should set short-term cache for other file types (images, etc.)', async () => {
       await app.register(staticPlugin);
 
-      // Test logic: if file doesn't match JS/CSS/fonts or HTML, should get no-cache
-      // In practice, this would be images, etc.
+      // Test with an image file - will fall back to index.html
       const response = await app.inject({
         method: 'GET',
         url: '/logo.png',
       });
 
-      // Falls back to index.html (HTML gets short-term cache)
+      // Falls back to index.html, which gets short-term cache
       expect(response.statusCode).toBe(200);
+      expect(response.headers['cache-control']).toBe('public, max-age=3600, must-revalidate');
     });
   });
 });

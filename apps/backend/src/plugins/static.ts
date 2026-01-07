@@ -18,13 +18,9 @@ export default fp(
         if (filePath.match(/\.(js|css|woff2?|ttf|eot)$/)) {
           res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         }
-        // HTMLファイルは短期キャッシュ
-        else if (filePath.endsWith('.html')) {
-          res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
-        }
-        // その他のファイル（画像など）はデフォルトのキャッシュなし
+        // HTMLファイルと画像は短期キャッシュ
         else {
-          res.setHeader('Cache-Control', 'no-cache');
+          res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
         }
       },
     });

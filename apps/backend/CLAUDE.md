@@ -521,9 +521,8 @@ export async function build() {
 
 - **JS/CSS/フォント** (`.js`, `.css`, `.woff2`, `.ttf`, `.eot`): 1年間の長期キャッシュ（`immutable`）
   - Viteがハッシュ付きファイル名を生成するため、安全にキャッシュ可能
-- **HTML** (`.html`): 1時間の短期キャッシュ（`must-revalidate`）
+- **HTML/画像/その他**: 1時間の短期キャッシュ（`must-revalidate`）
   - 新しいバージョンがあるかを定期的にチェック
-- **その他** (画像など): キャッシュなし
 
 ```typescript
 setHeaders: (res, filePath) => {
@@ -531,13 +530,9 @@ setHeaders: (res, filePath) => {
   if (filePath.match(/\.(js|css|woff2?|ttf|eot)$/)) {
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   }
-  // HTMLファイルは短期キャッシュ
-  else if (filePath.endsWith('.html')) {
-    res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
-  }
-  // その他のファイル（画像など）はデフォルトのキャッシュなし
+  // HTMLファイルと画像は短期キャッシュ
   else {
-    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
   }
 }
 ```
