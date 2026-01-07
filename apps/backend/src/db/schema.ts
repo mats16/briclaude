@@ -87,11 +87,9 @@ export const userSettings = pgTable('user_settings', {
 export const oauthTokens = pgTable(
   'oauth_tokens',
   {
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    authType: text('auth_type').notNull(),
-    provider: text('provider').notNull(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    authType: text('auth_type'),
+    provider: text('provider'),
     accessToken: encryptedText('access_token').notNull(),
     refreshToken: encryptedText('refresh_token'),
     expiresAt: timestamp('expires_at', { mode: 'date', withTimezone: true }),
@@ -104,7 +102,7 @@ export const oauthTokens = pgTable(
       .$onUpdate(() => new Date()),
   },
   table => ({
-    // 複合主キー
+    // 複合主キー（PostgreSQLのPRIMARY KEY制約が自動的にNOT NULLを保証）
     pk: primaryKey({ columns: [table.userId, table.authType, table.provider] }),
     // userIdインデックス
     userIdIdx: index('oauth_tokens_user_id_idx').on(table.userId),
