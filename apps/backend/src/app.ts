@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import compress from '@fastify/compress';
 import configPlugin from './plugins/config.js';
 import requestDecoratorPlugin from './plugins/request-decorator.js';
 import staticPlugin from './plugins/static.js';
@@ -14,6 +15,11 @@ export async function build() {
 
   // リクエストデコレータプラグイン
   await app.register(requestDecoratorPlugin);
+
+  // 圧縮プラグイン（brotli, gzip）
+  await app.register(compress, {
+    encodings: ['br', 'gzip', 'deflate'],
+  });
 
   // ルート登録（静的ファイルより先に）
   await app.register(healthRoute, { prefix: '/api' });
