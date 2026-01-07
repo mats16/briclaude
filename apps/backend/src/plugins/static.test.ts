@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import Fastify, { FastifyInstance } from 'fastify';
+import fastifyStatic from '@fastify/static';
 import staticPlugin from './static.js';
 import fs from 'fs';
 import path from 'path';
+import type { ServerResponse } from 'http';
 
 const TEST_DIST_DIR = path.join(import.meta.dirname, '../../../frontend/dist-test');
 
@@ -246,11 +248,11 @@ describe('static plugin', () => {
     it('should set long-term cache for actual JS files', async () => {
       // Register static plugin pointing to test directory
       await app.register(async (fastify) => {
-        await fastify.register(require('@fastify/static'), {
+        await fastify.register(fastifyStatic, {
           root: TEST_DIST_DIR,
           prefix: '/',
           cacheControl: false,
-          setHeaders: (res: any, filePath: string) => {
+          setHeaders: (res: ServerResponse, filePath: string) => {
             const LONG_CACHE_PATTERN = /\.(js|css|woff2?|ttf|eot)$/;
             if (LONG_CACHE_PATTERN.test(filePath)) {
               res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
@@ -273,11 +275,11 @@ describe('static plugin', () => {
 
     it('should set long-term cache for actual CSS files', async () => {
       await app.register(async (fastify) => {
-        await fastify.register(require('@fastify/static'), {
+        await fastify.register(fastifyStatic, {
           root: TEST_DIST_DIR,
           prefix: '/',
           cacheControl: false,
-          setHeaders: (res: any, filePath: string) => {
+          setHeaders: (res: ServerResponse, filePath: string) => {
             const LONG_CACHE_PATTERN = /\.(js|css|woff2?|ttf|eot)$/;
             if (LONG_CACHE_PATTERN.test(filePath)) {
               res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
@@ -300,11 +302,11 @@ describe('static plugin', () => {
 
     it('should set short-term cache for actual image files', async () => {
       await app.register(async (fastify) => {
-        await fastify.register(require('@fastify/static'), {
+        await fastify.register(fastifyStatic, {
           root: TEST_DIST_DIR,
           prefix: '/',
           cacheControl: false,
-          setHeaders: (res: any, filePath: string) => {
+          setHeaders: (res: ServerResponse, filePath: string) => {
             const LONG_CACHE_PATTERN = /\.(js|css|woff2?|ttf|eot)$/;
             if (LONG_CACHE_PATTERN.test(filePath)) {
               res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
@@ -326,11 +328,11 @@ describe('static plugin', () => {
 
     it('should set short-term cache for actual HTML files', async () => {
       await app.register(async (fastify) => {
-        await fastify.register(require('@fastify/static'), {
+        await fastify.register(fastifyStatic, {
           root: TEST_DIST_DIR,
           prefix: '/',
           cacheControl: false,
-          setHeaders: (res: any, filePath: string) => {
+          setHeaders: (res: ServerResponse, filePath: string) => {
             const LONG_CACHE_PATTERN = /\.(js|css|woff2?|ttf|eot)$/;
             if (LONG_CACHE_PATTERN.test(filePath)) {
               res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
