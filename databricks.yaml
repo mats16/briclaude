@@ -14,6 +14,11 @@ sync:
     - node_modules
     - "**/.git"
     - "**/.vscode"
+    - "**/.turbo"          # Turborepoキャッシュ
+    - "**/dist"            # ビルド成果物(必要に応じて)
+    - "**/*.test.ts"       # テストファイル
+    - "**/*.spec.ts"       # テストファイル
+    - "**/coverage"        # カバレッジレポート
 
 targets:
   dev:
