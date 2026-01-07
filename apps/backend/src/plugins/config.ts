@@ -47,7 +47,7 @@ const schema = {
       description: 'The base directory for working directories (e.g. /home/app/ws).',
     },
     // Warehouse IDs (optional)
-    WAREHOUSE_ID: {
+    SQL_WAREHOUSE_ID: {
       type: 'string',
       default: '',
       description: 'SQL Warehouse ID',
@@ -132,7 +132,7 @@ declare module 'fastify' {
       /** The base directory for working directories (e.g. /home/app/ws). */
       SESSION_BASE_DIR: string;
       /** The SQL Warehouse ID for the app. */
-      WAREHOUSE_ID: string;
+      SQL_WAREHOUSE_ID: string;
       /** The name of the running app. */
       DATABRICKS_APP_NAME: string;
       /** The unique ID for the Databricks workspace the app belongs to. */

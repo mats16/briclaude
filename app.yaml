@@ -5,5 +5,5 @@ env:
     valueFrom: encryption-key-secret
   - name: DATABASE_URL
     valueFrom: database-url-secret
-  - name: WAREHOUSE_ID
-    valueFrom: warehouse
+  - name: SQL_WAREHOUSE_ID
+    valueFrom: sql-warehouse-2xs

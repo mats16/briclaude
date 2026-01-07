@@ -4,7 +4,7 @@ bundle:
   name: claude-code-app
 
 include:
-  - resources/*.yml
+  - resources/*.yaml
 
 # Exclude sensitive and unnecessary files from deployment
 sync:
