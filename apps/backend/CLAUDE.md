@@ -505,10 +505,17 @@ export async function build() {
   // 2. リクエストデコレータ
   await app.register(requestDecoratorPlugin);
 
-  // 3. APIルート（静的ファイルより先に）
+  // 3. APIルートにはキャッシュさせない
+  app.addHook('onSend', async (request, reply) => {
+    if (request.url.startsWith('/api/')) {
+      reply.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  });
+
+  // 4. APIルート（静的ファイルより先に）
   await app.register(healthRoute, { prefix: '/api' });
 
-  // 4. 静的ファイル配信（最後に登録）
+  // 5. 静的ファイル配信（最後に登録）
   await app.register(staticPlugin);
 
   return app;
@@ -517,7 +524,9 @@ export async function build() {
 
 #### キャッシュヘッダー設定
 
-静的ファイルのキャッシュ戦略（Reactアプリケーション向け）：
+キャッシュ戦略（Reactアプリケーション向け）：
+
+##### 静的ファイル
 
 - **JS/CSS/フォント** (`.js`, `.css`, `.woff2`, `.ttf`, `.eot`): 1年間の長期キャッシュ（`immutable`）
   - Viteがハッシュ付きファイル名を生成するため、安全にキャッシュ可能
@@ -535,6 +544,20 @@ setHeaders: (res, filePath) => {
     res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
   }
 }
+```
+
+##### APIルート
+
+- **すべてのAPIエンドポイント** (`/api/*`): キャッシュなし
+  - 常に最新のデータを取得する必要があるため
+
+```typescript
+// onSendフックでAPIルートのキャッシュを無効化
+app.addHook('onSend', async (request, reply) => {
+  if (request.url.startsWith('/api/')) {
+    reply.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+  }
+});
 ```
 
 #### エラーハンドリング

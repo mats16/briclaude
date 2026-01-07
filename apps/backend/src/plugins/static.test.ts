@@ -65,6 +65,13 @@ describe('static plugin', () => {
         return { message: 'API response' };
       });
 
+      // Add cache control hook for API routes
+      app.addHook('onSend', async (request, reply) => {
+        if (request.url.startsWith('/api/')) {
+          reply.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+      });
+
       await app.register(staticPlugin);
 
       const response = await app.inject({
@@ -77,6 +84,13 @@ describe('static plugin', () => {
     });
 
     it('should return JSON error for non-existent API routes', async () => {
+      // Add cache control hook for API routes
+      app.addHook('onSend', async (request, reply) => {
+        if (request.url.startsWith('/api/')) {
+          reply.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+      });
+
       await app.register(staticPlugin);
 
       const response = await app.inject({
@@ -91,6 +105,30 @@ describe('static plugin', () => {
         message: 'Route not found',
         statusCode: 404,
       });
+    });
+
+    it('should not cache API routes', async () => {
+      // Register a test API route
+      app.get('/api/test', async () => {
+        return { message: 'API response' };
+      });
+
+      // Add cache control hook for API routes
+      app.addHook('onSend', async (request, reply) => {
+        if (request.url.startsWith('/api/')) {
+          reply.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+      });
+
+      await app.register(staticPlugin);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/test',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['cache-control']).toBe('no-cache, no-store, must-revalidate');
     });
   });
 

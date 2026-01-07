@@ -15,6 +15,13 @@ export async function build() {
   // リクエストデコレータプラグイン
   await app.register(requestDecoratorPlugin);
 
+  // APIルートにはキャッシュさせない
+  app.addHook('onSend', async (request, reply) => {
+    if (request.url.startsWith('/api/')) {
+      reply.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  });
+
   // ルート登録（静的ファイルより先に）
   await app.register(healthRoute, { prefix: '/api' });
 
