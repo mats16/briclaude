@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "84b1da98-c2ad-4375-8105-231ddd95ae31",
+  "id": "1227bb09-7caa-4024-a781-5e893b8b6400",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -37,7 +37,7 @@
       "schema": "public"
     },
     {
-      "type": "uuid",
+      "type": "text",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -258,7 +258,7 @@
       "table": "sessions"
     },
     {
-      "type": "uuid",
+      "type": "text",
       "typeSchema": null,
       "notNull": false,
       "dimensions": 0,
@@ -323,7 +323,7 @@
       "table": "sessions"
     },
     {
-      "type": "uuid",
+      "type": "text",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -375,11 +375,11 @@
       "table": "user_settings"
     },
     {
-      "type": "uuid",
+      "type": "text",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
-      "default": "gen_random_uuid()",
+      "default": null,
       "generated": null,
       "identity": null,
       "name": "id",
@@ -609,8 +609,8 @@
       "roles": [
         "public"
       ],
-      "using": "user_id = current_setting('app.user_id', true)::uuid",
-      "withCheck": "user_id = current_setting('app.user_id', true)::uuid",
+      "using": "user_id = current_setting('app.user_id', true)",
+      "withCheck": "user_id = current_setting('app.user_id', true)",
       "name": "oauth_tokens_user_isolation_policy",
       "entityType": "policies",
       "schema": "public",
@@ -622,8 +622,8 @@
       "roles": [
         "public"
       ],
-      "using": "user_id = current_setting('app.user_id', true)::uuid",
-      "withCheck": "user_id = current_setting('app.user_id', true)::uuid",
+      "using": "user_id = current_setting('app.user_id', true)",
+      "withCheck": "user_id = current_setting('app.user_id', true)",
       "name": "sessions_user_isolation_policy",
       "entityType": "policies",
       "schema": "public",
@@ -635,8 +635,8 @@
       "roles": [
         "public"
       ],
-      "using": "user_id = current_setting('app.user_id', true)::uuid",
-      "withCheck": "user_id = current_setting('app.user_id', true)::uuid",
+      "using": "user_id = current_setting('app.user_id', true)",
+      "withCheck": "user_id = current_setting('app.user_id', true)",
       "name": "user_settings_user_isolation_policy",
       "entityType": "policies",
       "schema": "public",

@@ -1,5 +1,5 @@
 CREATE TABLE "oauth_tokens" (
-	"user_id" uuid,
+	"user_id" text,
 	"auth_type" text,
 	"provider" text,
 	"access_token" text NOT NULL,
@@ -24,7 +24,7 @@ CREATE TABLE "session_events" (
 --> statement-breakpoint
 CREATE TABLE "sessions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-	"user_id" uuid,
+	"user_id" text,
 	"title" text NOT NULL,
 	"is_archived" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE "sessions" (
 --> statement-breakpoint
 ALTER TABLE "sessions" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "user_settings" (
-	"user_id" uuid PRIMARY KEY,
+	"user_id" text PRIMARY KEY,
 	"claude_config_backup" text DEFAULT 'auto' NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
@@ -41,7 +41,7 @@ CREATE TABLE "user_settings" (
 --> statement-breakpoint
 ALTER TABLE "user_settings" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "users" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+	"id" text PRIMARY KEY,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -53,6 +53,6 @@ ALTER TABLE "oauth_tokens" ADD CONSTRAINT "oauth_tokens_user_id_users_id_fkey" F
 ALTER TABLE "session_events" ADD CONSTRAINT "session_events_session_id_sessions_id_fkey" FOREIGN KEY ("session_id") REFERENCES "sessions"("id") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL;--> statement-breakpoint
 ALTER TABLE "user_settings" ADD CONSTRAINT "user_settings_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE;--> statement-breakpoint
-CREATE POLICY "oauth_tokens_user_isolation_policy" ON "oauth_tokens" AS PERMISSIVE FOR ALL TO public USING (user_id = current_setting('app.user_id', true)::uuid) WITH CHECK (user_id = current_setting('app.user_id', true)::uuid);--> statement-breakpoint
-CREATE POLICY "sessions_user_isolation_policy" ON "sessions" AS PERMISSIVE FOR ALL TO public USING (user_id = current_setting('app.user_id', true)::uuid) WITH CHECK (user_id = current_setting('app.user_id', true)::uuid);--> statement-breakpoint
-CREATE POLICY "user_settings_user_isolation_policy" ON "user_settings" AS PERMISSIVE FOR ALL TO public USING (user_id = current_setting('app.user_id', true)::uuid) WITH CHECK (user_id = current_setting('app.user_id', true)::uuid);
+CREATE POLICY "oauth_tokens_user_isolation_policy" ON "oauth_tokens" AS PERMISSIVE FOR ALL TO public USING (user_id = current_setting('app.user_id', true)) WITH CHECK (user_id = current_setting('app.user_id', true));--> statement-breakpoint
+CREATE POLICY "sessions_user_isolation_policy" ON "sessions" AS PERMISSIVE FOR ALL TO public USING (user_id = current_setting('app.user_id', true)) WITH CHECK (user_id = current_setting('app.user_id', true));--> statement-breakpoint
+CREATE POLICY "user_settings_user_isolation_policy" ON "user_settings" AS PERMISSIVE FOR ALL TO public USING (user_id = current_setting('app.user_id', true)) WITH CHECK (user_id = current_setting('app.user_id', true));
