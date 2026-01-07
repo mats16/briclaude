@@ -517,17 +517,27 @@ export async function build() {
 
 #### キャッシュヘッダー設定
 
-静的ファイルのキャッシュ戦略：
+静的ファイルのキャッシュ戦略（Reactアプリケーション向け）：
 
-- **アセットファイル** (`/assets/*`): 1年間の長期キャッシュ（`immutable`）
-- **index.html**: キャッシュなし（常に最新版を取得）
+- **JS/CSS/フォント** (`.js`, `.css`, `.woff2`, `.ttf`, `.eot`): 1年間の長期キャッシュ（`immutable`）
+  - Viteがハッシュ付きファイル名を生成するため、安全にキャッシュ可能
+- **HTML** (`.html`): 1時間の短期キャッシュ（`must-revalidate`）
+  - 新しいバージョンがあるかを定期的にチェック
+- **その他** (画像など): キャッシュなし
 
 ```typescript
 setHeaders: (res, filePath) => {
-  if (filePath.includes('/assets/')) {
+  // JS/CSS/フォントファイルには長期キャッシュを設定（ハッシュ付きファイル名のため）
+  if (filePath.match(/\.(js|css|woff2?|ttf|eot)$/)) {
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-  } else {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  }
+  // HTMLファイルは短期キャッシュ
+  else if (filePath.endsWith('.html')) {
+    res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+  }
+  // その他のファイル（画像など）はデフォルトのキャッシュなし
+  else {
+    res.setHeader('Cache-Control', 'no-cache');
   }
 }
 ```

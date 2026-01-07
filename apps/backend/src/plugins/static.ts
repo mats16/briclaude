@@ -14,12 +14,17 @@ export default fp(
       prefix: '/',
       cacheControl: false, // デフォルトのキャッシュ制御を無効化
       setHeaders: (res, filePath) => {
-        // アセットファイルには長期キャッシュを設定
-        if (filePath.includes('/assets/')) {
+        // JS/CSS/フォントファイルには長期キャッシュを設定（ハッシュ付きファイル名のため）
+        if (filePath.match(/\.(js|css|woff2?|ttf|eot)$/)) {
           res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-        } else {
-          // index.htmlはキャッシュしない
-          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+        // HTMLファイルは短期キャッシュ
+        else if (filePath.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+        }
+        // その他のファイル（画像など）はデフォルトのキャッシュなし
+        else {
+          res.setHeader('Cache-Control', 'no-cache');
         }
       },
     });
