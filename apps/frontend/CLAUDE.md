@@ -234,11 +234,11 @@ try {
 
 ### API Proxy
 
-In development, `/api/*` requests are proxied to `http://localhost:3001`:
+In development, `/api/*` requests are proxied to `http://localhost:8000`:
 
 ```typescript
 // Development
-fetch('/api/health'); // → http://localhost:3001/api/health
+fetch('/api/health'); // → http://localhost:8000/api/health
 
 // Production (use environment variable)
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -433,7 +433,7 @@ npm run preview
 
 ```bash
 # Development
-VITE_API_URL=http://localhost:3001 npm run build
+VITE_API_URL=http://localhost:8000 npm run build
 
 # Production
 VITE_API_URL=https://api.production.com npm run build

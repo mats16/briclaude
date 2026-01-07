@@ -72,7 +72,7 @@ npx shadcn-ui@latest add card
 npm run dev
 
 # Frontend: http://localhost:3000
-# Backend: http://localhost:3001
+# Backend: http://localhost:8000
 ```
 
 ### 個別起動
@@ -124,7 +124,7 @@ npm run type-check
 
 ### 開発環境
 
-- Vite のプロキシ設定により `/api/*` は自動的に `http://localhost:3001` に転送
+- Vite のプロキシ設定により `/api/*` は自動的に `http://localhost:8000` に転送
 - フロントエンドから `fetch('/api/health')` で API を呼び出し
 
 ### 本番環境

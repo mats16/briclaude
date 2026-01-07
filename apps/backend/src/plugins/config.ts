@@ -11,6 +11,18 @@ const schema = {
   type: 'object',
   required: ['DATABASE_URL', 'DATABRICKS_HOST'],
   properties: {
+    // Server
+    NODE_ENV: {
+      type: 'string',
+      default: 'development',
+      enum: ['development', 'production', 'test'],
+      description: 'Node environment (development, production, or test)',
+    },
+    PORT: {
+      type: 'integer',
+      default: 8000,
+      description: 'Server port (used in development, overridden by DATABRICKS_APP_PORT in production)',
+    },
     // Database (required)
     DATABASE_URL: {
       type: 'string',
@@ -119,6 +131,9 @@ declare module 'fastify' {
   interface FastifyInstance {
     config: {
       // this should be the same as the confKey in options
+      // Server
+      NODE_ENV: 'development' | 'production' | 'test';
+      PORT: number;
       // Database
       DATABASE_URL: string;
       // Encryption
@@ -156,7 +171,7 @@ export default fp(
         confKey: 'config',
         schema,
         dotenv: {
-          path: path.join(__dirname, '../../.env'), // -> app/.env (parent of backend/)
+          path: path.join(__dirname, '../../.env'), // -> backend/.env
         },
       });
       fastify.log.info('Configuration loaded and validated');

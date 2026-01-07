@@ -128,7 +128,7 @@ This project uses ESLint 9 with Flat Config (`eslint.config.js`). Do NOT use leg
 
 - Node.js 22.16 is required
 - Use `import.meta.env` for environment variables
-- Proxy setup: `/api` → `http://localhost:3001` (development only)
+- Proxy setup: `/api` → `http://localhost:8000` (development only)
 
 ### Fastify 5
 
@@ -268,7 +268,7 @@ npm run clean && npm install && npm run build
 ### CORS Errors
 
 1. Check `apps/backend/.env` has correct `CORS_ORIGIN`
-2. Ensure backend is running on port 3001
+2. Ensure backend is running on port 8000
 3. Check Vite proxy configuration in `apps/frontend/vite.config.ts`
 
 ## Additional Resources

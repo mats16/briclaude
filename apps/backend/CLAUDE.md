@@ -242,7 +242,7 @@ fastify.post(
 
 ```typescript
 // .env
-PORT=3001
+PORT=8000
 NODE_ENV=development
 CORS_ORIGIN=http://localhost:3000
 DATABASE_URL=postgresql://localhost/mydb
@@ -255,7 +255,7 @@ import { config } from 'dotenv';
 
 config(); // Load .env file
 
-const PORT = parseInt(process.env.PORT || '3001', 10);
+const PORT = parseInt(process.env.PORT || '8000', 10);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
 ```
 
@@ -270,7 +270,7 @@ interface Config {
 }
 
 export const config: Config = {
-  port: parseInt(process.env.PORT || '3001', 10),
+  port: parseInt(process.env.PORT || '8000', 10),
   nodeEnv: (process.env.NODE_ENV as Config['nodeEnv']) || 'development',
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
 };
@@ -580,7 +580,7 @@ Output: `dist/` directory
 
 ```bash
 # Set environment variables
-export PORT=3001
+export PORT=8000
 export NODE_ENV=production
 export CORS_ORIGIN=https://frontend.example.com
 
@@ -601,8 +601,8 @@ pm2 start dist/server.js --name backend
 ### Port Already in Use
 
 ```bash
-# Find process using port 3001
-lsof -i :3001
+# Find process using port 8000
+lsof -i :8000
 
 # Kill process
 kill -9 <PID>
