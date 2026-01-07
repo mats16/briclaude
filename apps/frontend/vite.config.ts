@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import type { ClientRequest } from 'http';
 
 export default defineConfig(({ mode }) => {
   // Load env file from project root
@@ -23,7 +24,7 @@ export default defineConfig(({ mode }) => {
           rewriteWsOrigin: true,
           configure: (proxy, _options) => {
             // Helper function to inject headers
-            const injectHeaders = (proxyReq: any) => {
+            const injectHeaders = (proxyReq: ClientRequest) => {
               const token = env.DATABRICKS_TOKEN;
               const userName = env.DATABRICKS_USER_NAME;
               const userId = env.DATABRICKS_USER_ID;
@@ -33,13 +34,13 @@ export default defineConfig(({ mode }) => {
                 proxyReq.setHeader('x-forwarded-access-token', token);
               }
               if (userName) {
-                proxyReq.setHeader('X-Forwarded-Preferred-Username', userName);
+                proxyReq.setHeader('x-forwarded-preferred-username', userName);
               }
               if (userId) {
-                proxyReq.setHeader('X-Forwarded-User', userId);
+                proxyReq.setHeader('x-forwarded-user', userId);
               }
               if (userEmail) {
-                proxyReq.setHeader('X-Forwarded-Email', userEmail);
+                proxyReq.setHeader('x-forwarded-email', userEmail);
               }
             };
 
