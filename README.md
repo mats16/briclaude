@@ -148,6 +148,96 @@ export interface HealthCheckResponse {
 import type { HealthCheckResponse } from '@repo/types';
 ```
 
+## Databricks Apps へのデプロイ
+
+このプロジェクトは Databricks Apps へのデプロイに対応しており、Databricks Asset Bundle を使用して管理されます。
+
+### 前提条件
+
+- [Databricks CLI](https://docs.databricks.com/dev-tools/cli/index.html) がインストールされていること
+- Databricks ワークスペースへの認証が設定されていること
+- 適切な権限（アプリ作成、シークレット管理、SQL Warehouse 作成）があること
+
+### シークレットの作成
+
+デプロイ前に、以下のシークレットを作成する必要があります。
+
+#### 1. シークレットスコープの作成
+
+```bash
+databricks secrets create-scope claude-code-app
+```
+
+#### 2. 必須シークレットの設定
+
+**encryption-key** (アプリケーションの暗号化キー):
+
+```bash
+databricks secrets put-secret claude-code-app encryption-key
+```
+
+コマンド実行後、エディタが開きます。暗号化キーを入力して保存してください。
+
+**database-url** (データベース接続文字列):
+
+```bash
+databricks secrets put-secret claude-code-app database-url
+```
+
+コマンド実行後、エディタが開きます。データベース接続文字列を入力して保存してください。
+
+例: `postgresql://user:password@host:5432/database`
+
+#### 3. シークレットの確認
+
+```bash
+# スコープ内のシークレット一覧を確認
+databricks secrets list-secrets claude-code-app
+```
+
+### デプロイ
+
+#### 開発環境へのデプロイ
+
+```bash
+# ビルド
+npm run build
+
+# デプロイ
+databricks bundle deploy
+```
+
+デプロイ先: `/Workspace/Users/{yourUserName}/.bundle/claude-code-app/dev`
+
+#### 本番環境へのデプロイ
+
+```bash
+# ビルド
+npm run build
+
+# 本番環境にデプロイ
+databricks bundle deploy --target prod
+```
+
+デプロイ先: `/Workspace/Shared/.bundle/claude-code-app/prod`
+
+### デプロイされるリソース
+
+- **Claude Code App**: メインアプリケーション
+- **SQL Warehouse**: `claude-warehouse` (2X-Small, サーバーレス対応)
+- **Secrets**: 暗号化キーとデータベース URL
+- **Permissions**: `users` グループに `CAN_USE` 権限
+
+### デプロイの確認
+
+```bash
+# デプロイ済みリソースの確認
+databricks bundle validate
+
+# アプリのステータス確認
+databricks apps list
+```
+
 ## クリーンアップ
 
 ```bash
