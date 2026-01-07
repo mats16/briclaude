@@ -336,6 +336,139 @@ Environment variables are tested in [src/plugins/config.test.ts](./src/plugins/c
 - Type validation (integers, enums)
 - Custom configuration values
 
+## Request Context
+
+### Request Decorator Plugin
+
+This project uses a custom `request-decorator` plugin to extract request context from Databricks Apps headers. The plugin makes user information and request metadata easily accessible throughout the application.
+
+### What It Does
+
+The plugin automatically decorates every incoming request with a `ctx` property containing:
+
+- **host**: Original host/domain requested by the client
+- **requestId**: UUID for request tracing
+- **realIp**: IP address of the client
+- **user**: User information from the Identity Provider (IdP)
+  - **id**: User identifier
+  - **name**: User name
+  - **email**: User email
+  - **oboAccessToken**: OAuth access token for on-behalf-of authorization
+
+### Accessing Request Context
+
+The context is available via `request.ctx` in any route handler:
+
+```typescript
+fastify.get('/example', async (request, reply) => {
+  // Access user information
+  const userId = request.ctx?.user.id;
+  const userName = request.ctx?.user.name;
+  const userEmail = request.ctx?.user.email;
+
+  // Access request metadata
+  const requestId = request.ctx?.requestId;
+  const clientIp = request.ctx?.realIp;
+  const host = request.ctx?.host;
+
+  return {
+    userId,
+    userName,
+    requestId,
+  };
+});
+```
+
+### Databricks Apps Headers
+
+The plugin extracts information from these Databricks Apps headers:
+
+| Header                           | Context Property          | Fallback       |
+| -------------------------------- | ------------------------- | -------------- |
+| `x-forwarded-host`               | `ctx.host`                | `req.hostname` |
+| `x-request-id`                   | `ctx.requestId`           | Generated UUID |
+| `x-real-ip`                      | `ctx.realIp`              | `req.ip`       |
+| `x-forwarded-user`               | `ctx.user.id`             | Empty string   |
+| `x-forwarded-preferred-username` | `ctx.user.name`           | Empty string   |
+| `x-forwarded-email`              | `ctx.user.email`          | Empty string   |
+| `x-forwarded-access-token`       | `ctx.user.oboAccessToken` | Empty string   |
+
+### Type Safety
+
+The plugin provides full TypeScript type safety through module augmentation:
+
+```typescript
+// TypeScript knows the ctx property and its structure
+request.ctx?.host; // type: string
+request.ctx?.requestId; // type: string
+request.ctx?.user.id; // type: string
+request.ctx?.user.email; // type: string
+```
+
+### Null Safety
+
+The `ctx` property is nullable (`RequestContext | null`), so always use optional chaining:
+
+```typescript
+// ✅ Good - Use optional chaining
+const userId = request.ctx?.user.id;
+
+// ❌ Bad - May throw if ctx is null
+const userId = request.ctx.user.id;
+```
+
+### Example: User-Specific Logic
+
+```typescript
+fastify.get('/my-data', async (request, reply) => {
+  const userId = request.ctx?.user.id;
+
+  if (!userId) {
+    return reply.status(401).send({
+      error: 'Unauthorized',
+      message: 'User ID not found in request context',
+    });
+  }
+
+  // Fetch user-specific data
+  const data = await fetchUserData(userId);
+
+  request.log.info({ userId, requestId: request.ctx?.requestId }, 'Fetched user data');
+
+  return data;
+});
+```
+
+### Example: Request Tracing
+
+```typescript
+fastify.post('/process', async (request, reply) => {
+  const requestId = request.ctx?.requestId;
+
+  request.log.info({ requestId }, 'Starting process');
+
+  try {
+    const result = await processData(request.body);
+    request.log.info({ requestId }, 'Process completed');
+    return result;
+  } catch (error) {
+    request.log.error({ requestId, error }, 'Process failed');
+    throw error;
+  }
+});
+```
+
+### Testing
+
+Request context functionality is tested in [src/plugins/request-decorator.test.ts](./src/plugins/request-decorator.test.ts). The tests verify:
+
+- Context extraction from Databricks headers
+- Fallback values when headers are missing
+- UUID generation for requestId
+- User information extraction
+- Type safety and null handling
+- Multiple concurrent requests
+
 ## Logging
 
 ### Built-in Logger

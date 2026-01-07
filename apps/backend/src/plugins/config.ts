@@ -164,7 +164,7 @@ export default fp(
         confKey: 'config',
         schema,
         dotenv: {
-          path: path.join(__dirname, '../../.env'), // -> backend/.env
+          path: path.join(__dirname, '../../../../.env'), // -> project root .env
         },
       });
       fastify.config.ANTHROPIC_BASE_URL = `https://${fastify.config.DATABRICKS_HOST}/serving-endpoints/anthropic`;
