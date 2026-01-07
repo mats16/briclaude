@@ -38,7 +38,7 @@ Always use TypeScript generics for type-safe routes:
 import { FastifyPluginAsync } from 'fastify';
 import type { HealthCheckResponse } from '@repo/types';
 
-const healthRoute: FastifyPluginAsync = async (fastify) => {
+const healthRoute: FastifyPluginAsync = async fastify => {
   // ✅ Good - Typed route
   fastify.get<{ Reply: HealthCheckResponse }>('/health', async (request, reply) => {
     const response: HealthCheckResponse = {
@@ -214,22 +214,26 @@ fastify.get('/users/:id', async (request, reply) => {
 
 ```typescript
 // Using Fastify's schema validation
-fastify.post('/users', {
-  schema: {
-    body: {
-      type: 'object',
-      required: ['name', 'email'],
-      properties: {
-        name: { type: 'string', minLength: 1 },
-        email: { type: 'string', format: 'email' },
+fastify.post(
+  '/users',
+  {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['name', 'email'],
+        properties: {
+          name: { type: 'string', minLength: 1 },
+          email: { type: 'string', format: 'email' },
+        },
       },
     },
   },
-}, async (request, reply) => {
-  // Body is automatically validated
-  const { name, email } = request.body;
-  // ...
-});
+  async (request, reply) => {
+    // Body is automatically validated
+    const { name, email } = request.body;
+    // ...
+  }
+);
 ```
 
 ## Environment Variables
@@ -327,10 +331,7 @@ await app.register(cors, {
 ```typescript
 await app.register(cors, {
   origin: (origin, callback) => {
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'https://production.example.com',
-    ];
+    const allowedOrigins = ['http://localhost:3000', 'https://production.example.com'];
 
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
@@ -373,7 +374,9 @@ import { registerRoutes } from './routes/index.js';
 export async function build() {
   const app = Fastify({ logger: true });
 
-  await app.register(cors, { /* ... */ });
+  await app.register(cors, {
+    /* ... */
+  });
   await registerRoutes(app);
 
   return app;
@@ -504,10 +507,7 @@ describe('Health Route', () => {
 // hooks/auth.ts
 import { FastifyRequest, FastifyReply } from 'fastify';
 
-export async function authenticate(
-  request: FastifyRequest,
-  reply: FastifyReply
-) {
+export async function authenticate(request: FastifyRequest, reply: FastifyReply) {
   const token = request.headers.authorization?.replace('Bearer ', '');
 
   if (!token) {
@@ -533,7 +533,7 @@ export async function authenticate(
 }
 
 // Usage
-fastify.get('/protected', { preHandler: authenticate }, async (request) => {
+fastify.get('/protected', { preHandler: authenticate }, async request => {
   return { user: request.user };
 });
 ```
@@ -546,7 +546,7 @@ interface PaginationQuery {
   limit?: number;
 }
 
-fastify.get<{ Querystring: PaginationQuery }>('/users', async (request) => {
+fastify.get<{ Querystring: PaginationQuery }>('/users', async request => {
   const page = request.query.page || 1;
   const limit = Math.min(request.query.limit || 10, 100); // Max 100
   const offset = (page - 1) * limit;

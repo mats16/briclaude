@@ -9,15 +9,15 @@ Turborepo + npm workspaces で管理され、TypeScript により型安全性を
 
 ## 技術スタック
 
-| カテゴリ | 技術 |
-|---------|------|
-| モノレポ管理 | Turborepo, npm workspaces |
-| 言語 | TypeScript 5.8+ |
-| フロントエンド | React 19, Vite 7 |
-| UI ライブラリ | shadcn/ui, Tailwind CSS |
-| バックエンド | Fastify 5 |
-| コード品質 | ESLint 9 (Flat Config), Prettier |
-| 必須環境 | Node.js 22.16 (LTS) |
+| カテゴリ       | 技術                             |
+| -------------- | -------------------------------- |
+| モノレポ管理   | Turborepo, npm workspaces        |
+| 言語           | TypeScript 5.8+                  |
+| フロントエンド | React 19, Vite 7                 |
+| UI ライブラリ  | shadcn/ui, Tailwind CSS          |
+| バックエンド   | Fastify 5                        |
+| コード品質     | ESLint 9 (Flat Config), Prettier |
+| 必須環境       | Node.js 22.16 (LTS)              |
 
 ## プロジェクト構造
 

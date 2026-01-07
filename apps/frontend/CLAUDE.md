@@ -90,11 +90,11 @@ function Button({ label, onClick }: any) { /* ... */ }
 Order classes by category:
 
 1. Layout (flex, grid, block)
-2. Spacing (p-*, m-*, space-*)
-3. Sizing (w-*, h-*)
-4. Typography (text-*, font-*)
-5. Colors (bg-*, text-*)
-6. Effects (shadow-*, rounded-*)
+2. Spacing (p-_, m-_, space-\*)
+3. Sizing (w-_, h-_)
+4. Typography (text-_, font-_)
+5. Colors (bg-_, text-_)
+6. Effects (shadow-_, rounded-_)
 
 ```typescript
 // ✅ Good
@@ -238,11 +238,11 @@ In development, `/api/*` requests are proxied to `http://localhost:3001`:
 
 ```typescript
 // Development
-fetch('/api/health') // → http://localhost:3001/api/health
+fetch('/api/health'); // → http://localhost:3001/api/health
 
 // Production (use environment variable)
 const API_URL = import.meta.env.VITE_API_URL || '';
-fetch(`${API_URL}/api/health`)
+fetch(`${API_URL}/api/health`);
 ```
 
 ## Path Aliases

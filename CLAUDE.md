@@ -163,7 +163,9 @@ export interface UserResponse {
 
 // 2. Backend route
 fastify.get<{ Reply: UserResponse }>('/user/:id', async (request, reply) => {
-  const user: UserResponse = { /* ... */ };
+  const user: UserResponse = {
+    /* ... */
+  };
   return reply.send(user);
 });
 
@@ -198,6 +200,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 ## Testing (Future)
 
 When adding tests:
+
 - Use Vitest for unit tests
 - Use Testing Library for React component tests
 - Place tests next to source files with `.test.ts` or `.spec.ts` extension
@@ -279,5 +282,6 @@ npm run clean && npm install && npm run build
 ## App-Specific Guidelines
 
 For detailed guidelines specific to each application, see:
+
 - Frontend: [apps/frontend/CLAUDE.md](./apps/frontend/CLAUDE.md)
 - Backend: [apps/backend/CLAUDE.md](./apps/backend/CLAUDE.md)
