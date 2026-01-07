@@ -160,39 +160,58 @@ import type { HealthCheckResponse } from '@repo/types';
 
 ### シークレットの作成
 
-デプロイ前に、以下のシークレットを作成する必要があります。
+デプロイ前に、環境ごとにシークレットを作成する必要があります。
 
 #### 1. シークレットスコープの作成
 
+**開発環境用:**
+
 ```bash
-databricks secrets create-scope claude-code-app
+databricks secrets create-scope claude-code-app-dev
+```
+
+**本番環境用:**
+
+```bash
+databricks secrets create-scope claude-code-app-prod
 ```
 
 #### 2. 必須シークレットの設定
 
-**encryption-key** (アプリケーションの暗号化キー):
+各環境に対して、以下のシークレットを設定します。
+
+**開発環境:**
 
 ```bash
-databricks secrets put-secret claude-code-app encryption-key
+# encryption-key (アプリケーションの暗号化キー)
+databricks secrets put-secret claude-code-app-dev encryption-key
+
+# database-url (データベース接続文字列)
+databricks secrets put-secret claude-code-app-dev database-url
 ```
 
-コマンド実行後、エディタが開きます。暗号化キーを入力して保存してください。
-
-**database-url** (データベース接続文字列):
+**本番環境:**
 
 ```bash
-databricks secrets put-secret claude-code-app database-url
+# encryption-key (アプリケーションの暗号化キー)
+databricks secrets put-secret claude-code-app-prod encryption-key
+
+# database-url (データベース接続文字列)
+databricks secrets put-secret claude-code-app-prod database-url
 ```
 
-コマンド実行後、エディタが開きます。データベース接続文字列を入力して保存してください。
+コマンド実行後、エディタが開きます。それぞれのシークレット値を入力して保存してください。
 
-例: `postgresql://user:password@host:5432/database`
+データベース接続文字列の例: `postgresql://user:password@host:5432/database`
 
 #### 3. シークレットの確認
 
 ```bash
-# スコープ内のシークレット一覧を確認
-databricks secrets list-secrets claude-code-app
+# 開発環境のシークレット一覧を確認
+databricks secrets list-secrets claude-code-app-dev
+
+# 本番環境のシークレット一覧を確認
+databricks secrets list-secrets claude-code-app-prod
 ```
 
 ### デプロイ

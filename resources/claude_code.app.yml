@@ -8,13 +8,13 @@ resources:
         - name: encryption-key-secret
           description: Encryption key
           secret:
-            scope: claude-code-app
+            scope: claude-code-app-${bundle.target}
             key: encryption-key
             permission: READ
         - name: database-url-secret
           description: Database connection string
           secret:
-            scope: claude-code-app
+            scope: claude-code-app-${bundle.target}
             key: database-url
             permission: READ
         - name: warehouse
