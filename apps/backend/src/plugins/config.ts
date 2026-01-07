@@ -19,6 +19,7 @@ const schema = {
     // Encryption (optional - empty string = plaintext mode)
     ENCRYPTION_KEY: {
       type: 'string',
+      default: '',
       description:
         'AES-256-GCM encryption key (64 hex chars). Leave empty for plaintext mode (NOT recommended for production).',
     },
@@ -121,7 +122,7 @@ declare module 'fastify' {
       // Database
       DATABASE_URL: string;
       // Encryption
-      ENCRYPTION_KEY?: string;
+      ENCRYPTION_KEY: string;
       // User and working directories
       USER_BASE_DIR: string;
       SESSION_BASE_DIR: string;
@@ -160,7 +161,8 @@ export default fp(
       });
       fastify.log.info('Configuration loaded and validated');
     } catch (error) {
-      fastify.log.error({ error }, 'Failed to load configuration');
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      fastify.log.error({ message }, 'Failed to load configuration');
       throw error;
     }
   },
