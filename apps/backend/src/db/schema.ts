@@ -9,7 +9,6 @@ import {
   index,
   uniqueIndex,
   primaryKey,
-  pgEnum,
   customType,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
@@ -42,8 +41,7 @@ const encryptedText = customType<{ data: string; notNull: boolean; default: bool
 // =====================================================
 // Enums
 // =====================================================
-
-export const claudeConfigBackupEnum = pgEnum('claude_config_backup', ['auto', 'disabled']);
+// (No enums defined)
 
 // =====================================================
 // Tables
@@ -72,7 +70,7 @@ export const userSettings = pgTable('user_settings', {
   userId: uuid('user_id')
     .primaryKey()
     .references(() => users.id, { onDelete: 'cascade' }),
-  claudeConfigBackup: claudeConfigBackupEnum('claude_config_backup').notNull().default('auto'),
+  claudeConfigBackup: text('claude_config_backup').notNull().default('auto'),
   createdAt: timestamp('created_at', { mode: 'date' })
     .notNull()
     .default(sql`now()`),

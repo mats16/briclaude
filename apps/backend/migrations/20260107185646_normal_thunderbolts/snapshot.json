@@ -1,20 +1,11 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "bba1f6ea-65a9-4d05-940e-c673d1cff123",
+  "id": "13d85d76-da87-4c3a-b7ed-b7085ace563d",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
   "ddl": [
-    {
-      "values": [
-        "auto",
-        "disabled"
-      ],
-      "name": "claude_config_backup",
-      "entityType": "enums",
-      "schema": "public"
-    },
     {
       "isRlsEnabled": false,
       "name": "oauth_tokens",
@@ -345,8 +336,8 @@
       "table": "user_settings"
     },
     {
-      "type": "claude_config_backup",
-      "typeSchema": "public",
+      "type": "text",
+      "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
       "default": "'auto'",
