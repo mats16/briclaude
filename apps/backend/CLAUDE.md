@@ -543,7 +543,7 @@ setHeaders: (res, filePath) => {
   else {
     res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
   }
-}
+};
 ```
 
 ##### APIルート

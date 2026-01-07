@@ -49,7 +49,7 @@ describe('static plugin', () => {
   describe('cache headers', () => {
     it('should set long-term cache for actual JS files', async () => {
       // Register static plugin pointing to test directory
-      await app.register(async (fastify) => {
+      await app.register(async fastify => {
         await fastify.register(fastifyStatic, {
           root: TEST_DIST_DIR,
           prefix: '/',
@@ -77,7 +77,7 @@ describe('static plugin', () => {
     });
 
     it('should set short-term cache for HTML files', async () => {
-      await app.register(async (fastify) => {
+      await app.register(async fastify => {
         await fastify.register(fastifyStatic, {
           root: TEST_DIST_DIR,
           prefix: '/',

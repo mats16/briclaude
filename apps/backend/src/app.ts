@@ -24,6 +24,13 @@ export async function build() {
   // ルート登録（静的ファイルより先に）
   await app.register(healthRoute, { prefix: '/api' });
 
+  // APIルートのキャッシュ制御
+  app.addHook('onSend', async (request, reply) => {
+    if (request.url.startsWith('/api/')) {
+      reply.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  });
+
   // 静的ファイル配信（最後に登録）
   await app.register(staticPlugin);
 

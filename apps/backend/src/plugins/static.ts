@@ -11,13 +11,6 @@ export default fp(
   async fastify => {
     const frontendDistPath = path.join(__dirname, '../../../frontend/dist');
 
-    // APIルートのキャッシュ制御
-    fastify.addHook('onSend', async (request, reply) => {
-      if (request.url.startsWith('/api/')) {
-        reply.header('Cache-Control', 'no-cache, no-store, must-revalidate');
-      }
-    });
-
     // 静的ファイル配信を登録
     await fastify.register(staticPlugin, {
       root: frontendDistPath,
@@ -25,12 +18,14 @@ export default fp(
       serveDotFiles: false, // 隠しファイルを配信しない（セキュリティ）
       cacheControl: false, // デフォルトのキャッシュ制御を無効化
       setHeaders: (res, filePath) => {
-        // JS/CSS/フォントファイルには長期キャッシュを設定（ハッシュ付きファイル名のため）
         if (LONG_CACHE_PATTERN.test(filePath)) {
+          // ハッシュ付きファイル名のため、JS/CSS/フォントファイルには長期キャッシュを設定
           res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-        }
-        // HTMLファイルと画像は短期キャッシュ
-        else {
+        } else if (filePath.endsWith('.html')) {
+          // SPA では通常 index.html はキャッシュしないのがベストプラクティス
+          res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+        } else {
+          // 画像などは短期キャッシュ
           res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
         }
       },
