@@ -20,11 +20,11 @@ import { encrypt, decrypt } from '../utils/encryption.js';
 // =====================================================
 
 /**
- * 暗号化テキスト型
+ * 暗号化テキスト型（NOT NULL）
  * データベースには暗号化された文字列として保存され、
  * アプリケーションでは自動的に復号化されます。
  */
-const encryptedText = customType<{ data: string; notNull: boolean; default: boolean }>({
+const encryptedText = customType<{ data: string; notNull: false; default: false }>({
   dataType() {
     return 'text';
   },
@@ -34,6 +34,29 @@ const encryptedText = customType<{ data: string; notNull: boolean; default: bool
   fromDriver(value: unknown): string {
     if (typeof value !== 'string') {
       throw new Error('Expected string from database');
+    }
+    return decrypt(value);
+  },
+});
+
+/**
+ * 暗号化テキスト型（NULLABLE）
+ * データベースには暗号化された文字列として保存され、
+ * アプリケーションでは自動的に復号化されます。
+ * NULL値も適切にハンドリングされます。
+ */
+const encryptedTextNullable = customType<{ data: string | null; notNull: false; default: false }>({
+  dataType() {
+    return 'text';
+  },
+  toDriver(value: string | null): string | null {
+    if (value === null) return null;
+    return encrypt(value);
+  },
+  fromDriver(value: unknown): string | null {
+    if (value === null) return null;
+    if (typeof value !== 'string') {
+      throw new Error('Expected string or null from database');
     }
     return decrypt(value);
   },
@@ -53,7 +76,7 @@ const encryptedText = customType<{ data: string; notNull: boolean; default: bool
  * ユーザーの基本情報を管理
  */
 export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: text('id').primaryKey(),
   createdAt: timestamp('created_at', { mode: 'date' })
     .notNull()
     .default(sql`now()`),
@@ -68,7 +91,7 @@ export const users = pgTable('users', {
  * ユーザーごとの設定を管理
  */
 export const userSettings = pgTable('user_settings', {
-  userId: uuid('user_id')
+  userId: text('user_id')
     .primaryKey()
     .references(() => users.id, { onDelete: 'cascade' }),
   claudeConfigBackup: text('claude_config_backup').notNull().default('auto'),
@@ -88,8 +111,8 @@ export const userSettings = pgTable('user_settings', {
 export const userSettingsPolicy = pgPolicy('user_settings_user_isolation_policy', {
   for: 'all',
   to: 'public',
-  using: sql`user_id = current_setting('app.user_id', true)::uuid`,
-  withCheck: sql`user_id = current_setting('app.user_id', true)::uuid`,
+  using: sql`user_id = current_setting('app.user_id', true)`,
+  withCheck: sql`user_id = current_setting('app.user_id', true)`,
 }).link(userSettings);
 
 /**
@@ -99,11 +122,11 @@ export const userSettingsPolicy = pgPolicy('user_settings_user_isolation_policy'
 export const oauthTokens = pgTable(
   'oauth_tokens',
   {
-    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
     authType: text('auth_type'),
     provider: text('provider'),
     accessToken: encryptedText('access_token').notNull(),
-    refreshToken: encryptedText('refresh_token'),
+    refreshToken: encryptedTextNullable('refresh_token'),
     expiresAt: timestamp('expires_at', { mode: 'date', withTimezone: true }),
     createdAt: timestamp('created_at', { mode: 'date' })
       .notNull()
@@ -128,8 +151,8 @@ export const oauthTokens = pgTable(
 export const oauthTokensPolicy = pgPolicy('oauth_tokens_user_isolation_policy', {
   for: 'all',
   to: 'public',
-  using: sql`user_id = current_setting('app.user_id', true)::uuid`,
-  withCheck: sql`user_id = current_setting('app.user_id', true)::uuid`,
+  using: sql`user_id = current_setting('app.user_id', true)`,
+  withCheck: sql`user_id = current_setting('app.user_id', true)`,
 }).link(oauthTokens);
 
 /**
@@ -140,7 +163,7 @@ export const sessions = pgTable(
   'sessions',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
     title: text('title').notNull(),
     isArchived: boolean('is_archived').notNull().default(false),
     createdAt: timestamp('created_at', { mode: 'date' })
@@ -164,8 +187,8 @@ export const sessions = pgTable(
 export const sessionsPolicy = pgPolicy('sessions_user_isolation_policy', {
   for: 'all',
   to: 'public',
-  using: sql`user_id = current_setting('app.user_id', true)::uuid`,
-  withCheck: sql`user_id = current_setting('app.user_id', true)::uuid`,
+  using: sql`user_id = current_setting('app.user_id', true)`,
+  withCheck: sql`user_id = current_setting('app.user_id', true)`,
 }).link(sessions);
 
 /**
