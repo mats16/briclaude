@@ -11,10 +11,18 @@ export default fp(
   async fastify => {
     const frontendDistPath = path.join(__dirname, '../../../frontend/dist');
 
+    // APIルートのキャッシュ制御
+    fastify.addHook('onSend', async (request, reply) => {
+      if (request.url.startsWith('/api/')) {
+        reply.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    });
+
     // 静的ファイル配信を登録
     await fastify.register(staticPlugin, {
       root: frontendDistPath,
       prefix: '/',
+      serveDotFiles: false, // 隠しファイルを配信しない（セキュリティ）
       cacheControl: false, // デフォルトのキャッシュ制御を無効化
       setHeaders: (res, filePath) => {
         // JS/CSS/フォントファイルには長期キャッシュを設定（ハッシュ付きファイル名のため）
@@ -41,7 +49,7 @@ export default fp(
 
       // SPA fallback
       try {
-        return reply.sendFile('index.html');
+        return await reply.sendFile('index.html');
       } catch (error: unknown) {
         // 型安全なエラーハンドリング
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';

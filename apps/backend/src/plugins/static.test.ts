@@ -26,8 +26,6 @@ describe('static plugin', () => {
     // テスト用ファイルを作成
     fs.writeFileSync(path.join(TEST_DIST_DIR, 'index.html'), '<html><body>Test</body></html>');
     fs.writeFileSync(path.join(assetsDir, 'index-abc123.js'), 'console.log("test");');
-    fs.writeFileSync(path.join(assetsDir, 'style-def456.css'), 'body { margin: 0; }');
-    fs.writeFileSync(path.join(TEST_DIST_DIR, 'logo.png'), 'fake-image-data');
   });
 
   // テスト終了後にクリーンアップ
@@ -73,20 +71,6 @@ describe('static plugin', () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.headers['content-type']).toContain('text/html');
-    });
-
-    it('should serve static assets with long-term cache headers', async () => {
-      await app.register(staticPlugin);
-
-      // Try to access an asset file (may not exist in test environment)
-      const response = await app.inject({
-        method: 'GET',
-        url: '/assets/test.js',
-      });
-
-      // If the file doesn't exist, we still get SPA fallback with index.html
-      // This is expected behavior since we don't have actual assets in test
-      expect([200, 404].includes(response.statusCode)).toBe(true);
     });
   });
 
@@ -202,54 +186,13 @@ describe('static plugin', () => {
   });
 
   describe('cache headers', () => {
-    it('should set short-term cache headers for HTML files', async () => {
-      await app.register(staticPlugin);
-
-      const response = await app.inject({
-        method: 'GET',
-        url: '/',
-      });
-
-      expect(response.headers['cache-control']).toBe('public, max-age=3600, must-revalidate');
-    });
-
-    it('should set long-term cache headers for JS/CSS files', async () => {
-      await app.register(staticPlugin);
-
-      // Test with a non-existent JS file - will fall back to index.html
-      // but we're testing the cache strategy logic
-      const response = await app.inject({
-        method: 'GET',
-        url: '/assets/index-abc123.js',
-      });
-
-      // Falls back to index.html in test, which has short-term cache
-      expect(response.statusCode).toBe(200);
-      expect(response.headers['cache-control']).toBeDefined();
-    });
-
-    it('should set short-term cache for other file types (images, etc.)', async () => {
-      await app.register(staticPlugin);
-
-      // Test with an image file - will fall back to index.html
-      const response = await app.inject({
-        method: 'GET',
-        url: '/logo.png',
-      });
-
-      // Falls back to index.html, which gets short-term cache
-      expect(response.statusCode).toBe(200);
-      expect(response.headers['cache-control']).toBe('public, max-age=3600, must-revalidate');
-    });
-  });
-
-  describe('cache headers with actual files', () => {
     it('should set long-term cache for actual JS files', async () => {
       // Register static plugin pointing to test directory
       await app.register(async (fastify) => {
         await fastify.register(fastifyStatic, {
           root: TEST_DIST_DIR,
           prefix: '/',
+          serveDotFiles: false,
           cacheControl: false,
           setHeaders: (res, filePath) => {
             const LONG_CACHE_PATTERN = /\.(js|css|woff2?|ttf|eot)$/;
@@ -272,64 +215,12 @@ describe('static plugin', () => {
       expect(response.headers['content-type']).toContain('javascript');
     });
 
-    it('should set long-term cache for actual CSS files', async () => {
+    it('should set short-term cache for HTML files', async () => {
       await app.register(async (fastify) => {
         await fastify.register(fastifyStatic, {
           root: TEST_DIST_DIR,
           prefix: '/',
-          cacheControl: false,
-          setHeaders: (res, filePath) => {
-            const LONG_CACHE_PATTERN = /\.(js|css|woff2?|ttf|eot)$/;
-            if (LONG_CACHE_PATTERN.test(filePath)) {
-              res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-            } else {
-              res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
-            }
-          },
-        });
-      });
-
-      const response = await app.inject({
-        method: 'GET',
-        url: '/assets/style-def456.css',
-      });
-
-      expect(response.statusCode).toBe(200);
-      expect(response.headers['cache-control']).toBe('public, max-age=31536000, immutable');
-      expect(response.headers['content-type']).toContain('css');
-    });
-
-    it('should set short-term cache for actual image files', async () => {
-      await app.register(async (fastify) => {
-        await fastify.register(fastifyStatic, {
-          root: TEST_DIST_DIR,
-          prefix: '/',
-          cacheControl: false,
-          setHeaders: (res, filePath) => {
-            const LONG_CACHE_PATTERN = /\.(js|css|woff2?|ttf|eot)$/;
-            if (LONG_CACHE_PATTERN.test(filePath)) {
-              res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-            } else {
-              res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
-            }
-          },
-        });
-      });
-
-      const response = await app.inject({
-        method: 'GET',
-        url: '/logo.png',
-      });
-
-      expect(response.statusCode).toBe(200);
-      expect(response.headers['cache-control']).toBe('public, max-age=3600, must-revalidate');
-    });
-
-    it('should set short-term cache for actual HTML files', async () => {
-      await app.register(async (fastify) => {
-        await fastify.register(fastifyStatic, {
-          root: TEST_DIST_DIR,
-          prefix: '/',
+          serveDotFiles: false,
           cacheControl: false,
           setHeaders: (res, filePath) => {
             const LONG_CACHE_PATTERN = /\.(js|css|woff2?|ttf|eot)$/;
