@@ -10,10 +10,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { SESSION_MODELS, DEFAULT_SESSION_MODEL } from '@/constants';
+import { SESSION_MODELS, DEFAULT_SESSION_MODEL, TEXTAREA_MAX_HEIGHT_SIDEBAR } from '@/constants';
 
 interface NewSessionInputProps {
-  onSubmit?: (content: string, modelId: string) => void;
+  onSubmit?: (content: string, modelId: string) => Promise<void> | void;
   disabled?: boolean;
 }
 
@@ -21,19 +21,25 @@ export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
   const { t } = useTranslation();
   const [content, setContent] = useState('');
   const [selectedModel, setSelectedModel] = useState(DEFAULT_SESSION_MODEL);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, TEXTAREA_MAX_HEIGHT_SIDEBAR)}px`;
     }
   }, [content]);
 
-  const handleSubmit = () => {
-    if (content.trim() && !disabled) {
-      onSubmit?.(content.trim(), selectedModel.id);
-      setContent('');
+  const handleSubmit = async () => {
+    if (content.trim() && !disabled && !isSubmitting) {
+      setIsSubmitting(true);
+      try {
+        await onSubmit?.(content.trim(), selectedModel.id);
+        setContent('');
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -113,7 +119,7 @@ export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
                     size="icon"
                     className="h-7 w-7 shrink-0"
                     onClick={handleSubmit}
-                    disabled={!content.trim() || disabled}
+                    disabled={!content.trim() || disabled || isSubmitting}
                   >
                     <Send className="h-3.5 w-3.5" />
                   </Button>

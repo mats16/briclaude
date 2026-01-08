@@ -4,28 +4,35 @@ import { useTranslation } from 'react-i18next';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { TEXTAREA_MAX_HEIGHT_MAIN } from '@/constants';
 
 interface InputAreaProps {
-  onSend?: (content: string) => void;
+  onSend?: (content: string) => Promise<void> | void;
   disabled?: boolean;
 }
 
 export function InputArea({ onSend, disabled }: InputAreaProps) {
   const { t } = useTranslation();
   const [content, setContent] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 150)}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, TEXTAREA_MAX_HEIGHT_MAIN)}px`;
     }
   }, [content]);
 
-  const handleSubmit = () => {
-    if (content.trim() && !disabled) {
-      onSend?.(content.trim());
-      setContent('');
+  const handleSubmit = async () => {
+    if (content.trim() && !disabled && !isSubmitting) {
+      setIsSubmitting(true);
+      try {
+        await onSend?.(content.trim());
+        setContent('');
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -71,7 +78,7 @@ export function InputArea({ onSend, disabled }: InputAreaProps) {
                     size="icon"
                     className="h-8 w-8 shrink-0"
                     onClick={handleSubmit}
-                    disabled={!content.trim() || disabled}
+                    disabled={!content.trim() || disabled || isSubmitting}
                   >
                     <Send className="h-4 w-4" />
                   </Button>

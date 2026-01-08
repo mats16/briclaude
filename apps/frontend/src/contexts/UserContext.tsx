@@ -28,7 +28,9 @@ export function UserProvider({ children }: UserProviderProps) {
       const data = await userService.getCurrentUser();
       setUser(data.user);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      console.error('Failed to fetch user:', error);
+      setError(error);
       setUser(null);
     } finally {
       setIsLoading(false);
