@@ -6,10 +6,9 @@ import { sessionEvents, type InsertSessionEvent } from './schema.js';
 
 /**
  * insertSessionEvent の引数型
- * seq は省略可能（自動計算される）
+ * seq は自動計算されるため含まない
  */
 export type InsertSessionEventInput = Omit<InsertSessionEvent, 'seq' | 'message'> & {
-  seq?: number;
   message: Record<string, unknown>;
 };
 
@@ -20,7 +19,7 @@ export type InsertSessionEventInput = Omit<InsertSessionEvent, 'seq' | 'message'
  * PostgreSQL の Advisory Lock を使用して、軽量かつ効率的に競合を防ぎます。
  *
  * @param db - Drizzle データベースインスタンス
- * @param event - 挿入するイベント（seq は省略可能）
+ * @param event - 挿入するイベント
  * @returns 挿入されたレコード
  */
 export async function insertSessionEvent(
@@ -28,24 +27,6 @@ export async function insertSessionEvent(
   event: InsertSessionEventInput
 ) {
   return db.transaction(async tx => {
-    // seq が指定されている場合はそのまま使用
-    if (event.seq !== undefined && event.seq !== 0) {
-      const [inserted] = await tx
-        .insert(sessionEvents)
-        .values({
-          uuid: event.uuid,
-          sessionId: event.sessionId,
-          seq: event.seq,
-          type: event.type,
-          subtype: event.subtype,
-          message: event.message,
-          createdAt: event.createdAt,
-          updatedAt: event.updatedAt,
-        })
-        .returning();
-      return inserted;
-    }
-
     // Advisory Lock を取得（session_id ごとにロック）
     // pg_advisory_xact_lock はトランザクション終了時に自動解除
     // hashtext で文字列を整数に変換してロックキーとして使用

@@ -116,18 +116,6 @@ describe('Database Integration Tests', () => {
       expect(event2.seq).toBe(2);
     });
 
-    it('should use provided seq when specified', async () => {
-      const event = await insertSessionEvent(db, {
-        uuid: '33333333-3333-3333-3333-333333333333',
-        sessionId: TEST_SESSION_1,
-        seq: 100,
-        type: 'message',
-        message: { content: 'Custom seq' },
-      });
-
-      expect(event.seq).toBe(100);
-    });
-
     it('should maintain separate seq counters per session', async () => {
       // 2つ目のセッションを作成（RLS 保護テーブル）
       await withTestUserContext(TEST_USER_1, async tx => {

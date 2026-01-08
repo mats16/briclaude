@@ -21,9 +21,10 @@ import { encrypt, decrypt } from '../utils/encryption.js';
 // =====================================================
 
 /**
- * 暗号化テキスト型（NOT NULL）
+ * 暗号化テキスト型
  * データベースには暗号化された文字列として保存され、
  * アプリケーションでは自動的に復号化されます。
+ * 使用時に .notNull() を付けて NOT NULL 制約を追加できます。
  */
 const encryptedText = customType<{ data: string; notNull: false; default: false }>({
   dataType() {
