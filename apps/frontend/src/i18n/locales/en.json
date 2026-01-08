@@ -1,0 +1,53 @@
+{
+  "app": {
+    "title": "Claude Code on Databricks",
+    "badge": "Unofficial"
+  },
+  "sidebar": {
+    "newSession": "New Session",
+    "newSessionPlaceholder": "Start a new session...",
+    "attachImage": "Attach image",
+    "moreOptions": "More options",
+    "startSession": "Start session",
+    "searchPlaceholder": "Search sessions...",
+    "sessions": "Sessions",
+    "noSessions": "No sessions yet",
+    "model": {
+      "label": "Model",
+      "default": "Default",
+      "opusDesc": "Most capable for complex work",
+      "sonnetDesc": "Best for everyday tasks",
+      "haikuDesc": "Fastest for quick answers"
+    }
+  },
+  "main": {
+    "selectSession": "Select a session to start",
+    "inputPlaceholder": "Type your message...",
+    "send": "Send",
+    "openInCli": "Open in CLI",
+    "emptyChat": "Start a conversation"
+  },
+  "user": {
+    "settings": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "signOut": "Sign Out",
+    "loadError": "Failed to load user"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry"
+  },
+  "time": {
+    "justNow": "Just now",
+    "minutesAgo": "{{count}} min ago",
+    "hoursAgo": "{{count}}h ago",
+    "yesterday": "Yesterday",
+    "daysAgo": "{{count}}d ago"
+  },
+  "language": {
+    "en": "English",
+    "ja": "Japanese"
+  }
+}

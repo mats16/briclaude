@@ -1,54 +1,39 @@
-import { useState, useEffect } from 'react';
-import type { HealthCheckResponse } from '@repo/types';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { UserProvider } from '@/contexts/UserContext';
+import { useUser } from '@/hooks/useUser';
+import { Skeleton } from '@/components/ui/skeleton';
 
-function App() {
-  const [health, setHealth] = useState<HealthCheckResponse | null>(null);
-  const [loading, setLoading] = useState(false);
+function AppContent() {
+  const { isLoading } = useUser();
 
-  const checkHealth = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/health');
-      const data = await response.json();
-      setHealth(data);
-    } catch (error) {
-      console.error('Health check failed:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    checkHealth();
-  }, []);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-[400px] border rounded-lg shadow-sm bg-card text-card-foreground">
-        <div className="p-6">
-          <h2 className="text-2xl font-semibold">Claude Code on Databricks</h2>
-          <p className="text-sm text-muted-foreground mt-2">React + Fastify Monorepo</p>
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-screen bg-background">
+        <div className="w-[420px] h-full border-r border-border p-4 space-y-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-8 w-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
         </div>
-        <div className="p-6 pt-0 space-y-4">
-          {health && (
-            <div className="rounded-lg border p-4">
-              <p className="text-sm font-medium">Status: {health.status}</p>
-              <p className="text-sm text-muted-foreground">Service: {health.service}</p>
-              <p className="text-sm text-muted-foreground">
-                Time: {new Date(health.timestamp).toLocaleString()}
-              </p>
-            </div>
-          )}
-          <button
-            onClick={checkHealth}
-            disabled={loading}
-            className="w-full inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-          >
-            {loading ? 'Checking...' : 'Check Health'}
-          </button>
+        <div className="flex-1 h-full p-4">
+          <Skeleton className="h-full w-full" />
         </div>
       </div>
-    </div>
+    );
+  }
+
+  return <AppLayout />;
+}
+
+function App() {
+  return (
+    <UserProvider>
+      <AppContent />
+    </UserProvider>
   );
 }
 

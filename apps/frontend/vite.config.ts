@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 3000,
+      headers: {
+        'Cache-Control': 'no-store',
+      },
       proxy: {
         '/api': {
           target: 'http://localhost:8000',
