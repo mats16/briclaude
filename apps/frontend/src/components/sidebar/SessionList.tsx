@@ -12,11 +12,7 @@ interface SessionListProps {
   onSelectSession?: (sessionId: string) => void;
 }
 
-export function SessionList({
-  sessions,
-  selectedSessionId,
-  onSelectSession,
-}: SessionListProps) {
+export function SessionList({ sessions, selectedSessionId, onSelectSession }: SessionListProps) {
   const { t } = useTranslation();
 
   return (
@@ -34,12 +30,10 @@ export function SessionList({
         <div className="py-2 px-1 space-y-0.5">
           {sessions.length === 0 ? (
             <div className="px-3 py-8 text-center">
-              <p className="text-sm text-muted-foreground">
-                {t('sidebar.noSessions')}
-              </p>
+              <p className="text-sm text-muted-foreground">{t('sidebar.noSessions')}</p>
             </div>
           ) : (
-            sessions.map((session) => (
+            sessions.map(session => (
               <SessionItem
                 key={session.id}
                 session={session}

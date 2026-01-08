@@ -17,7 +17,7 @@ export function MessageArea({ messages }: MessageAreaProps) {
   return (
     <ScrollArea className="flex-1">
       <div className="w-full max-w-[735px] mx-auto pb-24">
-        {messages.map((message) => (
+        {messages.map(message => (
           <MessageItem key={message.id} message={message} />
         ))}
       </div>
