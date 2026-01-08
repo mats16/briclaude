@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Filter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { SessionSummary } from '@repo/types';
@@ -15,6 +16,12 @@ interface SessionListProps {
 export function SessionList({ sessions, selectedSessionId, onSelectSession }: SessionListProps) {
   const { t } = useTranslation();
 
+  // フィルタリング処理の最適化（将来的なフィルター機能追加に備える）
+  const filteredSessions = useMemo(() => {
+    // アーカイブされていないセッションのみ表示
+    return sessions.filter(session => !session.isArchived);
+  }, [sessions]);
+
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       <div className="flex items-center justify-between px-4 py-2 shrink-0">
@@ -28,12 +35,12 @@ export function SessionList({ sessions, selectedSessionId, onSelectSession }: Se
       <Separator className="mx-3 shrink-0" />
       <ScrollArea className="flex-1">
         <div className="py-2 px-1 space-y-0.5">
-          {sessions.length === 0 ? (
+          {filteredSessions.length === 0 ? (
             <div className="px-3 py-8 text-center">
               <p className="text-sm text-muted-foreground">{t('sidebar.noSessions')}</p>
             </div>
           ) : (
-            sessions.map(session => (
+            filteredSessions.map(session => (
               <SessionItem
                 key={session.id}
                 session={session}

@@ -2,21 +2,18 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Sidebar } from '@/components/sidebar/Sidebar';
 import { MainArea } from '@/components/main/MainArea';
 import { cn } from '@/lib/utils';
-
-const MIN_SIDEBAR_WIDTH = 300;
-const MAX_SIDEBAR_WIDTH = 800;
-const DEFAULT_SIDEBAR_WIDTH = 420;
+import { SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_DEFAULT_WIDTH } from '@/constants';
 
 export function AppLayout() {
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem('sidebar-width');
     if (saved) {
       const width = parseInt(saved, 10);
-      if (!isNaN(width) && width >= MIN_SIDEBAR_WIDTH && width <= MAX_SIDEBAR_WIDTH) {
+      if (!isNaN(width) && width >= SIDEBAR_MIN_WIDTH && width <= SIDEBAR_MAX_WIDTH) {
         return width;
       }
     }
-    return DEFAULT_SIDEBAR_WIDTH;
+    return SIDEBAR_DEFAULT_WIDTH;
   });
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,7 +36,7 @@ export function AppLayout() {
       if (!containerRef.current) return;
       const containerRect = containerRef.current.getBoundingClientRect();
       const newWidth = e.clientX - containerRect.left;
-      const clampedWidth = Math.min(Math.max(newWidth, MIN_SIDEBAR_WIDTH), MAX_SIDEBAR_WIDTH);
+      const clampedWidth = Math.min(Math.max(newWidth, SIDEBAR_MIN_WIDTH), SIDEBAR_MAX_WIDTH);
       setSidebarWidth(clampedWidth);
     };
 
