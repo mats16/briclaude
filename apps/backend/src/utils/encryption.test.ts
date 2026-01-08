@@ -1,6 +1,6 @@
 // apps/backend/src/utils/encryption.test.ts
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { encrypt, decrypt } from './encryption.js';
+import { encrypt, decrypt, DecryptionError } from './encryption.js';
 
 describe('encryption', () => {
   const originalEnv = process.env.ENCRYPTION_KEY;
@@ -88,7 +88,7 @@ describe('encryption', () => {
       expect(decrypted).toBe(plaintext);
     });
 
-    it('should throw error for tampered ciphertext', () => {
+    it('should throw DecryptionError for tampered ciphertext', () => {
       const plaintext = 'Secret data';
       const encrypted = encrypt(plaintext);
 
@@ -97,11 +97,34 @@ describe('encryption', () => {
       buffer[20] = buffer[20] ^ 0xff; // 1バイトを反転
       const tampered = buffer.toString('base64');
 
-      expect(() => decrypt(tampered)).toThrow();
+      expect(() => decrypt(tampered)).toThrow(DecryptionError);
+      expect(() => decrypt(tampered)).toThrow('Decryption failed');
     });
 
-    it('should throw error for invalid base64', () => {
-      expect(() => decrypt('not-valid-base64!!!')).toThrow();
+    it('should throw DecryptionError for too short ciphertext', () => {
+      // 最小長 28バイト未満
+      const tooShort = Buffer.alloc(20).toString('base64');
+
+      expect(() => decrypt(tooShort)).toThrow(DecryptionError);
+      expect(() => decrypt(tooShort)).toThrow('too short');
+    });
+
+    it('should throw DecryptionError with cause for crypto errors', () => {
+      const plaintext = 'Secret data';
+      const encrypted = encrypt(plaintext);
+
+      // auth tag を改ざん（最後の16バイト）
+      const buffer = Buffer.from(encrypted, 'base64');
+      buffer[buffer.length - 1] = buffer[buffer.length - 1] ^ 0xff;
+      const tampered = buffer.toString('base64');
+
+      try {
+        decrypt(tampered);
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(DecryptionError);
+        expect((error as DecryptionError).cause).toBeDefined();
+      }
     });
   });
 

@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Fastify, { FastifyInstance } from 'fastify';
 import configPlugin from './config.js';
-import databasePlugin from './database.js';
+import databasePlugin, { RLSContextError } from './database.js';
 
 describe('database plugin', () => {
   let app: FastifyInstance;
@@ -107,6 +107,59 @@ describe('database plugin', () => {
       expect(typeof app.db.insert).toBe('function');
       expect(typeof app.db.update).toBe('function');
       expect(typeof app.db.delete).toBe('function');
+    });
+  });
+
+  describe('withUserContext', () => {
+    it('should decorate fastify.withUserContext', async () => {
+      await app.register(configPlugin);
+      await app.register(databasePlugin);
+
+      expect(app.withUserContext).toBeDefined();
+      expect(typeof app.withUserContext).toBe('function');
+    });
+
+    it('should throw RLSContextError for empty userId', async () => {
+      await app.register(configPlugin);
+      await app.register(databasePlugin);
+
+      await expect(app.withUserContext('', async () => {})).rejects.toThrow(RLSContextError);
+      await expect(app.withUserContext('', async () => {})).rejects.toThrow(
+        'must be a non-empty string'
+      );
+    });
+
+    it('should throw RLSContextError for whitespace-only userId', async () => {
+      await app.register(configPlugin);
+      await app.register(databasePlugin);
+
+      await expect(app.withUserContext('   ', async () => {})).rejects.toThrow(RLSContextError);
+      await expect(app.withUserContext('   ', async () => {})).rejects.toThrow(
+        'cannot be empty or whitespace only'
+      );
+    });
+
+    it('should throw RLSContextError for null/undefined userId', async () => {
+      await app.register(configPlugin);
+      await app.register(databasePlugin);
+
+      // @ts-expect-error - Testing runtime behavior with invalid input
+      await expect(app.withUserContext(null, async () => {})).rejects.toThrow(RLSContextError);
+      // @ts-expect-error - Testing runtime behavior with invalid input
+      await expect(app.withUserContext(undefined, async () => {})).rejects.toThrow(RLSContextError);
+    });
+
+    it('RLSContextError should include userId in error', async () => {
+      await app.register(configPlugin);
+      await app.register(databasePlugin);
+
+      try {
+        await app.withUserContext('   ', async () => {});
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(RLSContextError);
+        expect((error as RLSContextError).userId).toBe('   ');
+      }
     });
   });
 });

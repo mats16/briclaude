@@ -44,29 +44,67 @@ export function encrypt(plaintext: string): string {
 }
 
 /**
+ * 復号化エラー
+ * 暗号文の形式が不正、または認証に失敗した場合にスローされる
+ */
+export class DecryptionError extends Error {
+  constructor(
+    message: string,
+    public readonly cause?: Error
+  ) {
+    super(message);
+    this.name = 'DecryptionError';
+  }
+}
+
+/**
  * 暗号文を復号化（AES-256-GCM）
  *
  * @param ciphertext - Base64エンコードされた暗号文（IV + encrypted data + auth tag）
  * @returns 復号化されたテキスト
+ * @throws {DecryptionError} 復号化に失敗した場合
  */
 export function decrypt(ciphertext: string): string {
   const key = getEncryptionKey();
 
   // Base64デコード
-  const combined = Buffer.from(ciphertext, 'base64');
+  let combined: Buffer;
+  try {
+    combined = Buffer.from(ciphertext, 'base64');
+  } catch (error) {
+    throw new DecryptionError(
+      'Invalid ciphertext: failed to decode Base64',
+      error instanceof Error ? error : undefined
+    );
+  }
+
+  // 最小長チェック: IV (12) + auth tag (16) = 28バイト
+  if (combined.length < 28) {
+    throw new DecryptionError(
+      `Invalid ciphertext: too short (expected at least 28 bytes, got ${combined.length})`
+    );
+  }
 
   // IV (12バイト)、encrypted data、auth tag (16バイト) を分離
   const iv = combined.subarray(0, 12);
   const authTag = combined.subarray(combined.length - 16);
   const encrypted = combined.subarray(12, combined.length - 16);
 
-  // Decipher インスタンスを作成
-  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
-  decipher.setAuthTag(authTag);
+  try {
+    // Decipher インスタンスを作成
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(authTag);
 
-  // データを復号化
-  let decrypted = decipher.update(encrypted.toString('hex'), 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
+    // データを復号化
+    let decrypted = decipher.update(encrypted.toString('hex'), 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
 
-  return decrypted;
+    return decrypted;
+  } catch (error) {
+    // GCM認証失敗、または復号化エラー
+    throw new DecryptionError(
+      'Decryption failed: invalid ciphertext or authentication tag',
+      error instanceof Error ? error : undefined
+    );
+  }
 }

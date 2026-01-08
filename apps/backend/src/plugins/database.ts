@@ -22,6 +22,21 @@ export type RLSTransaction = Parameters<
  */
 export type WithUserContextCallback<T> = (tx: RLSTransaction) => Promise<T>;
 
+/**
+ * RLSコンテキスト設定エラー
+ * ユーザーコンテキストの設定に失敗した場合にスローされる
+ */
+export class RLSContextError extends Error {
+  constructor(
+    message: string,
+    public readonly userId: string,
+    public readonly cause?: Error
+  ) {
+    super(message);
+    this.name = 'RLSContextError';
+  }
+}
+
 // Fastify型拡張
 declare module 'fastify' {
   interface FastifyInstance {
@@ -99,11 +114,31 @@ export default fp(
       fastify.decorate(
         'withUserContext',
         async <T>(userId: string, callback: WithUserContextCallback<T>): Promise<T> => {
+          // userId のバリデーション
+          if (!userId || typeof userId !== 'string') {
+            throw new RLSContextError(
+              'Invalid userId: must be a non-empty string',
+              userId ?? ''
+            );
+          }
+
+          if (userId.trim() === '') {
+            throw new RLSContextError('Invalid userId: cannot be empty or whitespace only', userId);
+          }
+
           return db.transaction(async tx => {
-            // PostgreSQLセッション変数を設定（トランザクションスコープ）
-            // set_config の第3引数 true = is_local（SET LOCAL と同等）
-            // トランザクション終了時に自動的にリセットされる
-            await tx.execute(sql`SELECT set_config('app.user_id', ${userId}, true)`);
+            try {
+              // PostgreSQLセッション変数を設定（トランザクションスコープ）
+              // set_config の第3引数 true = is_local（SET LOCAL と同等）
+              // トランザクション終了時に自動的にリセットされる
+              await tx.execute(sql`SELECT set_config('app.user_id', ${userId}, true)`);
+            } catch (error) {
+              throw new RLSContextError(
+                `Failed to set RLS context for user: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                userId,
+                error instanceof Error ? error : undefined
+              );
+            }
 
             // コールバックを実行
             return callback(tx);
