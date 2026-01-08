@@ -5,6 +5,15 @@ import * as schema from './schema.js';
 import { sessions, sessionEvents, type InsertSessionEvent } from './schema.js';
 
 /**
+ * insertSessionEvent の引数型
+ * seq は省略可能（自動計算される）
+ */
+export type InsertSessionEventInput = Omit<InsertSessionEvent, 'seq' | 'message'> & {
+  seq?: number;
+  message: Record<string, unknown>;
+};
+
+/**
  * session_events テーブルにレコードを挿入するヘルパー関数
  *
  * seq フィールドは自動的に計算されます（session_id ごとに自動インクリメント）。
@@ -17,14 +26,23 @@ import { sessions, sessionEvents, type InsertSessionEvent } from './schema.js';
  */
 export async function insertSessionEvent(
   db: PostgresJsDatabase<typeof schema>,
-  event: Omit<InsertSessionEvent, 'seq'> & { seq?: number }
+  event: InsertSessionEventInput
 ) {
   return db.transaction(async tx => {
     // seq が指定されている場合はそのまま使用
     if (event.seq !== undefined && event.seq !== 0) {
       const [inserted] = await tx
         .insert(sessionEvents)
-        .values(event as InsertSessionEvent)
+        .values({
+          uuid: event.uuid,
+          sessionId: event.sessionId,
+          seq: event.seq,
+          type: event.type,
+          subtype: event.subtype,
+          message: event.message,
+          createdAt: event.createdAt,
+          updatedAt: event.updatedAt,
+        })
         .returning();
       return inserted;
     }
@@ -48,8 +66,14 @@ export async function insertSessionEvent(
     const [inserted] = await tx
       .insert(sessionEvents)
       .values({
-        ...event,
+        uuid: event.uuid,
+        sessionId: event.sessionId,
         seq: nextSeq,
+        type: event.type,
+        subtype: event.subtype,
+        message: event.message,
+        createdAt: event.createdAt,
+        updatedAt: event.updatedAt,
       })
       .returning();
 
