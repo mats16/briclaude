@@ -12,20 +12,23 @@ CREATE TABLE "oauth_tokens" (
 ALTER TABLE "oauth_tokens" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "session_events" (
 	"uuid" uuid PRIMARY KEY,
-	"session_id" uuid NOT NULL,
+	"session_id" text NOT NULL,
 	"seq" integer NOT NULL,
 	"type" text NOT NULL,
 	"subtype" text,
-	"message" text NOT NULL,
+	"message" jsonb NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "sessions" (
-	"id" uuid PRIMARY KEY,
+	"id" text PRIMARY KEY,
 	"user_id" text,
-	"title" text NOT NULL,
+	"title" text,
 	"is_archived" boolean DEFAULT false NOT NULL,
+	"sdk_session_id" uuid,
+	"databricks_workspace_path" text,
+	"databricks_workspace_auto_push" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );

@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   customType,
   pgPolicy,
+  jsonb,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { encrypt, decrypt } from '../utils/encryption.js';
@@ -165,10 +166,13 @@ export const oauthTokensPolicy = pgPolicy('oauth_tokens_user_isolation_policy', 
 export const sessions = pgTable(
   'sessions',
   {
-    id: uuid('id').primaryKey(),
+    id: text('id').primaryKey(),
     userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
-    title: text('title').notNull(),
+    title: text('title'),
     isArchived: boolean('is_archived').notNull().default(false),
+    sdkSessionId: uuid('sdk_session_id'),
+    databricksWorkspacePath: text('databricks_workspace_path'),
+    databricksWorkspaceAutoPush: boolean('databricks_workspace_auto_push').notNull().default(false),
     createdAt: timestamp('created_at', { mode: 'date' })
       .notNull()
       .default(sql`now()`),
@@ -202,13 +206,13 @@ export const sessionEvents = pgTable(
   'session_events',
   {
     uuid: uuid('uuid').primaryKey(),
-    sessionId: uuid('session_id')
+    sessionId: text('session_id')
       .notNull()
       .references(() => sessions.id, { onDelete: 'cascade' }),
     seq: integer('seq').notNull(),
     type: text('type').notNull(),
     subtype: text('subtype'),
-    message: text('message').notNull(),
+    message: jsonb('message').notNull(),
     createdAt: timestamp('created_at', { mode: 'date' })
       .notNull()
       .default(sql`now()`),
