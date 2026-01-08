@@ -29,6 +29,11 @@ const schema = {
       type: 'string',
       description: 'PostgreSQL connection string',
     },
+    DISABLE_AUTO_MIGRATION: {
+      type: 'boolean',
+      default: false,
+      description: 'Disable automatic database migration on startup',
+    },
     // Encryption (required)
     ENCRYPTION_KEY: {
       type: 'string',
@@ -128,6 +133,8 @@ declare module 'fastify' {
       PORT: number;
       /** The PostgreSQL connection string. */
       DATABASE_URL: string;
+      /** Disable automatic database migration on startup. */
+      DISABLE_AUTO_MIGRATION: boolean;
       /** The AES-256-GCM encryption key (64 hex chars). Leave empty for plaintext mode (NOT recommended for production). */
       ENCRYPTION_KEY: string;
       /** The base directory for user directories (e.g. /home/app/users). */

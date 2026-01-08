@@ -72,8 +72,11 @@ export default fp(
       // Drizzle ORM初期化
       const db = drizzle({ client, schema });
 
-      // マイグレーション実行（テスト環境ではスキップ）
-      if (fastify.config.NODE_ENV !== 'test') {
+      // マイグレーション実行（テスト環境または DISABLE_AUTO_MIGRATION=true ではスキップ）
+      const shouldSkipMigration =
+        fastify.config.NODE_ENV === 'test' || fastify.config.DISABLE_AUTO_MIGRATION;
+
+      if (!shouldSkipMigration) {
         const __filename = fileURLToPath(import.meta.url);
         const __dirname = path.dirname(__filename);
         const migrationsFolder = path.join(__dirname, '../../migrations');
@@ -83,7 +86,10 @@ export default fp(
 
         fastify.log.info('Database migrations completed');
       } else {
-        fastify.log.info('Skipping database migrations in test environment');
+        const reason = fastify.config.DISABLE_AUTO_MIGRATION
+          ? 'DISABLE_AUTO_MIGRATION is set'
+          : 'test environment';
+        fastify.log.info({ reason }, 'Skipping database migrations');
       }
 
       // Fastifyインスタンスにデコレート
