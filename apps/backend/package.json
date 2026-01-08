@@ -13,21 +13,30 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "type-check": "tsc --noEmit",
-    "clean": "rm -rf dist .turbo node_modules"
+    "clean": "rm -rf dist .turbo node_modules",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@fastify/compress": "^8.3.1",
     "@fastify/env": "^5.0.3",
     "@fastify/static": "^9.0.0",
     "@repo/types": "*",
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^1.0.0-beta.8",
     "fastify": "^5.2.0",
-    "fastify-plugin": "^5.1.0"
+    "fastify-plugin": "^5.1.0",
+    "postgres": "^3.4.5"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
     "@types/node": "^22.10.5",
+    "@types/pg": "^8.11.10",
     "@vitest/ui": "^4.0.16",
+    "drizzle-kit": "^1.0.0-beta.8",
     "tsx": "^4.19.2",
     "vitest": "^4.0.16"
   }

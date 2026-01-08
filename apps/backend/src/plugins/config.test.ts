@@ -45,13 +45,13 @@ describe('config plugin', () => {
       process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
       process.env.ENCRYPTION_KEY = 'a'.repeat(64);
       process.env.DATABRICKS_HOST = 'test.databricks.com';
-      // Note: Vitest sets NODE_ENV to 'test' by default, so we need to delete it
-      delete process.env.NODE_ENV;
+      // Set NODE_ENV to 'test' to prevent loading .env file
+      process.env.NODE_ENV = 'test';
 
       await app.register(configPlugin);
 
       // Verify default values
-      expect(app.config.NODE_ENV).toBe('development');
+      expect(app.config.NODE_ENV).toBe('test');
       expect(app.config.PORT).toBe(8000);
       expect(app.config.DATABRICKS_APP_PORT).toBe(8000);
       expect(app.config.SQL_WAREHOUSE_ID).toBe('');
@@ -132,6 +132,7 @@ describe('config plugin', () => {
     it('should fail when ENCRYPTION_KEY is missing', async () => {
       process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
       process.env.DATABRICKS_HOST = 'test.databricks.com';
+      delete process.env.ENCRYPTION_KEY;
 
       await expect(app.register(configPlugin)).rejects.toThrow();
     });
@@ -166,6 +167,22 @@ describe('config plugin', () => {
       process.env.ENCRYPTION_KEY = 'a'.repeat(64);
       process.env.DATABRICKS_HOST = 'test.databricks.com';
       process.env.DATABRICKS_APP_PORT = 'not-a-number';
+
+      await expect(app.register(configPlugin)).rejects.toThrow();
+    });
+
+    it('should fail when ENCRYPTION_KEY is not 64 characters', async () => {
+      process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+      process.env.ENCRYPTION_KEY = 'a'.repeat(32); // Too short
+      process.env.DATABRICKS_HOST = 'test.databricks.com';
+
+      await expect(app.register(configPlugin)).rejects.toThrow();
+    });
+
+    it('should fail when ENCRYPTION_KEY contains non-hex characters', async () => {
+      process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+      process.env.ENCRYPTION_KEY = 'g'.repeat(64); // 'g' is not a valid hex character
+      process.env.DATABRICKS_HOST = 'test.databricks.com';
 
       await expect(app.register(configPlugin)).rejects.toThrow();
     });

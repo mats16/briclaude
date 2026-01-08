@@ -29,11 +29,19 @@ const schema = {
       type: 'string',
       description: 'PostgreSQL connection string',
     },
+    DISABLE_AUTO_MIGRATION: {
+      type: 'boolean',
+      default: false,
+      description: 'Disable automatic database migration on startup',
+    },
     // Encryption (required)
     ENCRYPTION_KEY: {
       type: 'string',
+      minLength: 64,
+      maxLength: 64,
+      pattern: '^[0-9a-fA-F]{64}$',
       description:
-        'AES-256-GCM encryption key (64 hex chars). Leave empty for plaintext mode (NOT recommended for production).',
+        'AES-256-GCM encryption key (64 hex chars). Must be valid hexadecimal characters only.',
     },
     // User and session directories (optional)
     USER_BASE_DIR: {
@@ -125,6 +133,8 @@ declare module 'fastify' {
       PORT: number;
       /** The PostgreSQL connection string. */
       DATABASE_URL: string;
+      /** Disable automatic database migration on startup. */
+      DISABLE_AUTO_MIGRATION: boolean;
       /** The AES-256-GCM encryption key (64 hex chars). Leave empty for plaintext mode (NOT recommended for production). */
       ENCRYPTION_KEY: string;
       /** The base directory for user directories (e.g. /home/app/users). */
@@ -164,11 +174,11 @@ export default fp(
         confKey: 'config',
         schema,
         dotenv:
-          process.env.NODE_ENV === 'development'
-            ? {
+          process.env.NODE_ENV == 'test'
+            ? false
+            : {
                 path: path.join(__dirname, '../../../../.env'), // -> project root .env
-              }
-            : false, // テスト環境・本番環境では.envファイルを読み込まない
+              },
       });
       fastify.config.ANTHROPIC_BASE_URL = `https://${fastify.config.DATABRICKS_HOST}/serving-endpoints/anthropic`;
       fastify.log.info('Configuration loaded and validated');
