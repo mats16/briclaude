@@ -4,6 +4,7 @@ import { NewSessionInput } from './NewSessionInput';
 import { ModelSelector } from './ModelSelector';
 import { SessionList } from './SessionList';
 import { UserMenu } from './UserMenu';
+import { useUser } from '@/hooks/useUser';
 
 // Mock data for development
 const MOCK_SESSIONS: SessionSummary[] = [
@@ -35,8 +36,6 @@ interface SidebarProps {
   selectedSessionId?: string | null;
   onSelectSession?: (sessionId: string) => void;
   onNewSession?: (content: string, modelId: string) => void;
-  userName?: string;
-  userEmail?: string;
 }
 
 export function Sidebar({
@@ -44,9 +43,9 @@ export function Sidebar({
   selectedSessionId = '1',
   onSelectSession,
   onNewSession,
-  userName = 'KM',
-  userEmail,
 }: SidebarProps) {
+  const { user, isLoading } = useUser();
+
   return (
     <div className="relative z-10 flex flex-col w-full h-full min-w-0 overflow-hidden bg-card border-r border-border">
       <SidebarHeader />
@@ -57,7 +56,7 @@ export function Sidebar({
         selectedSessionId={selectedSessionId}
         onSelectSession={onSelectSession}
       />
-      <UserMenu userName={userName} userEmail={userEmail} />
+      <UserMenu userName={user?.name} userEmail={user?.email} isLoading={isLoading} />
     </div>
   );
 }
