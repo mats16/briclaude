@@ -8,6 +8,7 @@ import {
   integer,
   index,
   uniqueIndex,
+  primaryKey,
   customType,
   pgPolicy,
   jsonb,
@@ -118,12 +119,13 @@ export const userSettingsPolicy = pgPolicy('user_settings_user_isolation_policy'
 /**
  * oauth_tokens テーブル
  * OAuth認証トークンを管理
+ * 複合主キー: (user_id, provider, auth_type)
  */
 export const oauthTokens = pgTable(
   'oauth_tokens',
   {
     userId: text('user_id')
-      .primaryKey()
+      .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     provider: text('provider').notNull(),
     authType: text('auth_type').notNull(),
@@ -139,12 +141,10 @@ export const oauthTokens = pgTable(
       .$onUpdate(() => new Date()),
   },
   table => ({
-    // (user_id, provider, auth_type) ユニーク制約
-    userProviderAuthUnique: uniqueIndex('oauth_tokens_user_provider_auth_unique').on(
-      table.userId,
-      table.provider,
-      table.authType
-    ),
+    // 複合主キー: (user_id, provider, auth_type)
+    pk: primaryKey({ columns: [table.userId, table.provider, table.authType] }),
+    // user_id インデックス（RLSクエリ高速化）
+    userIdIdx: index('oauth_tokens_user_id_idx').on(table.userId),
   })
 ).enableRLS();
 

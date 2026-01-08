@@ -1,12 +1,13 @@
 CREATE TABLE "oauth_tokens" (
-	"user_id" text PRIMARY KEY,
-	"provider" text NOT NULL,
-	"auth_type" text NOT NULL,
+	"user_id" text,
+	"provider" text,
+	"auth_type" text,
 	"access_token" text NOT NULL,
 	"refresh_token" text,
 	"expires_at" timestamp with time zone,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "oauth_tokens_pkey" PRIMARY KEY("user_id","provider","auth_type")
 );
 --> statement-breakpoint
 ALTER TABLE "oauth_tokens" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
@@ -48,7 +49,7 @@ CREATE TABLE "users" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX "oauth_tokens_user_provider_auth_unique" ON "oauth_tokens" ("user_id","provider","auth_type");--> statement-breakpoint
+CREATE INDEX "oauth_tokens_user_id_idx" ON "oauth_tokens" ("user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "session_events_session_id_seq_unique" ON "session_events" ("session_id","seq");--> statement-breakpoint
 CREATE INDEX "sessions_user_id_idx" ON "sessions" ("user_id");--> statement-breakpoint
 ALTER TABLE "oauth_tokens" ADD CONSTRAINT "oauth_tokens_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE;--> statement-breakpoint

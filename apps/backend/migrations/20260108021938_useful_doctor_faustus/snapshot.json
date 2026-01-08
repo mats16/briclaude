@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "b785b5c7-b401-4a56-aa36-3eb0f14c0ab6",
+  "id": "0d1865de-ce06-4bf6-987c-7983d9c2f0f9",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -461,28 +461,14 @@
           "asc": true,
           "nullsFirst": false,
           "opclass": null
-        },
-        {
-          "value": "provider",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "auth_type",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
         }
       ],
-      "isUnique": true,
+      "isUnique": false,
       "where": null,
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "oauth_tokens_user_provider_auth_unique",
+      "name": "oauth_tokens_user_id_idx",
       "entityType": "indexes",
       "schema": "public",
       "table": "oauth_tokens"
@@ -606,13 +592,15 @@
     },
     {
       "columns": [
-        "user_id"
+        "user_id",
+        "provider",
+        "auth_type"
       ],
       "nameExplicit": false,
       "name": "oauth_tokens_pkey",
+      "entityType": "pks",
       "schema": "public",
-      "table": "oauth_tokens",
-      "entityType": "pks"
+      "table": "oauth_tokens"
     },
     {
       "columns": [
