@@ -32,8 +32,11 @@ const schema = {
     // Encryption (required)
     ENCRYPTION_KEY: {
       type: 'string',
+      minLength: 64,
+      maxLength: 64,
+      pattern: '^[0-9a-fA-F]{64}$',
       description:
-        'AES-256-GCM encryption key (64 hex chars). Leave empty for plaintext mode (NOT recommended for production).',
+        'AES-256-GCM encryption key (64 hex chars). Must be valid hexadecimal characters only.',
     },
     // User and session directories (optional)
     USER_BASE_DIR: {

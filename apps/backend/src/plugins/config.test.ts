@@ -169,6 +169,22 @@ describe('config plugin', () => {
 
       await expect(app.register(configPlugin)).rejects.toThrow();
     });
+
+    it('should fail when ENCRYPTION_KEY is not 64 characters', async () => {
+      process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+      process.env.ENCRYPTION_KEY = 'a'.repeat(32); // Too short
+      process.env.DATABRICKS_HOST = 'test.databricks.com';
+
+      await expect(app.register(configPlugin)).rejects.toThrow();
+    });
+
+    it('should fail when ENCRYPTION_KEY contains non-hex characters', async () => {
+      process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
+      process.env.ENCRYPTION_KEY = 'g'.repeat(64); // 'g' is not a valid hex character
+      process.env.DATABRICKS_HOST = 'test.databricks.com';
+
+      await expect(app.register(configPlugin)).rejects.toThrow();
+    });
   });
 
   describe('directory configuration', () => {
