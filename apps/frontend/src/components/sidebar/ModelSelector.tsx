@@ -9,13 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-
-const MODELS = [
-  { id: 'claude-agent-databricks', name: 'claude-agent-databricks' },
-  { id: 'claude-opus-4-5', name: 'Claude Opus 4.5' },
-  { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5' },
-  { id: 'claude-haiku', name: 'Claude Haiku' },
-] as const;
+import { AGENT_MODELS, DEFAULT_AGENT_MODEL } from '@/constants';
 
 interface ModelSelectorProps {
   value?: string;
@@ -24,7 +18,7 @@ interface ModelSelectorProps {
 
 export function ModelSelector({ value, onChange }: ModelSelectorProps) {
   const { t } = useTranslation();
-  const [selectedModel, setSelectedModel] = useState(value || MODELS[0].id);
+  const [selectedModel, setSelectedModel] = useState(value || DEFAULT_AGENT_MODEL.id);
 
   const handleChange = (newValue: string) => {
     setSelectedModel(newValue);
@@ -44,7 +38,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
             </div>
           </SelectTrigger>
           <SelectContent>
-            {MODELS.map(model => (
+            {AGENT_MODELS.map(model => (
               <SelectItem key={model.id} value={model.id}>
                 {model.name}
               </SelectItem>
