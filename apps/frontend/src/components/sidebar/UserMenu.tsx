@@ -45,7 +45,12 @@ export function UserMenu({ userName = 'User', userEmail }: UserMenuProps) {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>{userName}</DropdownMenuLabel>
+          <DropdownMenuLabel className="flex flex-col">
+            <span>{userName}</span>
+            {userEmail && (
+              <span className="text-xs font-normal text-muted-foreground">{userEmail}</span>
+            )}
+          </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
