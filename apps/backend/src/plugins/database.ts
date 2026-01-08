@@ -95,8 +95,9 @@ export default fp(
         async <T>(userId: string, callback: WithUserContextCallback<T>): Promise<T> => {
           return db.transaction(async tx => {
             // PostgreSQLセッション変数を設定（トランザクションスコープ）
-            // SET LOCAL はトランザクション終了時に自動的にリセットされる
-            await tx.execute(sql`SET LOCAL app.user_id = ${userId}`);
+            // set_config の第3引数 true = is_local（SET LOCAL と同等）
+            // トランザクション終了時に自動的にリセットされる
+            await tx.execute(sql`SELECT set_config('app.user_id', ${userId}, true)`);
 
             // コールバックを実行
             return callback(tx);
