@@ -368,6 +368,19 @@ describe('Database Integration Tests', () => {
   });
 
   describe('Encryption in database', () => {
+    /**
+     * RLSコンテキスト付きでクエリを実行するヘルパー
+     */
+    async function withUserContext<T>(
+      userId: string,
+      callback: (tx: typeof db) => Promise<T>
+    ): Promise<T> {
+      return db.transaction(async tx => {
+        await tx.execute(sql`SELECT set_config('app.user_id', ${userId}, true)`);
+        return callback(tx as unknown as typeof db);
+      });
+    }
+
     beforeEach(async () => {
       if (!process.env.ENCRYPTION_KEY) {
         process.env.ENCRYPTION_KEY = 'a'.repeat(64);
@@ -379,18 +392,23 @@ describe('Database Integration Tests', () => {
     it('should encrypt access_token when stored and decrypt when retrieved', async () => {
       const originalToken = 'my-secret-access-token';
 
-      await db.insert(schema.oauthTokens).values({
-        userId: TEST_USER_1,
-        provider: 'github',
-        authType: 'oauth',
-        accessToken: originalToken,
+      // RLSコンテキスト付きでINSERT
+      await withUserContext(TEST_USER_1, async tx => {
+        await tx.insert(schema.oauthTokens).values({
+          userId: TEST_USER_1,
+          provider: 'github',
+          authType: 'oauth',
+          accessToken: originalToken,
+        });
       });
 
       // Drizzle経由で取得（復号化される）
-      const [retrieved] = await db
-        .select()
-        .from(schema.oauthTokens)
-        .where(eq(schema.oauthTokens.userId, TEST_USER_1));
+      const [retrieved] = await withUserContext(TEST_USER_1, async tx => {
+        return tx
+          .select()
+          .from(schema.oauthTokens)
+          .where(eq(schema.oauthTokens.userId, TEST_USER_1));
+      });
 
       expect(retrieved.accessToken).toBe(originalToken);
 
@@ -406,34 +424,42 @@ describe('Database Integration Tests', () => {
 
     it('should handle nullable refresh_token correctly', async () => {
       // refresh_token なし
-      await db.insert(schema.oauthTokens).values({
-        userId: TEST_USER_1,
-        provider: 'provider1',
-        authType: 'type1',
-        accessToken: 'token1',
-        refreshToken: null,
+      await withUserContext(TEST_USER_1, async tx => {
+        await tx.insert(schema.oauthTokens).values({
+          userId: TEST_USER_1,
+          provider: 'provider1',
+          authType: 'type1',
+          accessToken: 'token1',
+          refreshToken: null,
+        });
       });
 
-      const [withoutRefresh] = await db
-        .select()
-        .from(schema.oauthTokens)
-        .where(eq(schema.oauthTokens.provider, 'provider1'));
+      const [withoutRefresh] = await withUserContext(TEST_USER_1, async tx => {
+        return tx
+          .select()
+          .from(schema.oauthTokens)
+          .where(eq(schema.oauthTokens.provider, 'provider1'));
+      });
 
       expect(withoutRefresh.refreshToken).toBeNull();
 
       // refresh_token あり
-      await db.insert(schema.oauthTokens).values({
-        userId: TEST_USER_1,
-        provider: 'provider2',
-        authType: 'type2',
-        accessToken: 'token2',
-        refreshToken: 'my-refresh-token',
+      await withUserContext(TEST_USER_1, async tx => {
+        await tx.insert(schema.oauthTokens).values({
+          userId: TEST_USER_1,
+          provider: 'provider2',
+          authType: 'type2',
+          accessToken: 'token2',
+          refreshToken: 'my-refresh-token',
+        });
       });
 
-      const [withRefresh] = await db
-        .select()
-        .from(schema.oauthTokens)
-        .where(eq(schema.oauthTokens.provider, 'provider2'));
+      const [withRefresh] = await withUserContext(TEST_USER_1, async tx => {
+        return tx
+          .select()
+          .from(schema.oauthTokens)
+          .where(eq(schema.oauthTokens.provider, 'provider2'));
+      });
 
       expect(withRefresh.refreshToken).toBe('my-refresh-token');
     });
