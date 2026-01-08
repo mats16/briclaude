@@ -289,10 +289,7 @@ describe('Database Integration Tests', () => {
 
         // RLS コンテキスト付きで確認
         const [updated] = await withUserContext(TEST_USER_1, async tx => {
-          return tx
-            .select()
-            .from(schema.sessions)
-            .where(eq(schema.sessions.id, TEST_SESSION_1));
+          return tx.select().from(schema.sessions).where(eq(schema.sessions.id, TEST_SESSION_1));
         });
 
         expect(updated.title).toBe('Updated Title');
@@ -310,10 +307,7 @@ describe('Database Integration Tests', () => {
 
         // User 2のセッションは変更されていないはず（User 2 のコンテキストで確認）
         const [notUpdated] = await withUserContext(TEST_USER_2, async tx => {
-          return tx
-            .select()
-            .from(schema.sessions)
-            .where(eq(schema.sessions.id, TEST_SESSION_2));
+          return tx.select().from(schema.sessions).where(eq(schema.sessions.id, TEST_SESSION_2));
         });
 
         expect(notUpdated.title).toBe('User 2 Session');

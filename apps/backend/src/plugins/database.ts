@@ -116,10 +116,7 @@ export default fp(
         async <T>(userId: string, callback: WithUserContextCallback<T>): Promise<T> => {
           // userId のバリデーション
           if (!userId || typeof userId !== 'string') {
-            throw new RLSContextError(
-              'Invalid userId: must be a non-empty string',
-              userId ?? ''
-            );
+            throw new RLSContextError('Invalid userId: must be a non-empty string', userId ?? '');
           }
 
           if (userId.trim() === '') {

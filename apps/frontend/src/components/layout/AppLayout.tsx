@@ -34,7 +34,12 @@ export function AppLayout() {
       const containerRect = containerRef.current.getBoundingClientRect();
       const newWidth = e.clientX - containerRect.left;
       const clampedWidth = Math.min(Math.max(newWidth, MIN_SIDEBAR_WIDTH), MAX_SIDEBAR_WIDTH);
-      console.log('Drag:', { newWidth, clampedWidth, MIN: MIN_SIDEBAR_WIDTH, MAX: MAX_SIDEBAR_WIDTH });
+      console.log('Drag:', {
+        newWidth,
+        clampedWidth,
+        MIN: MIN_SIDEBAR_WIDTH,
+        MAX: MAX_SIDEBAR_WIDTH,
+      });
       setSidebarWidth(clampedWidth);
     };
 
@@ -55,10 +60,7 @@ export function AppLayout() {
   return (
     <div ref={containerRef} className="flex h-screen w-screen overflow-hidden bg-background">
       {/* Sidebar */}
-      <div
-        style={{ width: sidebarWidth }}
-        className="h-full shrink-0"
-      >
+      <div style={{ width: sidebarWidth }} className="h-full shrink-0">
         <Sidebar />
       </div>
 
@@ -78,9 +80,7 @@ export function AppLayout() {
       </div>
 
       {/* Overlay during drag to prevent text selection */}
-      {isDragging && (
-        <div className="fixed inset-0 z-50 cursor-col-resize" />
-      )}
+      {isDragging && <div className="fixed inset-0 z-50 cursor-col-resize" />}
     </div>
   );
 }
