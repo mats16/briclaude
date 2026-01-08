@@ -47,7 +47,7 @@ export function InputArea({ onSend, disabled }: InputAreaProps) {
             onKeyDown={handleKeyDown}
             placeholder={t('main.inputPlaceholder')}
             disabled={disabled}
-            className="min-h-[40px] max-h-[150px] w-full resize-none border-0 bg-transparent focus-visible:ring-0 px-1 py-0"
+            className="min-h-[40px] max-h-[150px] w-full resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none px-1 py-0"
             rows={1}
           />
           <div className="flex items-center justify-between shrink-0 mt-1">

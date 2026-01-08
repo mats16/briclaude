@@ -1,6 +1,6 @@
 import type { SessionSummary } from '@repo/types';
 import { SidebarHeader } from './SidebarHeader';
-import { SearchBar } from './SearchBar';
+import { NewSessionInput } from './NewSessionInput';
 import { ModelSelector } from './ModelSelector';
 import { SessionList } from './SessionList';
 import { UserMenu } from './UserMenu';
@@ -34,8 +34,7 @@ interface SidebarProps {
   sessions?: SessionSummary[];
   selectedSessionId?: string | null;
   onSelectSession?: (sessionId: string) => void;
-  onSearch?: (query: string) => void;
-  onNewSession?: (query: string) => void;
+  onNewSession?: (content: string, modelId: string) => void;
   userName?: string;
   userEmail?: string;
 }
@@ -44,7 +43,6 @@ export function Sidebar({
   sessions = MOCK_SESSIONS,
   selectedSessionId = '1',
   onSelectSession,
-  onSearch,
   onNewSession,
   userName = 'KM',
   userEmail,
@@ -52,7 +50,7 @@ export function Sidebar({
   return (
     <div className="relative z-10 flex flex-col w-full h-full min-w-0 overflow-hidden bg-card border-r border-border">
       <SidebarHeader />
-      <SearchBar onSearch={onSearch} onSubmit={onNewSession} />
+      <NewSessionInput onSubmit={onNewSession} />
       <ModelSelector />
       <SessionList
         sessions={sessions}

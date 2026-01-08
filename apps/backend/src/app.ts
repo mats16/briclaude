@@ -5,6 +5,7 @@ import databasePlugin from './plugins/database.js';
 import requestDecoratorPlugin from './plugins/request-decorator.js';
 import staticPlugin from './plugins/static.js';
 import healthRoute from './routes/health.js';
+import userRoute from './routes/user.js';
 
 export async function build() {
   const app = Fastify({
@@ -27,6 +28,7 @@ export async function build() {
 
   // ルート登録（静的ファイルより先に）
   await app.register(healthRoute, { prefix: '/api' });
+  await app.register(userRoute, { prefix: '/api' });
 
   // APIルートのキャッシュ制御
   app.addHook('onSend', async (request, reply) => {
