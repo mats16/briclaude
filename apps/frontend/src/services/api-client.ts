@@ -1,7 +1,8 @@
 export class ApiClientError extends Error {
   constructor(
     public statusCode: number,
-    message: string
+    message: string,
+    public details?: string
   ) {
     super(message);
     this.name = 'ApiClientError';
@@ -18,7 +19,22 @@ export async function apiClient<T>(endpoint: string, options?: RequestInit): Pro
   });
 
   if (!response.ok) {
-    throw new ApiClientError(response.status, `HTTP error: ${response.status}`);
+    let errorMessage = `HTTP error: ${response.status}`;
+    let details: string | undefined;
+
+    try {
+      const errorBody = await response.json();
+      if (errorBody.message) {
+        errorMessage = errorBody.message;
+      }
+      if (errorBody.error) {
+        details = errorBody.error;
+      }
+    } catch {
+      // レスポンスボディのパースに失敗した場合は無視
+    }
+
+    throw new ApiClientError(response.status, errorMessage, details);
   }
 
   return response.json();
