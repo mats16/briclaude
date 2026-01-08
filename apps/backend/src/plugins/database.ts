@@ -82,6 +82,9 @@ export default fp(
         await migrate(db, { migrationsFolder });
 
         fastify.log.info('Database migrations completed');
+
+        // updated_at 自動更新トリガーのセットアップ
+        await setupUpdatedAtTriggers(db, fastify.log);
       } else {
         fastify.log.info('Skipping database migrations in test environment');
       }

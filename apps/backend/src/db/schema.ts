@@ -182,8 +182,14 @@ export const sessions = pgTable(
       .$onUpdate(() => new Date()),
   },
   table => ({
-    // userIdインデックス
+    // user_id インデックス（RLSクエリ高速化）
     userIdIdx: index('sessions_user_id_idx').on(table.userId),
+    // updated_at インデックス（ソート用）
+    updatedAtIdx: index('sessions_updated_at_idx').on(table.updatedAt),
+    // アクティブセッション用部分インデックス（is_archived = false のみ）
+    activeSessionsIdx: index('sessions_active_idx')
+      .on(table.userId, table.updatedAt)
+      .where(sql`is_archived = false`),
   })
 ).enableRLS();
 
