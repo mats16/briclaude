@@ -132,6 +132,7 @@ describe('config plugin', () => {
     it('should fail when ENCRYPTION_KEY is missing', async () => {
       process.env.DATABASE_URL = 'postgresql://localhost:5432/test';
       process.env.DATABRICKS_HOST = 'test.databricks.com';
+      delete process.env.ENCRYPTION_KEY;
 
       await expect(app.register(configPlugin)).rejects.toThrow();
     });
