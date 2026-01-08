@@ -18,7 +18,7 @@ export function InputArea({ onSend, disabled }: InputAreaProps) {
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 150)}px`;
     }
   }, [content]);
 
@@ -30,33 +30,16 @@ export function InputArea({ onSend, disabled }: InputAreaProps) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleSubmit();
     }
   };
 
   return (
-    <div className="border-t border-border p-4 shrink-0">
-      <div className="relative w-full max-w-[735px] mx-auto">
-        <div className="relative flex items-end gap-2 rounded-lg border border-border bg-background p-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                >
-                  <Image className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Attach image</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
+    <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
+      <div className="relative w-full max-w-[735px] mx-auto pointer-events-auto">
+        <div className="relative flex flex-col rounded-xl border border-border bg-background p-2 shadow-lg">
           <Textarea
             ref={textareaRef}
             value={content}
@@ -64,27 +47,45 @@ export function InputArea({ onSend, disabled }: InputAreaProps) {
             onKeyDown={handleKeyDown}
             placeholder={t('main.inputPlaceholder')}
             disabled={disabled}
-            className="min-h-[40px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 p-2"
+            className="min-h-[40px] max-h-[150px] w-full resize-none border-0 bg-transparent focus-visible:ring-0 px-1 py-0"
             rows={1}
           />
+          <div className="flex items-center justify-between shrink-0 mt-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                  >
+                    <Image className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Attach image</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                  onClick={handleSubmit}
-                  disabled={!content.trim() || disabled}
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('main.send')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={handleSubmit}
+                    disabled={!content.trim() || disabled}
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('main.send')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
       </div>
     </div>
