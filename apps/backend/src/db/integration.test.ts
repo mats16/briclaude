@@ -29,6 +29,21 @@ const TEST_SESSION_2 = 'test-session-2';
 describe('Database Integration Tests', () => {
   let client: ReturnType<typeof postgres>;
   let db: PostgresJsDatabase<typeof schema>;
+  let hasBypassRls = false;
+
+  /**
+   * RLS 保護テーブルへのアクセス用ヘルパー
+   * app.user_id を設定してからコールバックを実行
+   */
+  async function withTestUserContext<T>(
+    userId: string,
+    callback: (tx: typeof db) => Promise<T>
+  ): Promise<T> {
+    return db.transaction(async tx => {
+      await tx.execute(sql`SELECT set_config('app.user_id', ${userId}, true)`);
+      return callback(tx as unknown as typeof db);
+    });
+  }
 
   beforeAll(async () => {
     const databaseUrl = process.env.DATABASE_URL;
@@ -45,11 +60,19 @@ describe('Database Integration Tests', () => {
     const migrationsFolder = path.join(__dirname, '../../migrations');
     await migrate(db, { migrationsFolder });
 
-    // テスト用にテーブルオーナーにもRLSを適用
-    // PostgreSQLではデフォルトでテーブルオーナーはRLSをバイパスするため
-    await client`ALTER TABLE sessions FORCE ROW LEVEL SECURITY`;
-    await client`ALTER TABLE user_settings FORCE ROW LEVEL SECURITY`;
-    await client`ALTER TABLE oauth_tokens FORCE ROW LEVEL SECURITY`;
+    // 現在のロールがBYPASSRLS属性を持っているかチェック
+    const result = await client`
+      SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user
+    `;
+    hasBypassRls = result[0]?.rolbypassrls === true;
+
+    // BYPASSRLS を持つユーザー（ローカル Neon など）の場合のみ FORCE RLS を適用
+    // CI 環境では testuser が BYPASSRLS を持たないため、RLS は自動的に適用される
+    if (hasBypassRls) {
+      await client`ALTER TABLE sessions FORCE ROW LEVEL SECURITY`;
+      await client`ALTER TABLE user_settings FORCE ROW LEVEL SECURITY`;
+      await client`ALTER TABLE oauth_tokens FORCE ROW LEVEL SECURITY`;
+    }
   });
 
   afterAll(async () => {
@@ -69,12 +92,15 @@ describe('Database Integration Tests', () => {
 
   describe('insertSessionEvent', () => {
     beforeEach(async () => {
-      // テスト用ユーザーとセッションを作成
+      // テスト用ユーザーを作成（users テーブルは RLS なし）
       await db.insert(schema.users).values({ id: TEST_USER_1 });
-      await db.insert(schema.sessions).values({
-        id: TEST_SESSION_1,
-        userId: TEST_USER_1,
-        title: 'Test Session',
+      // セッションを作成（RLS 保護テーブルなのでユーザーコンテキストが必要）
+      await withTestUserContext(TEST_USER_1, async tx => {
+        await tx.insert(schema.sessions).values({
+          id: TEST_SESSION_1,
+          userId: TEST_USER_1,
+          title: 'Test Session',
+        });
       });
     });
 
@@ -111,11 +137,13 @@ describe('Database Integration Tests', () => {
     });
 
     it('should maintain separate seq counters per session', async () => {
-      // 2つ目のセッションを作成
-      await db.insert(schema.sessions).values({
-        id: TEST_SESSION_2,
-        userId: TEST_USER_1,
-        title: 'Test Session 2',
+      // 2つ目のセッションを作成（RLS 保護テーブル）
+      await withTestUserContext(TEST_USER_1, async tx => {
+        await tx.insert(schema.sessions).values({
+          id: TEST_SESSION_2,
+          userId: TEST_USER_1,
+          title: 'Test Session 2',
+        });
       });
 
       const event1Session1 = await insertSessionEvent(db, {
@@ -197,20 +225,38 @@ describe('Database Integration Tests', () => {
     });
 
     beforeEach(async () => {
-      // 2人のユーザーを作成
+      // 2人のユーザーを作成（users テーブルは RLS なし）
       await db.insert(schema.users).values([{ id: TEST_USER_1 }, { id: TEST_USER_2 }]);
 
-      // 各ユーザーのセッションを作成
-      await db.insert(schema.sessions).values([
-        { id: TEST_SESSION_1, userId: TEST_USER_1, title: 'User 1 Session' },
-        { id: TEST_SESSION_2, userId: TEST_USER_2, title: 'User 2 Session' },
-      ]);
+      // 各ユーザーのセッションを作成（RLS 保護テーブル）
+      await withTestUserContext(TEST_USER_1, async tx => {
+        await tx.insert(schema.sessions).values({
+          id: TEST_SESSION_1,
+          userId: TEST_USER_1,
+          title: 'User 1 Session',
+        });
+      });
+      await withTestUserContext(TEST_USER_2, async tx => {
+        await tx.insert(schema.sessions).values({
+          id: TEST_SESSION_2,
+          userId: TEST_USER_2,
+          title: 'User 2 Session',
+        });
+      });
 
-      // 各ユーザーの設定を作成
-      await db.insert(schema.userSettings).values([
-        { userId: TEST_USER_1, claudeConfigBackup: 'auto' },
-        { userId: TEST_USER_2, claudeConfigBackup: 'disabled' },
-      ]);
+      // 各ユーザーの設定を作成（RLS 保護テーブル）
+      await withTestUserContext(TEST_USER_1, async tx => {
+        await tx.insert(schema.userSettings).values({
+          userId: TEST_USER_1,
+          claudeConfigBackup: 'auto',
+        });
+      });
+      await withTestUserContext(TEST_USER_2, async tx => {
+        await tx.insert(schema.userSettings).values({
+          userId: TEST_USER_2,
+          claudeConfigBackup: 'disabled',
+        });
+      });
     });
 
     /**
@@ -330,21 +376,23 @@ describe('Database Integration Tests', () => {
           process.env.ENCRYPTION_KEY = 'a'.repeat(64);
         }
 
-        // 各ユーザーのトークンを作成
-        await db.insert(schema.oauthTokens).values([
-          {
+        // 各ユーザーのトークンを作成（RLS 保護テーブル）
+        await withTestUserContext(TEST_USER_1, async tx => {
+          await tx.insert(schema.oauthTokens).values({
             userId: TEST_USER_1,
             provider: 'github',
             authType: 'oauth',
             accessToken: 'token1',
-          },
-          {
+          });
+        });
+        await withTestUserContext(TEST_USER_2, async tx => {
+          await tx.insert(schema.oauthTokens).values({
             userId: TEST_USER_2,
             provider: 'github',
             authType: 'oauth',
             accessToken: 'token2',
-          },
-        ]);
+          });
+        });
       });
 
       it('should only return tokens for the current user', async () => {
