@@ -2,7 +2,7 @@
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { sql, eq } from 'drizzle-orm';
 import * as schema from './schema.js';
-import { sessions, sessionEvents, type InsertSessionEvent } from './schema.js';
+import { sessionEvents, type InsertSessionEvent } from './schema.js';
 
 /**
  * insertSessionEvent の引数型
@@ -17,8 +17,7 @@ export type InsertSessionEventInput = Omit<InsertSessionEvent, 'seq' | 'message'
  * session_events テーブルにレコードを挿入するヘルパー関数
  *
  * seq フィールドは自動的に計算されます（session_id ごとに自動インクリメント）。
- * トランザクション内で sessions テーブルの行を FOR UPDATE でロックし、
- * 高並行環境でも競合を防ぎます。
+ * PostgreSQL の Advisory Lock を使用して、軽量かつ効率的に競合を防ぎます。
  *
  * @param db - Drizzle データベースインスタンス
  * @param event - 挿入するイベント（seq は省略可能）
@@ -47,12 +46,10 @@ export async function insertSessionEvent(
       return inserted;
     }
 
-    // sessions テーブルの行を FOR UPDATE でロックして競合を防ぐ
-    await tx
-      .select({ id: sessions.id })
-      .from(sessions)
-      .where(eq(sessions.id, event.sessionId))
-      .for('update');
+    // Advisory Lock を取得（session_id ごとにロック）
+    // pg_advisory_xact_lock はトランザクション終了時に自動解除
+    // hashtext で文字列を整数に変換してロックキーとして使用
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${event.sessionId}))`);
 
     // seq を MAX+1 で計算
     const result = await tx
