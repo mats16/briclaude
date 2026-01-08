@@ -10,23 +10,40 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+<<<<<<< HEAD
 import { SESSION_MODELS, DEFAULT_SESSION_MODEL, TEXTAREA_MAX_HEIGHT_SIDEBAR } from '@/constants';
 
 interface NewSessionInputProps {
   onSubmit?: (content: string, modelId: string) => Promise<void> | void;
+=======
+
+const CLAUDE_MODELS = [
+  { id: 'opus', name: 'Opus 4.5', shortName: 'Opus 4.5', descriptionKey: 'sidebar.model.opusDesc' },
+  { id: 'sonnet', name: 'Sonnet 4.5', shortName: 'Sonnet 4.5', descriptionKey: 'sidebar.model.sonnetDesc' },
+  { id: 'haiku', name: 'Haiku 4.5', shortName: 'Haiku 4.5', descriptionKey: 'sidebar.model.haikuDesc' },
+];
+
+interface NewSessionInputProps {
+  onSubmit?: (content: string, modelId: string) => void;
+>>>>>>> 6c0290e (Add user route and service for user management)
   disabled?: boolean;
 }
 
 export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
   const { t } = useTranslation();
   const [content, setContent] = useState('');
+<<<<<<< HEAD
   const [selectedModel, setSelectedModel] = useState(DEFAULT_SESSION_MODEL);
   const [isSubmitting, setIsSubmitting] = useState(false);
+=======
+  const [selectedModel, setSelectedModel] = useState(CLAUDE_MODELS[1]); // Default to Sonnet
+>>>>>>> 6c0290e (Add user route and service for user management)
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
+<<<<<<< HEAD
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, TEXTAREA_MAX_HEIGHT_SIDEBAR)}px`;
     }
   }, [content]);
@@ -40,6 +57,16 @@ export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
       } finally {
         setIsSubmitting(false);
       }
+=======
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+    }
+  }, [content]);
+
+  const handleSubmit = () => {
+    if (content.trim() && !disabled) {
+      onSubmit?.(content.trim(), selectedModel.id);
+      setContent('');
+>>>>>>> 6c0290e (Add user route and service for user management)
     }
   };
 
@@ -56,7 +83,11 @@ export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
         <Textarea
           ref={textareaRef}
           value={content}
+<<<<<<< HEAD
           onChange={e => setContent(e.target.value)}
+=======
+          onChange={(e) => setContent(e.target.value)}
+>>>>>>> 6c0290e (Add user route and service for user management)
           onKeyDown={handleKeyDown}
           placeholder={t('sidebar.newSessionPlaceholder')}
           disabled={disabled}
@@ -67,7 +98,15 @@ export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
+<<<<<<< HEAD
                 <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+=======
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0"
+                >
+>>>>>>> 6c0290e (Add user route and service for user management)
                   <Image className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </TooltipTrigger>
@@ -90,7 +129,11 @@ export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
+<<<<<<< HEAD
                 {SESSION_MODELS.map(model => (
+=======
+                {CLAUDE_MODELS.map((model) => (
+>>>>>>> 6c0290e (Add user route and service for user management)
                   <DropdownMenuItem
                     key={model.id}
                     onClick={() => setSelectedModel(model)}
@@ -98,11 +141,17 @@ export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
                   >
                     <div className="flex flex-col">
                       <span className="font-medium">{model.name}</span>
+<<<<<<< HEAD
                       {model.descriptionKey && (
                         <span className="text-xs text-muted-foreground">
                           {t(model.descriptionKey)}
                         </span>
                       )}
+=======
+                      <span className="text-xs text-muted-foreground">
+                        {t(model.descriptionKey)}
+                      </span>
+>>>>>>> 6c0290e (Add user route and service for user management)
                     </div>
                     {selectedModel.id === model.id && (
                       <Check className="h-4 w-4 text-primary shrink-0 ml-2" />
@@ -119,7 +168,11 @@ export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
                     size="icon"
                     className="h-7 w-7 shrink-0"
                     onClick={handleSubmit}
+<<<<<<< HEAD
                     disabled={!content.trim() || disabled || isSubmitting}
+=======
+                    disabled={!content.trim() || disabled}
+>>>>>>> 6c0290e (Add user route and service for user management)
                   >
                     <Send className="h-3.5 w-3.5" />
                   </Button>

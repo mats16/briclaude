@@ -4,10 +4,9 @@ import { getOrCreateUser } from '../services/user.service.js';
 
 const userRoute: FastifyPluginAsync = async fastify => {
   fastify.get<{ Reply: UserResponse | ApiError }>('/user', async (request, reply) => {
-    // preHandlerで必ず設定されるため、ctxは常に存在する
-    const { user: requestUser } = request.ctx!;
+    const userId = request.ctx?.user.id;
 
-    if (!requestUser.id) {
+    if (!userId) {
       return reply.status(401).send({
         error: 'Unauthorized',
         message: 'User ID not found in request context',
@@ -16,9 +15,9 @@ const userRoute: FastifyPluginAsync = async fastify => {
     }
 
     const user = await getOrCreateUser(fastify, {
-      id: requestUser.id,
-      name: requestUser.name,
-      email: requestUser.email,
+      id: userId,
+      name: request.ctx?.user.name ?? '',
+      email: request.ctx?.user.email ?? '',
     });
 
     return reply.send({ user });

@@ -21,9 +21,9 @@ export async function getOrCreateUser(
   const { id, name, email } = userInfo;
 
   // 既存ユーザーチェック
-  const [existingUser] = await fastify.db.select().from(users).where(eq(users.id, id)).limit(1);
+  const existingUser = await fastify.db.select().from(users).where(eq(users.id, id)).limit(1);
 
-  if (existingUser) {
+  if (existingUser.length > 0) {
     return { id, name, email };
   }
 
