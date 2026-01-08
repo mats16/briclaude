@@ -20,6 +20,12 @@ export function AppLayout() {
   });
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const sidebarWidthRef = useRef(sidebarWidth);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    sidebarWidthRef.current = sidebarWidth;
+  }, [sidebarWidth]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -34,18 +40,12 @@ export function AppLayout() {
       const containerRect = containerRef.current.getBoundingClientRect();
       const newWidth = e.clientX - containerRect.left;
       const clampedWidth = Math.min(Math.max(newWidth, MIN_SIDEBAR_WIDTH), MAX_SIDEBAR_WIDTH);
-      console.log('Drag:', {
-        newWidth,
-        clampedWidth,
-        MIN: MIN_SIDEBAR_WIDTH,
-        MAX: MAX_SIDEBAR_WIDTH,
-      });
       setSidebarWidth(clampedWidth);
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
-      localStorage.setItem('sidebar-width', sidebarWidth.toString());
+      localStorage.setItem('sidebar-width', sidebarWidthRef.current.toString());
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -55,7 +55,7 @@ export function AppLayout() {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, sidebarWidth]);
+  }, [isDragging]);
 
   return (
     <div ref={containerRef} className="flex h-screen w-screen overflow-hidden bg-background">

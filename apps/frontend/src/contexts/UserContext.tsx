@@ -1,5 +1,6 @@
 import { createContext, useCallback, useEffect, useState, type ReactNode } from 'react';
 import type { UserInfo } from '@repo/types';
+import { userService } from '@/services';
 
 export interface UserContextValue {
   user: UserInfo | null;
@@ -24,13 +25,7 @@ export function UserProvider({ children }: UserProviderProps) {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/user');
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch user: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await userService.getCurrentUser();
       setUser(data.user);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'));

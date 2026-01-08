@@ -10,22 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-const CLAUDE_MODELS = [
-  { id: 'opus', name: 'Opus 4.5', shortName: 'Opus 4.5', descriptionKey: 'sidebar.model.opusDesc' },
-  {
-    id: 'sonnet',
-    name: 'Sonnet 4.5',
-    shortName: 'Sonnet 4.5',
-    descriptionKey: 'sidebar.model.sonnetDesc',
-  },
-  {
-    id: 'haiku',
-    name: 'Haiku 4.5',
-    shortName: 'Haiku 4.5',
-    descriptionKey: 'sidebar.model.haikuDesc',
-  },
-];
+import { SESSION_MODELS, DEFAULT_SESSION_MODEL } from '@/constants';
 
 interface NewSessionInputProps {
   onSubmit?: (content: string, modelId: string) => void;
@@ -35,7 +20,7 @@ interface NewSessionInputProps {
 export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
   const { t } = useTranslation();
   const [content, setContent] = useState('');
-  const [selectedModel, setSelectedModel] = useState(CLAUDE_MODELS[1]); // Default to Sonnet
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_SESSION_MODEL);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -99,7 +84,7 @@ export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                {CLAUDE_MODELS.map(model => (
+                {SESSION_MODELS.map(model => (
                   <DropdownMenuItem
                     key={model.id}
                     onClick={() => setSelectedModel(model)}
@@ -107,9 +92,11 @@ export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
                   >
                     <div className="flex flex-col">
                       <span className="font-medium">{model.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {t(model.descriptionKey)}
-                      </span>
+                      {model.descriptionKey && (
+                        <span className="text-xs text-muted-foreground">
+                          {t(model.descriptionKey)}
+                        </span>
+                      )}
                     </div>
                     {selectedModel.id === model.id && (
                       <Check className="h-4 w-4 text-primary shrink-0 ml-2" />
