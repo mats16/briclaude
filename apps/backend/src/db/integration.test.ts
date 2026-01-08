@@ -67,36 +67,6 @@ describe('Database Integration Tests', () => {
     await client`ALTER TABLE sessions FORCE ROW LEVEL SECURITY`;
     await client`ALTER TABLE user_settings FORCE ROW LEVEL SECURITY`;
     await client`ALTER TABLE oauth_tokens FORCE ROW LEVEL SECURITY`;
-
-    // updated_at 自動更新トリガーをセットアップ
-    await db.execute(sql`
-      CREATE OR REPLACE FUNCTION update_updated_at_column()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.updated_at = now();
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql
-    `);
-
-    const tables = ['users', 'user_settings', 'oauth_tokens', 'sessions', 'session_events'];
-    for (const tableName of tables) {
-      const triggerName = `update_${tableName}_updated_at`;
-      await db.execute(sql.raw(`
-        DO $$
-        BEGIN
-          IF NOT EXISTS (
-            SELECT 1 FROM pg_trigger WHERE tgname = '${triggerName}'
-          ) THEN
-            CREATE TRIGGER ${triggerName}
-              BEFORE UPDATE ON "${tableName}"
-              FOR EACH ROW
-              EXECUTE FUNCTION update_updated_at_column();
-          END IF;
-        END;
-        $$
-      `));
-    }
   });
 
   afterAll(async () => {

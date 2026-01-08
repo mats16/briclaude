@@ -100,9 +100,6 @@ export default fp(
         await migrate(db, { migrationsFolder });
 
         fastify.log.info('Database migrations completed');
-
-        // updated_at 自動更新トリガーのセットアップ
-        await setupUpdatedAtTriggers(db, fastify.log);
       } else {
         const reason = fastify.config.DISABLE_AUTO_MIGRATION
           ? 'DISABLE_AUTO_MIGRATION is set'
