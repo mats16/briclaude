@@ -217,7 +217,10 @@ describe('Database Integration Tests', () => {
      * RLSコンテキスト付きでクエリを実行するヘルパー
      * set_config を使用してパラメータを安全に渡す
      */
-    async function withUserContext<T>(userId: string, callback: (tx: typeof db) => Promise<T>): Promise<T> {
+    async function withUserContext<T>(
+      userId: string,
+      callback: (tx: typeof db) => Promise<T>
+    ): Promise<T> {
       return db.transaction(async tx => {
         // set_config の第3引数 true = is_local（SET LOCAL と同等）
         await tx.execute(sql`SELECT set_config('app.user_id', ${userId}, true)`);
@@ -359,7 +362,10 @@ describe('Database Integration Tests', () => {
         if (skipRlsTests) return;
 
         const user1Tokens = await withUserContext(TEST_USER_1, async tx => {
-          return tx.select().from(schema.oauthTokens).where(eq(schema.oauthTokens.userId, TEST_USER_2));
+          return tx
+            .select()
+            .from(schema.oauthTokens)
+            .where(eq(schema.oauthTokens.userId, TEST_USER_2));
         });
 
         expect(user1Tokens).toHaveLength(0);
