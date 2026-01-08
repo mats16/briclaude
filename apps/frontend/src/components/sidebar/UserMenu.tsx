@@ -1,4 +1,4 @@
-import { Globe, LogOut, Check, Settings } from 'lucide-react';
+import { Globe, LogOut, Check, Settings, AlertCircle, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -18,9 +18,11 @@ interface UserMenuProps {
   userName?: string;
   userEmail?: string;
   isLoading?: boolean;
+  error?: Error | null;
+  onRetry?: () => void;
 }
 
-export function UserMenu({ userName, userEmail, isLoading }: UserMenuProps) {
+export function UserMenu({ userName, userEmail, isLoading, error, onRetry }: UserMenuProps) {
   const { t, i18n } = useTranslation();
 
   const displayName = userName || 'User';
@@ -39,6 +41,26 @@ export function UserMenu({ userName, userEmail, isLoading }: UserMenuProps) {
     return (
       <div className="px-3 h-[50px] flex items-center border-t border-border shrink-0">
         <Skeleton className="h-8 w-8 rounded-full" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="px-3 h-[50px] flex items-center gap-2 border-t border-border shrink-0">
+        <div className="flex items-center gap-2 text-destructive">
+          <AlertCircle className="h-4 w-4" />
+          <span className="text-xs truncate">{t('user.loadError')}</span>
+        </div>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className="p-1 rounded hover:bg-muted transition-colors"
+            aria-label={t('common.retry')}
+          >
+            <RefreshCw className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+          </button>
+        )}
       </div>
     );
   }

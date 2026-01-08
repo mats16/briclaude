@@ -44,7 +44,7 @@ export function Sidebar({
   onSelectSession,
   onNewSession,
 }: SidebarProps) {
-  const { user, isLoading } = useUser();
+  const { user, isLoading, error, refetch } = useUser();
 
   return (
     <div className="relative z-10 flex flex-col w-full h-full min-w-0 overflow-hidden bg-card border-r border-border">
@@ -56,7 +56,13 @@ export function Sidebar({
         selectedSessionId={selectedSessionId}
         onSelectSession={onSelectSession}
       />
-      <UserMenu userName={user?.name} userEmail={user?.email} isLoading={isLoading} />
+      <UserMenu
+        userName={user?.name}
+        userEmail={user?.email}
+        isLoading={isLoading}
+        error={error}
+        onRetry={refetch}
+      />
     </div>
   );
 }

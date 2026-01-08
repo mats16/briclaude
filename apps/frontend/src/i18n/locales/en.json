@@ -31,7 +31,8 @@
     "settings": "Settings",
     "language": "Language",
     "theme": "Theme",
-    "signOut": "Sign Out"
+    "signOut": "Sign Out",
+    "loadError": "Failed to load user"
   },
   "common": {
     "loading": "Loading...",
