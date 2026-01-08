@@ -33,9 +33,7 @@ export function MainHeader({
           <DropdownMenuContent align="start">
             <DropdownMenuItem>Rename session</DropdownMenuItem>
             <DropdownMenuItem>Archive session</DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">
-              Delete session
-            </DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive">Delete session</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

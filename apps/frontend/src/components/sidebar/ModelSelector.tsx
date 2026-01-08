@@ -44,7 +44,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
             </div>
           </SelectTrigger>
           <SelectContent>
-            {MODELS.map((model) => (
+            {MODELS.map(model => (
               <SelectItem key={model.id} value={model.id}>
                 {model.name}
               </SelectItem>

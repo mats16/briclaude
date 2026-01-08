@@ -23,7 +23,7 @@ export function UserMenu({ userName = 'User', userEmail }: UserMenuProps) {
 
   const initials = userName
     .split(' ')
-    .map((n) => n[0])
+    .map(n => n[0])
     .join('')
     .slice(0, 2)
     .toUpperCase();
@@ -55,15 +55,11 @@ export function UserMenu({ userName = 'User', userEmail }: UserMenuProps) {
             <DropdownMenuSubContent>
               <DropdownMenuItem onClick={() => changeLanguage('en')}>
                 {i18n.language === 'en' && <Check className="h-4 w-4 mr-2" />}
-                <span className={i18n.language !== 'en' ? 'ml-6' : ''}>
-                  {t('language.en')}
-                </span>
+                <span className={i18n.language !== 'en' ? 'ml-6' : ''}>{t('language.en')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => changeLanguage('ja')}>
                 {i18n.language === 'ja' && <Check className="h-4 w-4 mr-2" />}
-                <span className={i18n.language !== 'ja' ? 'ml-6' : ''}>
-                  {t('language.ja')}
-                </span>
+                <span className={i18n.language !== 'ja' ? 'ml-6' : ''}>{t('language.ja')}</span>
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>

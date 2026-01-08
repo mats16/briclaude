@@ -13,8 +13,18 @@ import {
 
 const CLAUDE_MODELS = [
   { id: 'opus', name: 'Opus 4.5', shortName: 'Opus 4.5', descriptionKey: 'sidebar.model.opusDesc' },
-  { id: 'sonnet', name: 'Sonnet 4.5', shortName: 'Sonnet 4.5', descriptionKey: 'sidebar.model.sonnetDesc' },
-  { id: 'haiku', name: 'Haiku 4.5', shortName: 'Haiku 4.5', descriptionKey: 'sidebar.model.haikuDesc' },
+  {
+    id: 'sonnet',
+    name: 'Sonnet 4.5',
+    shortName: 'Sonnet 4.5',
+    descriptionKey: 'sidebar.model.sonnetDesc',
+  },
+  {
+    id: 'haiku',
+    name: 'Haiku 4.5',
+    shortName: 'Haiku 4.5',
+    descriptionKey: 'sidebar.model.haikuDesc',
+  },
 ];
 
 interface NewSessionInputProps {
@@ -55,7 +65,7 @@ export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
         <Textarea
           ref={textareaRef}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={e => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={t('sidebar.newSessionPlaceholder')}
           disabled={disabled}
@@ -66,11 +76,7 @@ export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 shrink-0"
-                >
+                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
                   <Image className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </TooltipTrigger>
@@ -93,7 +99,7 @@ export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                {CLAUDE_MODELS.map((model) => (
+                {CLAUDE_MODELS.map(model => (
                   <DropdownMenuItem
                     key={model.id}
                     onClick={() => setSelectedModel(model)}
