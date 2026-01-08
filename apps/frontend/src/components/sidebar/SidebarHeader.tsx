@@ -13,7 +13,7 @@ export function SidebarHeader() {
           {t('app.title')}
         </span>
         <Badge variant="secondary" className="text-xs font-normal shrink-0">
-          {t('app.beta')}
+          {t('app.badge')}
         </Badge>
       </div>
     </div>

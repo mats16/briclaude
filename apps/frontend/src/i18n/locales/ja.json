@@ -1,17 +1,23 @@
 {
   "app": {
-    "title": "Claude Code",
-    "subtitle": "on Databricks",
-    "beta": "ベータ"
+    "title": "Claude Code on Databricks",
+    "badge": "Unofficial"
   },
   "sidebar": {
     "newSession": "新規セッション",
+    "newSessionPlaceholder": "新しいセッションを開始...",
+    "attachImage": "画像を添付",
+    "moreOptions": "その他のオプション",
+    "startSession": "セッション開始",
     "searchPlaceholder": "セッションを検索...",
     "sessions": "セッション",
     "noSessions": "セッションがありません",
     "model": {
       "label": "モデル",
-      "default": "デフォルト"
+      "default": "デフォルト",
+      "opusDesc": "複雑な作業に最も優れた性能",
+      "sonnetDesc": "日常的なタスクに最適",
+      "haikuDesc": "素早い回答に最速のモデルです"
     }
   },
   "main": {
