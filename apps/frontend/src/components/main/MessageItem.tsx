@@ -9,7 +9,7 @@ export function MessageItem({ message }: MessageItemProps) {
   const isUser = message.role === 'user';
 
   return (
-    <div className={cn('px-4 py-3', isUser && 'flex justify-end')}>
+    <div className={cn('py-3', isUser && 'flex justify-end')}>
       <div
         className={cn(
           'text-sm text-foreground whitespace-pre-wrap break-words',
