@@ -12,16 +12,19 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface UserMenuProps {
   userName?: string;
   userEmail?: string;
+  isLoading?: boolean;
 }
 
-export function UserMenu({ userName = 'User', userEmail }: UserMenuProps) {
+export function UserMenu({ userName, userEmail, isLoading }: UserMenuProps) {
   const { t, i18n } = useTranslation();
 
-  const initials = userName
+  const displayName = userName || 'User';
+  const initials = displayName
     .split(' ')
     .map(n => n[0])
     .join('')
@@ -31,6 +34,14 @@ export function UserMenu({ userName = 'User', userEmail }: UserMenuProps) {
   const changeLanguage = (lang: string) => {
     i18n.changeLanguage(lang);
   };
+
+  if (isLoading) {
+    return (
+      <div className="px-3 h-[50px] flex items-center border-t border-border shrink-0">
+        <Skeleton className="h-8 w-8 rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="px-3 h-[50px] flex items-center border-t border-border shrink-0">
@@ -46,7 +57,7 @@ export function UserMenu({ userName = 'User', userEmail }: UserMenuProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="flex flex-col">
-            <span>{userName}</span>
+            <span>{displayName}</span>
             {userEmail && (
               <span className="text-xs font-normal text-muted-foreground">{userEmail}</span>
             )}
