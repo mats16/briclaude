@@ -16,7 +16,7 @@ export function MessageArea({ messages }: MessageAreaProps) {
 
   return (
     <ScrollArea className="flex-1">
-      <div className="divide-y divide-border">
+      <div className="divide-y divide-border pb-24">
         {messages.map((message) => (
           <MessageItem key={message.id} message={message} />
         ))}

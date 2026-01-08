@@ -33,7 +33,7 @@ export function UserMenu({ userName = 'User', userEmail }: UserMenuProps) {
   };
 
   return (
-    <div className="px-3 py-3 border-t border-border shrink-0">
+    <div className="px-3 h-[50px] flex items-center border-t border-border shrink-0">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="rounded-full hover:ring-2 hover:ring-primary/50 transition-all">
