@@ -192,7 +192,7 @@ jobs:
           "
 
       - name: Run integration tests
-        run: npm test -- --testPathPattern='integration.test.ts'
+        run: npm test -- integration.test.ts
         working-directory: apps/backend
         env:
           NODE_ENV: test
