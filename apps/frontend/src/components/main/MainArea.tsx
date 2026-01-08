@@ -64,7 +64,7 @@ export function MainArea({
       content,
       timestamp: new Date().toISOString(),
     };
-    setLocalMessages(prev => [...prev, newMessage]);
+    setLocalMessages((prev) => [...prev, newMessage]);
     onSendMessage?.(content);
 
     // Mock assistant response
@@ -75,7 +75,7 @@ export function MainArea({
         content: 'メッセージを受け取りました。処理中です...',
         timestamp: new Date().toISOString(),
       };
-      setLocalMessages(prev => [...prev, assistantMessage]);
+      setLocalMessages((prev) => [...prev, assistantMessage]);
     }, 1000);
   };
 

@@ -1,23 +1,17 @@
 {
   "app": {
-    "title": "Claude Code on Databricks",
-    "badge": "Unofficial"
+    "title": "Claude Code",
+    "subtitle": "on Databricks",
+    "beta": "Beta"
   },
   "sidebar": {
     "newSession": "New Session",
-    "newSessionPlaceholder": "Start a new session...",
-    "attachImage": "Attach image",
-    "moreOptions": "More options",
-    "startSession": "Start session",
     "searchPlaceholder": "Search sessions...",
     "sessions": "Sessions",
     "noSessions": "No sessions yet",
     "model": {
       "label": "Model",
-      "default": "Default",
-      "opusDesc": "Most capable for complex work",
-      "sonnetDesc": "Best for everyday tasks",
-      "haikuDesc": "Fastest for quick answers"
+      "default": "Default"
     }
   },
   "main": {
@@ -31,8 +25,7 @@
     "settings": "Settings",
     "language": "Language",
     "theme": "Theme",
-    "signOut": "Sign Out",
-    "loadError": "Failed to load user"
+    "signOut": "Sign Out"
   },
   "common": {
     "loading": "Loading...",

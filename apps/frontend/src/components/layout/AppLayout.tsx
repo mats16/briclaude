@@ -2,27 +2,24 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Sidebar } from '@/components/sidebar/Sidebar';
 import { MainArea } from '@/components/main/MainArea';
 import { cn } from '@/lib/utils';
-import { SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_DEFAULT_WIDTH } from '@/constants';
+
+const MIN_SIDEBAR_WIDTH = 300;
+const MAX_SIDEBAR_WIDTH = 800;
+const DEFAULT_SIDEBAR_WIDTH = 420;
 
 export function AppLayout() {
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem('sidebar-width');
     if (saved) {
       const width = parseInt(saved, 10);
-      if (!isNaN(width) && width >= SIDEBAR_MIN_WIDTH && width <= SIDEBAR_MAX_WIDTH) {
+      if (!isNaN(width) && width >= MIN_SIDEBAR_WIDTH && width <= MAX_SIDEBAR_WIDTH) {
         return width;
       }
     }
-    return SIDEBAR_DEFAULT_WIDTH;
+    return DEFAULT_SIDEBAR_WIDTH;
   });
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const sidebarWidthRef = useRef(sidebarWidth);
-
-  // Keep ref in sync with state
-  useEffect(() => {
-    sidebarWidthRef.current = sidebarWidth;
-  }, [sidebarWidth]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -36,13 +33,14 @@ export function AppLayout() {
       if (!containerRef.current) return;
       const containerRect = containerRef.current.getBoundingClientRect();
       const newWidth = e.clientX - containerRect.left;
-      const clampedWidth = Math.min(Math.max(newWidth, SIDEBAR_MIN_WIDTH), SIDEBAR_MAX_WIDTH);
+      const clampedWidth = Math.min(Math.max(newWidth, MIN_SIDEBAR_WIDTH), MAX_SIDEBAR_WIDTH);
+      console.log('Drag:', { newWidth, clampedWidth, MIN: MIN_SIDEBAR_WIDTH, MAX: MAX_SIDEBAR_WIDTH });
       setSidebarWidth(clampedWidth);
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
-      localStorage.setItem('sidebar-width', sidebarWidthRef.current.toString());
+      localStorage.setItem('sidebar-width', sidebarWidth.toString());
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -52,12 +50,15 @@ export function AppLayout() {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging]);
+  }, [isDragging, sidebarWidth]);
 
   return (
     <div ref={containerRef} className="flex h-screen w-screen overflow-hidden bg-background">
       {/* Sidebar */}
-      <div style={{ width: sidebarWidth }} className="h-full shrink-0">
+      <div
+        style={{ width: sidebarWidth }}
+        className="h-full shrink-0"
+      >
         <Sidebar />
       </div>
 
@@ -77,7 +78,9 @@ export function AppLayout() {
       </div>
 
       {/* Overlay during drag to prevent text selection */}
-      {isDragging && <div className="fixed inset-0 z-50 cursor-col-resize" />}
+      {isDragging && (
+        <div className="fixed inset-0 z-50 cursor-col-resize" />
+      )}
     </div>
   );
 }

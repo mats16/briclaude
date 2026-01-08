@@ -21,7 +21,7 @@ export function MainHeader({
   const { t } = useTranslation();
 
   return (
-    <div className="flex items-center justify-between h-[50px] px-4 border-b border-border">
+    <div className="flex items-center justify-between px-4 py-3 border-b border-border">
       <div className="flex items-center gap-2 min-w-0">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -33,7 +33,9 @@ export function MainHeader({
           <DropdownMenuContent align="start">
             <DropdownMenuItem>Rename session</DropdownMenuItem>
             <DropdownMenuItem>Archive session</DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">Delete session</DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive">
+              Delete session
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

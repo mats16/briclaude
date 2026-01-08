@@ -9,9 +9,11 @@ export function SidebarHeader() {
     <div className="flex items-center gap-2 px-4 py-3 shrink-0">
       <Terminal className="h-5 w-5 shrink-0" />
       <div className="flex items-center gap-2 min-w-0">
-        <span className="font-semibold text-foreground whitespace-nowrap">{t('app.title')}</span>
+        <span className="font-semibold text-foreground whitespace-nowrap">
+          {t('app.title')}
+        </span>
         <Badge variant="secondary" className="text-xs font-normal shrink-0">
-          {t('app.badge')}
+          {t('app.beta')}
         </Badge>
       </div>
     </div>

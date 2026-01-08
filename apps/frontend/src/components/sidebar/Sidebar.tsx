@@ -1,10 +1,9 @@
 import type { SessionSummary } from '@repo/types';
 import { SidebarHeader } from './SidebarHeader';
-import { NewSessionInput } from './NewSessionInput';
+import { SearchBar } from './SearchBar';
 import { ModelSelector } from './ModelSelector';
 import { SessionList } from './SessionList';
 import { UserMenu } from './UserMenu';
-import { useUser } from '@/hooks/useUser';
 
 // Mock data for development
 const MOCK_SESSIONS: SessionSummary[] = [
@@ -35,34 +34,32 @@ interface SidebarProps {
   sessions?: SessionSummary[];
   selectedSessionId?: string | null;
   onSelectSession?: (sessionId: string) => void;
-  onNewSession?: (content: string, modelId: string) => void;
+  onSearch?: (query: string) => void;
+  onNewSession?: (query: string) => void;
+  userName?: string;
+  userEmail?: string;
 }
 
 export function Sidebar({
   sessions = MOCK_SESSIONS,
   selectedSessionId = '1',
   onSelectSession,
+  onSearch,
   onNewSession,
+  userName = 'KM',
+  userEmail,
 }: SidebarProps) {
-  const { user, isLoading, error, refetch } = useUser();
-
   return (
     <div className="relative z-10 flex flex-col w-full h-full min-w-0 overflow-hidden bg-card border-r border-border">
       <SidebarHeader />
-      <NewSessionInput onSubmit={onNewSession} />
+      <SearchBar onSearch={onSearch} onSubmit={onNewSession} />
       <ModelSelector />
       <SessionList
         sessions={sessions}
         selectedSessionId={selectedSessionId}
         onSelectSession={onSelectSession}
       />
-      <UserMenu
-        userName={user?.name}
-        userEmail={user?.email}
-        isLoading={isLoading}
-        error={error}
-        onRetry={refetch}
-      />
+      <UserMenu userName={userName} userEmail={userEmail} />
     </div>
   );
 }
