@@ -3,15 +3,47 @@ import fp from 'fastify-plugin';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import { sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import * as schema from '../db/schema.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+/**
+ * RLS対応トランザクションの型
+ * Drizzle ORM のトランザクション内で使用可能なDB操作
+ */
+export type RLSTransaction = Parameters<
+  Parameters<PostgresJsDatabase<typeof schema>['transaction']>[0]
+>[0];
+
+/**
+ * withUserContext のコールバック型
+ */
+export type WithUserContextCallback<T> = (tx: RLSTransaction) => Promise<T>;
+
 // Fastify型拡張
 declare module 'fastify' {
   interface FastifyInstance {
     db: PostgresJsDatabase<typeof schema>;
+    /**
+     * RLS対応のユーザーコンテキスト付きトランザクションを実行
+     *
+     * PostgreSQLセッション変数 `app.user_id` を設定し、
+     * RLSポリシーによるデータ分離を有効にします。
+     *
+     * @param userId - ユーザーID（RLSポリシーで使用）
+     * @param callback - トランザクション内で実行するコールバック
+     * @returns コールバックの戻り値
+     *
+     * @example
+     * ```typescript
+     * const sessions = await fastify.withUserContext(userId, async (tx) => {
+     *   return tx.select().from(sessions);
+     * });
+     * ```
+     */
+    withUserContext: <T>(userId: string, callback: WithUserContextCallback<T>) => Promise<T>;
   }
 }
 
@@ -56,6 +88,21 @@ export default fp(
 
       // Fastifyインスタンスにデコレート
       fastify.decorate('db', db);
+
+      // RLS対応のユーザーコンテキスト付きトランザクションヘルパー
+      fastify.decorate(
+        'withUserContext',
+        async <T>(userId: string, callback: WithUserContextCallback<T>): Promise<T> => {
+          return db.transaction(async tx => {
+            // PostgreSQLセッション変数を設定（トランザクションスコープ）
+            // SET LOCAL はトランザクション終了時に自動的にリセットされる
+            await tx.execute(sql`SET LOCAL app.user_id = ${userId}`);
+
+            // コールバックを実行
+            return callback(tx);
+          });
+        }
+      );
 
       fastify.log.info('Database connection established');
 
