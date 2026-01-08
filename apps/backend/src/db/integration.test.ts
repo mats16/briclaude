@@ -29,7 +29,6 @@ const TEST_SESSION_2 = 'test-session-2';
 describe('Database Integration Tests', () => {
   let client: ReturnType<typeof postgres>;
   let db: PostgresJsDatabase<typeof schema>;
-  let hasBypassRls = false;
 
   /**
    * RLS 保護テーブルへのアクセス用ヘルパー
@@ -60,19 +59,14 @@ describe('Database Integration Tests', () => {
     const migrationsFolder = path.join(__dirname, '../../migrations');
     await migrate(db, { migrationsFolder });
 
-    // 現在のロールがBYPASSRLS属性を持っているかチェック
-    const result = await client`
-      SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user
-    `;
-    hasBypassRls = result[0]?.rolbypassrls === true;
-
-    // BYPASSRLS を持つユーザー（ローカル Neon など）の場合のみ FORCE RLS を適用
-    // CI 環境では testuser が BYPASSRLS を持たないため、RLS は自動的に適用される
-    if (hasBypassRls) {
-      await client`ALTER TABLE sessions FORCE ROW LEVEL SECURITY`;
-      await client`ALTER TABLE user_settings FORCE ROW LEVEL SECURITY`;
-      await client`ALTER TABLE oauth_tokens FORCE ROW LEVEL SECURITY`;
-    }
+    // 常に FORCE ROW LEVEL SECURITY を適用
+    // 理由:
+    // 1. BYPASSRLS 属性を持つユーザー（ローカル Neon など）は RLS をバイパスする
+    // 2. テーブルオーナー（CI で testuser がマイグレーションを実行した場合など）も RLS をバイパスする
+    // FORCE RLS により、どちらのケースでも RLS が強制される
+    await client`ALTER TABLE sessions FORCE ROW LEVEL SECURITY`;
+    await client`ALTER TABLE user_settings FORCE ROW LEVEL SECURITY`;
+    await client`ALTER TABLE oauth_tokens FORCE ROW LEVEL SECURITY`;
   });
 
   afterAll(async () => {
@@ -83,11 +77,9 @@ describe('Database Integration Tests', () => {
 
   beforeEach(async () => {
     // テストデータをクリーンアップ
-    await db.delete(schema.sessionEvents);
-    await db.delete(schema.sessions);
-    await db.delete(schema.oauthTokens);
-    await db.delete(schema.userSettings);
-    await db.delete(schema.users);
+    // TRUNCATE は RLS をバイパスするため、ユーザーコンテキストなしで実行可能
+    // CASCADE で外部キー参照を持つテーブルも一緒にクリア
+    await client`TRUNCATE TABLE session_events, sessions, oauth_tokens, user_settings, users CASCADE`;
   });
 
   describe('insertSessionEvent', () => {
@@ -307,10 +299,13 @@ describe('Database Integration Tests', () => {
             .where(eq(schema.sessions.id, TEST_SESSION_1));
         });
 
-        const [updated] = await db
-          .select()
-          .from(schema.sessions)
-          .where(eq(schema.sessions.id, TEST_SESSION_1));
+        // RLS コンテキスト付きで確認
+        const [updated] = await withUserContext(TEST_USER_1, async tx => {
+          return tx
+            .select()
+            .from(schema.sessions)
+            .where(eq(schema.sessions.id, TEST_SESSION_1));
+        });
 
         expect(updated.title).toBe('Updated Title');
       });
@@ -325,11 +320,13 @@ describe('Database Integration Tests', () => {
             .where(eq(schema.sessions.id, TEST_SESSION_2));
         });
 
-        // User 2のセッションは変更されていないはず
-        const [notUpdated] = await db
-          .select()
-          .from(schema.sessions)
-          .where(eq(schema.sessions.id, TEST_SESSION_2));
+        // User 2のセッションは変更されていないはず（User 2 のコンテキストで確認）
+        const [notUpdated] = await withUserContext(TEST_USER_2, async tx => {
+          return tx
+            .select()
+            .from(schema.sessions)
+            .where(eq(schema.sessions.id, TEST_SESSION_2));
+        });
 
         expect(notUpdated.title).toBe('User 2 Session');
       });
@@ -358,10 +355,13 @@ describe('Database Integration Tests', () => {
             .where(eq(schema.userSettings.userId, TEST_USER_1));
         });
 
-        const [updated] = await db
-          .select()
-          .from(schema.userSettings)
-          .where(eq(schema.userSettings.userId, TEST_USER_1));
+        // RLS コンテキスト付きで確認
+        const [updated] = await withUserContext(TEST_USER_1, async tx => {
+          return tx
+            .select()
+            .from(schema.userSettings)
+            .where(eq(schema.userSettings.userId, TEST_USER_1));
+        });
 
         expect(updated.claudeConfigBackup).toBe('disabled');
       });
@@ -467,13 +467,18 @@ describe('Database Integration Tests', () => {
       expect(retrieved.accessToken).toBe(originalToken);
 
       // 生SQLで取得（暗号化されたまま）
-      const rawResult = await client`
-        SELECT access_token FROM oauth_tokens WHERE user_id = ${TEST_USER_1}
-      `;
+      // RLS が有効なため、トランザクション内で app.user_id を設定
+      const rawResult = await db.transaction(async tx => {
+        await tx.execute(sql`SELECT set_config('app.user_id', ${TEST_USER_1}, true)`);
+        return tx.execute(
+          sql`SELECT access_token FROM oauth_tokens WHERE user_id = ${TEST_USER_1}`
+        );
+      });
 
-      expect(rawResult[0].access_token).not.toBe(originalToken);
+      const encryptedToken = (rawResult[0] as { access_token: string }).access_token;
+      expect(encryptedToken).not.toBe(originalToken);
       // Base64形式であることを確認
-      expect(() => Buffer.from(rawResult[0].access_token, 'base64')).not.toThrow();
+      expect(() => Buffer.from(encryptedToken, 'base64')).not.toThrow();
     });
 
     it('should handle nullable refresh_token correctly', async () => {
