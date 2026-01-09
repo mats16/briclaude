@@ -1,10 +1,10 @@
 {
-  "id": "3ab30857-3d92-43a7-9065-f365da371153",
-  "prevIds": [
-    "02377009-a809-4ef6-a87b-685cbd3a5459"
-  ],
   "version": "8",
   "dialect": "postgres",
+  "id": "683e50de-6ad5-44e7-9d81-a53120c59fcc",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
   "ddl": [
     {
       "isRlsEnabled": true,
@@ -284,14 +284,14 @@
       "table": "sessions"
     },
     {
-      "type": "boolean",
+      "type": "text",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
-      "default": "false",
+      "default": "'init'",
       "generated": null,
       "identity": null,
-      "name": "is_archived",
+      "name": "status",
       "entityType": "columns",
       "schema": "public",
       "table": "sessions"
@@ -310,27 +310,14 @@
       "table": "sessions"
     },
     {
-      "type": "text",
+      "type": "jsonb",
       "typeSchema": null,
       "notNull": false,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "databricks_workspace_path",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "sessions"
-    },
-    {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "false",
-      "generated": null,
-      "identity": null,
-      "name": "databricks_workspace_auto_push",
+      "name": "context",
       "entityType": "columns",
       "schema": "public",
       "table": "sessions"
@@ -540,6 +527,27 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "status",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "sessions_status_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "sessions"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "user_id",
           "isExpression": false,
           "asc": true,
@@ -555,7 +563,7 @@
         }
       ],
       "isUnique": false,
-      "where": "is_archived = false",
+      "where": "status != 'archived'",
       "with": "",
       "method": "btree",
       "concurrently": false,

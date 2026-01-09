@@ -27,10 +27,9 @@ CREATE TABLE "sessions" (
 	"id" text PRIMARY KEY,
 	"user_id" text,
 	"title" text,
-	"is_archived" boolean DEFAULT false NOT NULL,
+	"status" text DEFAULT 'init' NOT NULL,
 	"sdk_session_id" uuid,
-	"databricks_workspace_path" text,
-	"databricks_workspace_auto_push" boolean DEFAULT false NOT NULL,
+	"context" jsonb,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -54,7 +53,8 @@ CREATE INDEX "oauth_tokens_user_id_idx" ON "oauth_tokens" ("user_id");--> statem
 CREATE UNIQUE INDEX "session_events_uuid_unique" ON "session_events" ("uuid");--> statement-breakpoint
 CREATE INDEX "sessions_user_id_idx" ON "sessions" ("user_id");--> statement-breakpoint
 CREATE INDEX "sessions_updated_at_idx" ON "sessions" ("updated_at");--> statement-breakpoint
-CREATE INDEX "sessions_active_idx" ON "sessions" ("user_id","updated_at") WHERE is_archived = false;--> statement-breakpoint
+CREATE INDEX "sessions_status_idx" ON "sessions" ("status");--> statement-breakpoint
+CREATE INDEX "sessions_active_idx" ON "sessions" ("user_id","updated_at") WHERE status != 'archived';--> statement-breakpoint
 ALTER TABLE "oauth_tokens" ADD CONSTRAINT "oauth_tokens_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "session_events" ADD CONSTRAINT "session_events_session_id_sessions_id_fkey" FOREIGN KEY ("session_id") REFERENCES "sessions"("id") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL;--> statement-breakpoint
