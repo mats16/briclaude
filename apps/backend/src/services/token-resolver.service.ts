@@ -100,12 +100,11 @@ export async function getUserPAT(fastify: FastifyInstance, userId: string): Prom
             eq(oauthTokens.provider, 'databricks'),
             eq(oauthTokens.authType, 'pat')
           )
-        );
+        )
+        .limit(1);
     });
 
-    if (tokens.length > 0) {
-      return tokens[0].accessToken;
-    }
+    return tokens[0]?.accessToken ?? null;
   } catch (error) {
     fastify.log.warn({ userId, error }, 'Failed to fetch PAT from database');
   }
