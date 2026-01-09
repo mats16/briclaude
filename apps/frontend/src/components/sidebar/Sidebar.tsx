@@ -76,7 +76,7 @@ export function Sidebar({
     };
 
     const response = await sessionService.createSession(request);
-    navigate(`/${response.id}`, { state: { initialEvents: response.initial_events } });
+    navigate(`/${response.id}`);
   };
 
   return (

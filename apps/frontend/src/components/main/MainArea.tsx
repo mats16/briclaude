@@ -1,5 +1,4 @@
-import { useParams, useLocation, useNavigationType } from 'react-router-dom';
-import type { SessionEventData } from '@repo/types';
+import { useParams } from 'react-router-dom';
 import { MainHeader } from './MainHeader';
 import { MessageArea } from './MessageArea';
 import { InputArea } from './InputArea';
@@ -11,28 +10,15 @@ interface MainAreaProps {
   onSendMessage?: (content: string) => void;
 }
 
-interface LocationState {
-  initialEvents?: SessionEventData[];
-}
-
 export function MainArea({
   sessionTitle = 'New Session',
   branchName,
   onSendMessage,
 }: MainAreaProps) {
   const { sessionId } = useParams<{ sessionId?: string }>();
-  const location = useLocation();
-  const navigationType = useNavigationType();
-  const locationState = location.state as LocationState | null;
-
-  // navigationType が 'POP' の場合（URL直接アクセス、リロード、ブラウザバック）は
-  // initialEvents を使用しない（API から取得する）
-  // 'PUSH' の場合のみ initialEvents を使用（新規セッション作成時）
-  const shouldUseInitialEvents = navigationType === 'PUSH';
 
   const { events, isLoading, isConnected, error } = useSessionEvents({
     sessionId: sessionId ?? null,
-    initialEvents: shouldUseInitialEvents ? locationState?.initialEvents : undefined,
   });
 
   const handleSend = (content: string) => {
