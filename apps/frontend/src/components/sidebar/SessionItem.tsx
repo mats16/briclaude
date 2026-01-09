@@ -1,8 +1,8 @@
-import type { SessionSummary } from '@repo/types';
+import type { SessionResponse } from '@repo/types';
 import { cn } from '@/lib/utils';
 
 interface SessionItemProps {
-  session: SessionSummary;
+  session: SessionResponse;
   isSelected?: boolean;
   onClick?: () => void;
 }

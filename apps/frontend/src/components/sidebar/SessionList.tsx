@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Filter, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { SessionSummary } from '@repo/types';
+import type { SessionResponse } from '@repo/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -17,7 +17,7 @@ import { SessionItem } from './SessionItem';
 type SessionFilter = 'active' | 'archived' | 'all';
 
 interface SessionListProps {
-  sessions: SessionSummary[];
+  sessions: SessionResponse[];
   selectedSessionId?: string | null;
   onSelectSession?: (sessionId: string) => void;
   isLoading?: boolean;

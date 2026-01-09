@@ -81,24 +81,20 @@ export interface SessionCreateResponse {
 }
 
 // =====================================================
-// Session Summary/Detail Types
+// Session Response Types
 // =====================================================
 
-export interface SessionSummary {
+export interface SessionResponse {
   id: string;
   title: string | null;
   session_status: SessionStatus;
   created_at: string;
   updated_at: string;
-}
-
-export interface SessionDetail extends SessionSummary {
-  sdkSessionId: string | null;
-  sessionContext: SessionContextResponse | null;
+  session_context: SessionContextResponse | null;
 }
 
 export interface SessionListResponse {
-  data: SessionSummary[];
+  data: SessionResponse[];
   first_id: string;
   last_id: string;
   has_more: boolean;
@@ -216,5 +212,5 @@ export interface CreateSessionRequest {
  * @deprecated Use SessionCreateResponse instead
  */
 export interface CreateSessionResponse {
-  session: SessionDetail;
+  session: SessionResponse;
 }

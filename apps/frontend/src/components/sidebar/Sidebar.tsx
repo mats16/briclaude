@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import type { SessionSummary, SessionCreateRequest } from '@repo/types';
+import type { SessionResponse, SessionCreateRequest } from '@repo/types';
 import { SidebarHeader } from './SidebarHeader';
 import { NewSessionInput } from './NewSessionInput';
 import { ModelSelector } from './ModelSelector';
@@ -9,7 +9,7 @@ import { useUser } from '@/hooks/useUser';
 import { sessionService } from '@/services';
 
 interface SidebarProps {
-  sessions?: SessionSummary[];
+  sessions?: SessionResponse[];
   selectedSessionId?: string | null;
   onSelectSession?: (sessionId: string) => void;
   isSessionsLoading?: boolean;

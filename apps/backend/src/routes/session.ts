@@ -7,11 +7,12 @@ import type {
   SessionEventsQuery,
   SessionListQuery,
   SessionListResponse,
+  SessionResponse,
   WsConnectedMessage,
   WsErrorMessage,
   ApiError,
 } from '@repo/types';
-import { createSession, getSessions } from '../services/session.service.js';
+import { createSession, getSessions, getSession } from '../services/session.service.js';
 import { getSessionEvents, getSessionLastEventId } from '../services/session-events.service.js';
 import { wsManager } from '../services/websocket-manager.service.js';
 
@@ -81,6 +82,45 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
       return reply.status(500).send({
         error: 'InternalServerError',
         message: 'Failed to get sessions',
+        statusCode: 500,
+      });
+    }
+  });
+
+  // GET /sessions/:session_id - セッション詳細取得
+  fastify.get<{
+    Params: { session_id: string };
+    Reply: SessionResponse | ApiError;
+  }>('/sessions/:session_id', async (request, reply) => {
+    const { user } = request.ctx!;
+
+    if (!user.id) {
+      return reply.status(401).send({
+        error: 'Unauthorized',
+        message: 'User ID not found in request context',
+        statusCode: 401,
+      });
+    }
+
+    const { session_id } = request.params;
+
+    try {
+      const session = await getSession(fastify, user.id, session_id);
+
+      if (!session) {
+        return reply.status(404).send({
+          error: 'NotFound',
+          message: 'Session not found',
+          statusCode: 404,
+        });
+      }
+
+      return reply.send(session);
+    } catch (error) {
+      request.log.error(error, 'Failed to get session');
+      return reply.status(500).send({
+        error: 'InternalServerError',
+        message: 'Failed to get session',
         statusCode: 500,
       });
     }

@@ -10,7 +10,7 @@ import type {
   SessionContextResponse,
   SessionListQuery,
   SessionListResponse,
-  SessionSummary,
+  SessionResponse,
   SessionStatus,
   SessionCreateEventData,
 } from '@repo/types';
@@ -361,6 +361,7 @@ export async function getSessions(
         id: sessions.id,
         title: sessions.title,
         status: sessions.status,
+        context: sessions.context,
         createdAt: sessions.createdAt,
         updatedAt: sessions.updatedAt,
       })
@@ -373,13 +374,14 @@ export async function getSessions(
     const hasMore = rows.length > safeLimit;
     const resultRows = hasMore ? rows.slice(0, safeLimit) : rows;
 
-    // SessionSummary 形式に変換
-    const data: SessionSummary[] = resultRows.map(row => ({
+    // SessionResponse 形式に変換
+    const data: SessionResponse[] = resultRows.map(row => ({
       id: row.id,
       title: row.title,
       session_status: row.status as SessionStatus,
       created_at: row.createdAt.toISOString(),
       updated_at: row.updatedAt.toISOString(),
+      session_context: (row.context as SessionContextResponse) ?? null,
     }));
 
     return {
@@ -387,6 +389,47 @@ export async function getSessions(
       first_id: data.length > 0 ? data[0].id : '',
       last_id: data.length > 0 ? data[data.length - 1].id : '',
       has_more: hasMore,
+    };
+  });
+}
+
+/**
+ * 指定されたセッションを取得する
+ *
+ * @param fastify - Fastify インスタンス
+ * @param userId - ユーザーID
+ * @param sessionId - セッションID
+ * @returns セッション情報（見つからない場合は null）
+ */
+export async function getSession(
+  fastify: FastifyInstance,
+  userId: string,
+  sessionId: string
+): Promise<SessionResponse | null> {
+  return fastify.withUserContext(userId, async tx => {
+    const rows = await tx
+      .select({
+        id: sessions.id,
+        title: sessions.title,
+        status: sessions.status,
+        context: sessions.context,
+        createdAt: sessions.createdAt,
+        updatedAt: sessions.updatedAt,
+      })
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .limit(1);
+
+    if (rows.length === 0) return null;
+
+    const row = rows[0];
+    return {
+      id: row.id,
+      title: row.title,
+      session_status: row.status as SessionStatus,
+      created_at: row.createdAt.toISOString(),
+      updated_at: row.updatedAt.toISOString(),
+      session_context: (row.context as SessionContextResponse) ?? null,
     };
   });
 }

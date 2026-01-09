@@ -1,16 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { SessionSummary } from '@repo/types';
+import type { SessionResponse } from '@repo/types';
 import { sessionService } from '@/services/session.service';
 
 interface UseSessionsReturn {
-  sessions: SessionSummary[];
+  sessions: SessionResponse[];
   isLoading: boolean;
   error: Error | null;
   refetch: () => Promise<void>;
 }
 
 export function useSessions(): UseSessionsReturn {
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const [sessions, setSessions] = useState<SessionResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
