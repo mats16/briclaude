@@ -3,6 +3,7 @@ import compress from '@fastify/compress';
 import configPlugin from './plugins/config.js';
 import databasePlugin from './plugins/database.js';
 import requestDecoratorPlugin from './plugins/request-decorator.js';
+import requestContextPlugin from './plugins/request-context.js';
 import staticPlugin from './plugins/static.js';
 import healthRoute from './routes/health.js';
 import userRoute from './routes/user.js';
@@ -23,6 +24,9 @@ export async function build() {
 
   // リクエストデコレータプラグイン
   await app.register(requestDecoratorPlugin);
+
+  // リクエストコンテキストプラグイン（トークン解決）
+  await app.register(requestContextPlugin);
 
   // 圧縮プラグイン（brotli, gzip）
   await app.register(compress, {
