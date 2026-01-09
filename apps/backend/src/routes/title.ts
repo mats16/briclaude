@@ -1,13 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
+import OpenAI from 'openai';
 import type { GenerateTitleRequest, GenerateTitleResponse } from '@repo/types';
-
-interface DatabricksResponse {
-  choices?: Array<{
-    message?: {
-      content?: string;
-    };
-  }>;
-}
 
 const titleRoute: FastifyPluginAsync = async fastify => {
   fastify.post<{ Body: GenerateTitleRequest; Reply: GenerateTitleResponse }>(
@@ -22,32 +15,24 @@ const titleRoute: FastifyPluginAsync = async fastify => {
       }
 
       try {
-        const endpoint = `https://${fastify.config.DATABRICKS_HOST}/serving-endpoints/${fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL}/invocations`;
-
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${request.ctx?.user.oboAccessToken || ''}`,
-          },
-          body: JSON.stringify({
-            max_tokens: 50,
-            messages: [
-              {
-                role: 'user',
-                content: `Generate a short, concise title (3-6 words) for a coding session based on the following first message. Respond with only the title, no quotes or extra text.\n\nMessage: ${first_session_message}`,
-              },
-            ],
-          }),
+        const client = new OpenAI({
+          baseURL: `https://${fastify.config.DATABRICKS_HOST}/serving-endpoints/${fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL}`,
+          apiKey: request.ctx?.user.oboAccessToken || '',
         });
 
-        if (!response.ok) {
-          throw new Error(`Databricks API error: ${response.status}`);
-        }
+        const response = await client.chat.completions.create({
+          model: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
+          max_tokens: 50,
+          messages: [
+            {
+              role: 'user',
+              content: `Generate a short, concise title (3-6 words) for a coding session based on the following first message. Respond with only the title, no quotes or extra text.\n\nMessage: ${first_session_message}`,
+            },
+          ],
+        });
 
-        const data = (await response.json()) as DatabricksResponse;
         const generatedTitle =
-          data.choices?.[0]?.message?.content?.trim() || 'General coding session';
+          response.choices[0]?.message?.content?.trim() || 'General coding session';
 
         return reply.send({
           title: generatedTitle,
