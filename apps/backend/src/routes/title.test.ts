@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
 import Fastify, { FastifyInstance } from 'fastify';
 import configPlugin from '../plugins/config.js';
-import openaiClientPlugin from '../plugins/openai-client.js';
 import requestDecoratorPlugin from '../plugins/request-decorator.js';
 import titleRoute from './title.js';
 
@@ -54,7 +53,6 @@ describe('title route', () => {
   async function registerPlugins() {
     await app.register(configPlugin);
     await app.register(requestDecoratorPlugin);
-    await app.register(openaiClientPlugin);
     await app.register(titleRoute, { prefix: '/api' });
   }
 

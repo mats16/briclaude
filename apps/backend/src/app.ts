@@ -2,7 +2,6 @@ import Fastify from 'fastify';
 import compress from '@fastify/compress';
 import configPlugin from './plugins/config.js';
 import databasePlugin from './plugins/database.js';
-import openaiClientPlugin from './plugins/openai-client.js';
 import requestDecoratorPlugin from './plugins/request-decorator.js';
 import staticPlugin from './plugins/static.js';
 import healthRoute from './routes/health.js';
@@ -22,9 +21,6 @@ export async function build() {
 
   // リクエストデコレータプラグイン
   await app.register(requestDecoratorPlugin);
-
-  // OpenAIクライアントプラグイン
-  await app.register(openaiClientPlugin);
 
   // 圧縮プラグイン（brotli, gzip）
   await app.register(compress, {

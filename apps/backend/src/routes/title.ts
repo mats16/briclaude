@@ -1,4 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
+import OpenAI from 'openai';
 import type { GenerateTitleRequest, GenerateTitleResponse, ApiError } from '@repo/types';
 
 // Constants for title generation
@@ -65,7 +66,10 @@ const titleRoute: FastifyPluginAsync = async fastify => {
 
     try {
       const model = fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL;
-      const client = fastify.createOpenAIClient(accessToken, model);
+      const client = new OpenAI({
+        baseURL: `https://${fastify.config.DATABRICKS_HOST}/serving-endpoints/${model}`,
+        apiKey: accessToken,
+      });
 
       const response = await client.chat.completions.create({
         model,
