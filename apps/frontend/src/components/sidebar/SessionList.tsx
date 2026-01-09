@@ -19,7 +19,7 @@ export function SessionList({ sessions, selectedSessionId, onSelectSession }: Se
   // フィルタリング処理の最適化（将来的なフィルター機能追加に備える）
   const filteredSessions = useMemo(() => {
     // アーカイブされていないセッションのみ表示
-    return sessions.filter(session => !session.isArchived);
+    return sessions.filter(session => session.session_status !== 'archived');
   }, [sessions]);
 
   return (

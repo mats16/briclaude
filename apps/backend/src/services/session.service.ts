@@ -1,14 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import { typeid } from 'typeid-js';
 import { query } from '@anthropic-ai/claude-agent-sdk';
-import type { SessionStartRequest } from '@repo/types';
+import type {
+  SessionCreateRequest,
+  SessionCreateResponse,
+  SessionContextResponse,
+} from '@repo/types';
 import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
-
-export interface CreateSessionResult {
-  sessionId: string;
-  sdkSessionId: string;
-}
 
 /**
  * 新規セッションを作成する
@@ -20,15 +19,15 @@ export interface CreateSessionResult {
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
- * @param request - セッション開始リクエスト
- * @returns セッションIDとSDKセッションID
+ * @param request - セッション作成リクエスト
+ * @returns セッション作成レスポンス
  */
 export async function createSession(
   fastify: FastifyInstance,
   userId: string,
-  request: SessionStartRequest
-): Promise<CreateSessionResult> {
-  const { events, session_context } = request;
+  request: SessionCreateRequest
+): Promise<SessionCreateResponse> {
+  const { events, session_context, title } = request;
 
   // 1. TypeID で session_id 生成
   const sessionId = typeid('session').toString();
@@ -39,16 +38,26 @@ export async function createSession(
     sonnet: fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL,
     haiku: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
   };
-  const modelName =
-    modelMap[session_context.model] || fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL;
+  const modelName = modelMap[session_context.model] || fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL;
 
-  // 3. ユーザーメッセージのテキストを抽出
-  const userContent = events[0]?.message.content
-    .filter(c => c.type === 'text')
-    .map(c => c.text)
-    .join('\n');
+  // 3. ユーザーメッセージのテキストを抽出（新形式）
+  const userContent = events[0]?.data.message.content ?? '';
 
-  // 4. claude-agent-sdk で query 実行し、init イベントから sdk_session_id 取得
+  // 4. cwd の生成（SESSION_BASE_DIR + sessionId の末尾部分）
+  const sessionIdSuffix = sessionId.replace('session_', '');
+  const cwd = `${fastify.config.SESSION_BASE_DIR}/${sessionIdSuffix}`;
+
+  // 5. context オブジェクトの構築
+  const sessionContext: SessionContextResponse = {
+    allowed_tools: [],
+    disallowed_tools: [],
+    cwd,
+    model: modelName,
+    sources: session_context.sources,
+    outcomes: session_context.outcomes,
+  };
+
+  // 6. claude-agent-sdk で query 実行し、init イベントから sdk_session_id 取得
   let sdkSessionId = '';
   const response = query({
     prompt: userContent,
@@ -64,31 +73,43 @@ export async function createSession(
     }
   }
 
-  // 5. 単一トランザクション内でセッションとイベントを保存
-  // セッション保存とイベント保存が同一トランザクション内で実行されるため、
-  // どちらかが失敗した場合は両方ロールバックされる
+  // 7. 単一トランザクション内でセッションとイベントを保存
+  let createdAt: Date = new Date();
+  let updatedAt: Date = new Date();
+
   await fastify.withUserContext(userId, async tx => {
+    const now = new Date();
+    createdAt = now;
+    updatedAt = now;
+
     // セッションを sessions テーブルに保存
     await tx.insert(sessions).values({
       id: sessionId,
       userId,
-      title: null,
+      title: title ?? null,
+      status: 'running', // 初期ステータスは running
       sdkSessionId: sdkSessionId || null,
-      databricksWorkspacePath: session_context.databricksWorkspacePath,
-      databricksWorkspaceAutoPush: session_context.databricksWorkspaceAutoPush,
+      context: sessionContext,
     });
 
-    // イベントを session_events テーブルに保存
+    // イベントを session_events テーブルに保存（新形式）
     for (const event of events) {
       await insertSessionEventInTx(tx, {
-        uuid: event.uuid,
+        uuid: event.data.uuid,
         sessionId,
-        type: event.type,
+        type: event.data.type,
         subtype: null,
-        message: event.message,
+        message: event.data.message,
       });
     }
   });
 
-  return { sessionId, sdkSessionId };
+  return {
+    id: sessionId,
+    session_status: 'running',
+    title: title ?? null,
+    created_at: createdAt.toISOString(),
+    updated_at: updatedAt.toISOString(),
+    session_context: sessionContext,
+  };
 }

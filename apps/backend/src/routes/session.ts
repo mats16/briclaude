@@ -1,12 +1,12 @@
 // apps/backend/src/routes/session.ts
 import { FastifyPluginAsync } from 'fastify';
-import type { SessionStartRequest, SessionStartResponse, ApiError } from '@repo/types';
+import type { SessionCreateRequest, SessionCreateResponse, ApiError } from '@repo/types';
 import { createSession } from '../services/session.service.js';
 
 const sessionRoute: FastifyPluginAsync = async fastify => {
   fastify.post<{
-    Body: SessionStartRequest;
-    Reply: SessionStartResponse | ApiError;
+    Body: SessionCreateRequest;
+    Reply: SessionCreateResponse | ApiError;
   }>('/sessions', async (request, reply) => {
     const { user } = request.ctx!;
 
@@ -30,9 +30,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
 
     try {
       const result = await createSession(fastify, user.id, request.body);
-      return reply.status(201).send({
-        session_id: result.sessionId,
-      });
+      return reply.status(201).send(result);
     } catch (error) {
       request.log.error(error, 'Failed to create session');
       return reply.status(500).send({

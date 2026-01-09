@@ -4,7 +4,6 @@ import {
   uuid,
   timestamp,
   text,
-  boolean,
   integer,
   index,
   uniqueIndex,
@@ -170,10 +169,9 @@ export const sessions = pgTable(
     id: text('id').primaryKey(),
     userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
     title: text('title'),
-    isArchived: boolean('is_archived').notNull().default(false),
+    status: text('status').notNull().default('idle'), // 'running' | 'idle' | 'archived'
     sdkSessionId: uuid('sdk_session_id'),
-    databricksWorkspacePath: text('databricks_workspace_path'),
-    databricksWorkspaceAutoPush: boolean('databricks_workspace_auto_push').notNull().default(false),
+    context: jsonb('context'), // SessionContextResponse
     createdAt: timestamp('created_at', { mode: 'date' })
       .notNull()
       .default(sql`now()`),
@@ -187,10 +185,12 @@ export const sessions = pgTable(
     userIdIdx: index('sessions_user_id_idx').on(table.userId),
     // updated_at インデックス（ソート用）
     updatedAtIdx: index('sessions_updated_at_idx').on(table.updatedAt),
-    // アクティブセッション用部分インデックス（is_archived = false のみ）
+    // status インデックス（フィルタリング用）
+    statusIdx: index('sessions_status_idx').on(table.status),
+    // アクティブセッション用部分インデックス（status != 'archived' のみ）
     activeSessionsIdx: index('sessions_active_idx')
       .on(table.userId, table.updatedAt)
-      .where(sql`is_archived = false`),
+      .where(sql`status != 'archived'`),
   })
 ).enableRLS();
 

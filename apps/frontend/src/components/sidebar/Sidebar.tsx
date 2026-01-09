@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import type { SessionSummary, SessionStartRequest } from '@repo/types';
+import type { SessionSummary, SessionCreateRequest } from '@repo/types';
 import { SidebarHeader } from './SidebarHeader';
 import { NewSessionInput } from './NewSessionInput';
 import { ModelSelector } from './ModelSelector';
@@ -13,21 +13,21 @@ const MOCK_SESSIONS: SessionSummary[] = [
   {
     id: '1',
     title: 'Summarize context content clearly',
-    isArchived: false,
+    session_status: 'idle',
     createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
   },
   {
     id: '2',
     title: 'Debug authentication flow',
-    isArchived: false,
+    session_status: 'idle',
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
   },
   {
     id: '3',
     title: 'Implement user dashboard',
-    isArchived: false,
+    session_status: 'archived',
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
   },
@@ -48,26 +48,31 @@ export function Sidebar({
   const { user, databricksHost, isLoading, error, refetch } = useUser();
 
   const handleNewSession = async (content: string, modelId: string) => {
-    const request: SessionStartRequest = {
+    const request: SessionCreateRequest = {
       events: [
         {
-          uuid: crypto.randomUUID(),
-          type: 'user',
-          message: {
-            role: 'user',
-            content: [{ type: 'text', text: content }],
+          type: 'event',
+          data: {
+            uuid: crypto.randomUUID(),
+            session_id: '',
+            type: 'user',
+            parent_tool_use_id: null,
+            message: {
+              role: 'user',
+              content: content,
+            },
           },
         },
       ],
       session_context: {
         model: modelId as 'opus' | 'sonnet' | 'haiku',
-        databricksWorkspacePath: null,
-        databricksWorkspaceAutoPush: false,
+        sources: [],
+        outcomes: [],
       },
     };
 
-    const response = await sessionService.startSession(request);
-    navigate(`/${response.session_id}`);
+    const response = await sessionService.createSession(request);
+    navigate(`/${response.id}`);
   };
 
   return (

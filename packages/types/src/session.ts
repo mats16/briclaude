@@ -1,32 +1,105 @@
 // =====================================================
-// Session Types
+// Session Status Types
+// =====================================================
+
+export type SessionStatus = 'running' | 'idle' | 'archived';
+
+// =====================================================
+// Source/Outcome Types
+// =====================================================
+
+export interface DatabricksWorkspaceSource {
+  type: 'databricks_workspace';
+  path: string;
+}
+
+export type SessionSource = DatabricksWorkspaceSource;
+export type SessionOutcome = DatabricksWorkspaceSource;
+
+// =====================================================
+// Session Context Types
+// =====================================================
+
+/**
+ * セッション作成リクエスト用のコンテキスト
+ */
+export interface SessionCreateContext {
+  model: 'opus' | 'sonnet' | 'haiku';
+  sources: SessionSource[];
+  outcomes: SessionOutcome[];
+}
+
+/**
+ * セッションレスポンス用のコンテキスト（DBに保存される形式）
+ */
+export interface SessionContextResponse {
+  allowed_tools: string[];
+  disallowed_tools: string[];
+  cwd: string;
+  model: string;
+  sources: SessionSource[];
+  outcomes: SessionOutcome[];
+}
+
+// =====================================================
+// Session Create Event Types
+// =====================================================
+
+export interface SessionCreateEventData {
+  uuid: string;
+  session_id: string;
+  type: 'user';
+  parent_tool_use_id: string | null;
+  message: {
+    role: 'user';
+    content: string;
+  };
+}
+
+export interface SessionCreateEvent {
+  type: 'event';
+  data: SessionCreateEventData;
+}
+
+// =====================================================
+// Session Create Request/Response Types
+// =====================================================
+
+export interface SessionCreateRequest {
+  title?: string;
+  events: SessionCreateEvent[];
+  session_context: SessionCreateContext;
+}
+
+export interface SessionCreateResponse {
+  id: string;
+  session_status: SessionStatus;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+  session_context: SessionContextResponse;
+}
+
+// =====================================================
+// Session Summary/Detail Types
 // =====================================================
 
 export interface SessionSummary {
   id: string;
   title: string | null;
-  isArchived: boolean;
+  session_status: SessionStatus;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface SessionDetail extends SessionSummary {
   sdkSessionId: string | null;
-  databricksWorkspacePath: string | null;
-  databricksWorkspaceAutoPush: boolean;
+  sessionContext: SessionContextResponse | null;
 }
 
 export interface SessionListResponse {
   sessions: SessionSummary[];
   total: number;
-}
-
-export interface CreateSessionRequest {
-  title?: string;
-}
-
-export interface CreateSessionResponse {
-  session: SessionDetail;
 }
 
 // =====================================================
@@ -43,7 +116,7 @@ export interface ChatMessage {
 }
 
 // =====================================================
-// Session Start Types (claude-agent-sdk連携用)
+// Legacy Types (後方互換性のため残す)
 // =====================================================
 
 export interface UserMessageContentBlock {
@@ -56,23 +129,51 @@ export interface UserMessage {
   content: UserMessageContentBlock[];
 }
 
+/**
+ * @deprecated Use SessionCreateEvent instead
+ */
 export interface SessionStartEvent {
   uuid: string;
   type: 'user';
   message: UserMessage;
 }
 
+/**
+ * @deprecated Use SessionCreateContext instead
+ */
 export interface SessionContext {
   model: 'opus' | 'sonnet' | 'haiku';
   databricksWorkspacePath: string | null;
   databricksWorkspaceAutoPush: boolean;
 }
 
+/**
+ * @deprecated Use SessionCreateRequest instead
+ */
 export interface SessionStartRequest {
   events: SessionStartEvent[];
   session_context: SessionContext;
 }
 
+/**
+ * @deprecated Use SessionCreateResponse instead
+ */
 export interface SessionStartResponse {
   session_id: string;
+  sdk_session_id: string | null;
+  error?: unknown;
+}
+
+/**
+ * @deprecated Use SessionCreateRequest instead
+ */
+export interface CreateSessionRequest {
+  title?: string;
+}
+
+/**
+ * @deprecated Use SessionCreateResponse instead
+ */
+export interface CreateSessionResponse {
+  session: SessionDetail;
 }
