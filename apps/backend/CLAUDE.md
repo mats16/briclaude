@@ -1,48 +1,48 @@
 # Backend Application
 
-Fastify 5 で構築された REST API サーバー。Drizzle ORM でデータベース操作、Claude Agent SDK で AI 機能を提供。
+REST API server built with Fastify 5. Uses Drizzle ORM for database operations and Claude Agent SDK for AI features.
 
-## 技術スタック
+## Tech Stack
 
-| カテゴリ | 技術 |
-|---------|------|
-| フレームワーク | Fastify 5.2.0 |
+| Category | Technology |
+|----------|------------|
+| Framework | Fastify 5.2.0 |
 | ORM | Drizzle ORM 1.0.0-beta |
 | AI | Claude Agent SDK |
-| データベース | PostgreSQL (postgres.js) |
-| テスト | Vitest |
-| 開発 | tsx 4.x |
+| Database | PostgreSQL (postgres.js) |
+| Testing | Vitest |
+| Development | tsx 4.x |
 
-## ディレクトリ構造
+## Directory Structure
 
 ```
 src/
-├── db/                # データベース (schema, helpers)
-├── plugins/           # Fastify プラグイン
-│   ├── config.ts      # 環境変数設定 (@fastify/env)
-│   ├── database.ts    # データベース接続 (Drizzle)
-│   ├── request-context.ts  # リクエストコンテキスト
-│   ├── request-decorator.ts # リクエストデコレータ
-│   └── static.ts      # 静的ファイル配信
-├── routes/            # API ルート
-│   ├── health.ts      # ヘルスチェック
-│   ├── session.ts     # セッション管理
-│   ├── user.ts        # ユーザー情報
-│   ├── user-tokens.ts # トークン管理
-│   └── title.ts       # タイトル生成
-├── services/          # ビジネスロジック
+├── db/                # Database (schema, helpers)
+├── plugins/           # Fastify plugins
+│   ├── config.ts      # Environment variables (@fastify/env)
+│   ├── database.ts    # Database connection (Drizzle)
+│   ├── request-context.ts  # Request context
+│   ├── request-decorator.ts # Request decorator
+│   └── static.ts      # Static file serving
+├── routes/            # API routes
+│   ├── health.ts      # Health check
+│   ├── session.ts     # Session management
+│   ├── user.ts        # User info
+│   ├── user-tokens.ts # Token management
+│   └── title.ts       # Title generation
+├── services/          # Business logic
 │   ├── session.service.ts
 │   ├── title.service.ts
 │   ├── token-resolver.service.ts
 │   └── user.service.ts
-├── utils/             # ユーティリティ (encryption)
-├── app.ts             # Fastify アプリ設定
-└── server.ts          # サーバーエントリポイント
+├── utils/             # Utilities (encryption)
+├── app.ts             # Fastify app setup
+└── server.ts          # Server entry point
 ```
 
-## ルート定義パターン
+## Route Definition Pattern
 
-TypeScript ジェネリクスで型安全なルート:
+Type-safe routes using TypeScript generics:
 
 ```typescript
 import { FastifyPluginAsync } from 'fastify';
@@ -61,7 +61,7 @@ const healthRoute: FastifyPluginAsync = async fastify => {
 export default healthRoute;
 ```
 
-### リクエスト/レスポンス型
+### Request/Response Types
 
 ```typescript
 fastify.post<{
@@ -77,38 +77,38 @@ fastify.post<{
 });
 ```
 
-## プラグインシステム
+## Plugin System
 
-### 登録順序
+### Registration Order
 
 ```typescript
 // app.ts
 export async function build() {
   const app = Fastify({ logger: true });
 
-  // 1. 設定プラグイン
+  // 1. Config plugin
   await app.register(configPlugin);
 
-  // 2. データベースプラグイン
+  // 2. Database plugin
   await app.register(databasePlugin);
 
-  // 3. リクエストデコレータ
+  // 3. Request decorator
   await app.register(requestDecoratorPlugin);
 
-  // 4. API ルート
+  // 4. API routes
   await app.register(healthRoute, { prefix: '/api' });
   await app.register(sessionRoute, { prefix: '/api' });
 
-  // 5. 静的ファイル配信（最後）
+  // 5. Static file serving (last)
   await app.register(staticPlugin);
 
   return app;
 }
 ```
 
-### リクエストコンテキスト
+### Request Context
 
-Databricks Apps のヘッダーからユーザー情報を取得:
+Extract user info from Databricks Apps headers:
 
 ```typescript
 fastify.get('/example', async (request, reply) => {
@@ -119,17 +119,17 @@ fastify.get('/example', async (request, reply) => {
 });
 ```
 
-| ヘッダー | コンテキスト | フォールバック |
-|---------|-------------|---------------|
+| Header | Context | Fallback |
+|--------|---------|----------|
 | `x-forwarded-user` | `ctx.user.id` | Empty string |
 | `x-forwarded-preferred-username` | `ctx.user.name` | Empty string |
 | `x-forwarded-email` | `ctx.user.email` | Empty string |
 | `x-forwarded-access-token` | `ctx.user.oboAccessToken` | Empty string |
 | `x-request-id` | `ctx.requestId` | Generated UUID |
 
-## データベース (Drizzle ORM)
+## Database (Drizzle ORM)
 
-### スキーマ定義
+### Schema Definition
 
 ```typescript
 // src/db/schema.ts
@@ -143,7 +143,7 @@ export const users = pgTable('users', {
 });
 ```
 
-### クエリ
+### Queries
 
 ```typescript
 import { db } from '../plugins/database.js';
@@ -160,18 +160,18 @@ await db.insert(users).values({ id, name, email });
 await db.update(users).set({ name }).where(eq(users.id, userId));
 ```
 
-### マイグレーション
+### Migrations
 
 ```bash
-npm run db:generate   # マイグレーションファイル生成
-npm run db:migrate    # マイグレーション実行
-npm run db:push       # スキーマを直接プッシュ
-npm run db:studio     # Drizzle Studio 起動
+npm run db:generate   # Generate migration files
+npm run db:migrate    # Run migrations
+npm run db:push       # Push schema directly
+npm run db:studio     # Start Drizzle Studio
 ```
 
-## 環境変数
+## Environment Variables
 
-### 必須
+### Required
 
 ```bash
 DATABASE_URL=postgresql://localhost:5432/mydb
@@ -179,13 +179,13 @@ ENCRYPTION_KEY=your-64-character-hex-key
 DATABRICKS_HOST=your-workspace.databricks.com
 ```
 
-### オプション
+### Optional
 
 ```bash
 NODE_ENV=development          # development | production | test
-PORT=8000                     # サーバーポート
-USER_BASE_DIR=/home/app/users # ユーザーディレクトリ
-SESSION_BASE_DIR=/home/app/ws # セッションディレクトリ
+PORT=8000                     # Server port
+USER_BASE_DIR=/home/app/users # User directories
+SESSION_BASE_DIR=/home/app/ws # Session directories
 
 # Anthropic API
 ANTHROPIC_BASE_URL=https://your-workspace.databricks.com/serving-endpoints/anthropic
@@ -194,7 +194,7 @@ ANTHROPIC_DEFAULT_SONNET_MODEL=databricks-claude-sonnet-4-5
 ANTHROPIC_DEFAULT_HAIKU_MODEL=databricks-claude-haiku-4-5
 ```
 
-### 設定へのアクセス
+### Accessing Config
 
 ```typescript
 fastify.get('/example', async (request, reply) => {
@@ -205,34 +205,34 @@ fastify.get('/example', async (request, reply) => {
 });
 ```
 
-## 静的ファイル配信
+## Static File Serving
 
-Fastify から React フロントエンドを直接配信:
+Serves React frontend directly from Fastify:
 
-- `/api/*` → API エンドポイント
-- その他 → `frontend/dist` の静的ファイル
-- SPA フォールバック → `index.html`
+- `/api/*` -> API endpoints
+- Other paths -> Static files from `frontend/dist`
+- SPA fallback -> `index.html`
 
-### キャッシュ戦略
+### Caching Strategy
 
-| ファイル種類 | キャッシュ |
-|------------|----------|
-| JS/CSS/フォント | 1年（immutable） |
-| HTML/画像 | 1時間（must-revalidate） |
-| API | キャッシュなし |
+| File Type | Cache |
+|-----------|-------|
+| JS/CSS/Fonts | 1 year (immutable) |
+| HTML/Images | 1 hour (must-revalidate) |
+| API | No cache |
 
-## テスト
+## Testing
 
-### テストの実行
+### Running Tests
 
 ```bash
-npm run test           # テスト実行
-npm run test:watch     # ウォッチモード
+npm run test           # Run tests
+npm run test:watch     # Watch mode
 npm run test:ui        # Vitest UI
-npm run test:coverage  # カバレッジ
+npm run test:coverage  # Coverage
 ```
 
-### テストパターン
+### Test Pattern
 
 ```typescript
 // routes/health.test.ts
@@ -258,9 +258,9 @@ describe('Health Route', () => {
 });
 ```
 
-## エラーハンドリング
+## Error Handling
 
-### 標準エラーレスポンス
+### Standard Error Response
 
 ```typescript
 import type { ApiError } from '@repo/types';
@@ -276,7 +276,7 @@ fastify.setErrorHandler((error, request, reply) => {
 });
 ```
 
-### ルートレベル
+### Route Level
 
 ```typescript
 fastify.get('/users/:id', async (request, reply) => {
@@ -294,30 +294,30 @@ fastify.get('/users/:id', async (request, reply) => {
 });
 ```
 
-## 開発
+## Development
 
 ```bash
-npm run dev      # 開発サーバー (tsx watch)
-npm run build    # TypeScript ビルド
-npm run start    # 本番サーバー起動
+npm run dev      # Dev server (tsx watch)
+npm run build    # TypeScript build
+npm run start    # Production server
 ```
 
-## トラブルシューティング
+## Troubleshooting
 
-### ポートが使用中
+### Port Already in Use
 
 ```bash
-lsof -i :8000    # プロセスを確認
-kill -9 <PID>    # プロセスを終了
+lsof -i :8000    # Find process
+kill -9 <PID>    # Kill process
 ```
 
-### 型エラー
+### Type Errors
 
-1. `@repo/types` をビルド: `npm run build --filter=@repo/types`
-2. インポートパスに `.js` 拡張子を使用（ESM 要件）
+1. Build `@repo/types`: `npm run build --filter=@repo/types`
+2. Use `.js` extension in import paths (ESM requirement)
 
-### データベース接続エラー
+### Database Connection Errors
 
-1. PostgreSQL が起動しているか確認
-2. `DATABASE_URL` が正しいか確認
-3. `npm run db:push` でスキーマを同期
+1. Verify PostgreSQL is running
+2. Check `DATABASE_URL` is correct
+3. Sync schema with `npm run db:push`

@@ -1,8 +1,8 @@
 # Claude Code on Databricks
 
-Databricks Apps 上で動作する Claude Code のような AI チャットアプリケーションのモノレポ。
+A monorepo for a Claude Code-like AI chat application running on Databricks Apps.
 
-## アーキテクチャ
+## Architecture
 
 ```
 claude-code-on-databricks/
@@ -10,75 +10,75 @@ claude-code-on-databricks/
 │   ├── frontend/          # React 19 + Vite 7 + shadcn/ui
 │   └── backend/           # Fastify 5 + Drizzle ORM + Claude Agent SDK
 └── packages/
-    ├── types/             # 共有 TypeScript 型定義
-    ├── eslint-config/     # 共有 ESLint 設定
-    └── typescript-config/ # 共有 TypeScript 設定
+    ├── types/             # Shared TypeScript type definitions
+    ├── eslint-config/     # Shared ESLint configuration
+    └── typescript-config/ # Shared TypeScript configuration
 ```
 
-## 技術スタック
+## Tech Stack
 
-| カテゴリ | 技術 |
-|---------|------|
-| 言語 | TypeScript 5.8+ (strict mode) |
-| フロントエンド | React 19, Vite 7, Tailwind CSS, shadcn/ui, i18next |
-| バックエンド | Fastify 5, Drizzle ORM, Claude Agent SDK |
-| モノレポ | Turborepo 2.x, npm workspaces |
-| コード品質 | ESLint 9 (Flat Config), Prettier |
-| ランタイム | Node.js 22.16 (LTS) |
+| Category | Technology |
+|----------|------------|
+| Language | TypeScript 5.8+ (strict mode) |
+| Frontend | React 19, Vite 7, Tailwind CSS, shadcn/ui, i18next |
+| Backend | Fastify 5, Drizzle ORM, Claude Agent SDK |
+| Monorepo | Turborepo 2.x, npm workspaces |
+| Code Quality | ESLint 9 (Flat Config), Prettier |
+| Runtime | Node.js 22.16 (LTS) |
 
-## 開発コマンド
+## Development Commands
 
 ```bash
-npm install          # 依存関係をインストール
-npm run dev          # 全アプリを開発モードで起動
-npm run build        # 全パッケージをビルド
-npm run lint         # リンターを実行
-npm run format       # コードをフォーマット
-npm run type-check   # 型チェック
+npm install          # Install dependencies
+npm run dev          # Start all apps in development mode
+npm run build        # Build all packages
+npm run lint         # Run linter
+npm run format       # Format code
+npm run type-check   # Type check
 ```
 
-### 個別アプリの操作
+### Working with Individual Apps
 
 ```bash
-npm run dev --filter=@repo/frontend   # フロントエンドのみ
-npm run dev --filter=@repo/backend    # バックエンドのみ
-npm run build --filter=@repo/types    # types パッケージをビルド
+npm run dev --filter=@repo/frontend   # Frontend only
+npm run dev --filter=@repo/backend    # Backend only
+npm run build --filter=@repo/types    # Build types package
 ```
 
-## コードスタイル
+## Code Style
 
-### 必須ルール
+### Required Rules
 
-- **TypeScript First**: 全コードは TypeScript で記述（`any` 禁止、`unknown` または適切な型を使用）
-- **共有型**: API 型は `packages/types` で定義し、フロントエンド・バックエンド間で共有
-- **ESLint 9 Flat Config**: `.eslintrc.*` は使用しない（`eslint.config.js` のみ）
-- **Prettier**: コミット前にフォーマット必須
+- **TypeScript First**: All code must be written in TypeScript (no `any`, use `unknown` or proper types)
+- **Shared Types**: API types must be defined in `packages/types` and shared between frontend and backend
+- **ESLint 9 Flat Config**: Do not use `.eslintrc.*` (only `eslint.config.js`)
+- **Prettier**: Format code before committing
 
-### ファイル命名規則
+### File Naming Conventions
 
-| 種類 | 規則 | 例 |
-|------|------|-----|
-| コンポーネント | PascalCase | `UserProfile.tsx` |
-| ユーティリティ | camelCase | `formatDate.ts` |
-| 型定義 | PascalCase | `UserTypes.ts` |
-| 設定ファイル | kebab-case | `eslint.config.js` |
+| Type | Convention | Example |
+|------|------------|---------|
+| Components | PascalCase | `UserProfile.tsx` |
+| Utilities | camelCase | `formatDate.ts` |
+| Type Definitions | PascalCase | `UserTypes.ts` |
+| Config Files | kebab-case | `eslint.config.js` |
 
-### インポート順序
+### Import Order
 
 ```typescript
-// 1. 外部ライブラリ
+// 1. External libraries
 import { useState } from 'react';
 
-// 2. 内部パッケージ
+// 2. Internal packages
 import type { HealthCheckResponse } from '@repo/types';
 
-// 3. 相対インポート
+// 3. Relative imports
 import { formatDate } from './utils';
 ```
 
-## 型の共有
+## Type Sharing
 
-`@repo/types` パッケージで API 型を定義し、フロントエンド・バックエンド間で共有:
+Define API types in `@repo/types` package and share between frontend and backend:
 
 ```typescript
 // packages/types/src/api.ts
@@ -88,44 +88,44 @@ export interface HealthCheckResponse {
   service: string;
 }
 
-// 使用側（フロントエンド・バックエンド共通）
+// Usage (both frontend and backend)
 import type { HealthCheckResponse } from '@repo/types';
 ```
 
-## API 開発フロー
+## API Development Flow
 
-新しいエンドポイントを追加する手順:
+Steps to add a new endpoint:
 
-1. `packages/types/src/` に型を定義
-2. `apps/backend/src/routes/` にルートを実装
-3. `apps/backend/src/app.ts` でルートを登録
-4. フロントエンドで型を使用して API を呼び出し
+1. Define types in `packages/types/src/`
+2. Implement route in `apps/backend/src/routes/`
+3. Register route in `apps/backend/src/app.ts`
+4. Use types in frontend to call the API
 
-## 重要な注意事項
+## Important Notes
 
 ### Turborepo
 
-- ビルドタスクは依存関係を自動解決
-- キャッシュは `.turbo/` に保存（git-ignored）
-- キャッシュをバイパスするには `--force` を使用
+- Build tasks automatically resolve dependencies
+- Cache is stored in `.turbo/` (git-ignored)
+- Use `--force` to bypass cache
 
-### ビルドエラーの対処
+### Troubleshooting Build Errors
 
-1. `@repo/types` を先にビルド: `npm run build --filter=@repo/types`
-2. Turborepo キャッシュをクリア: `rm -rf .turbo`
-3. node_modules を再インストール: `npm run clean && npm install`
+1. Build `@repo/types` first: `npm run build --filter=@repo/types`
+2. Clear Turborepo cache: `rm -rf .turbo`
+3. Reinstall node_modules: `npm run clean && npm install`
 
-## アプリ固有のガイドライン
+## App-Specific Guidelines
 
-詳細なガイドラインは各アプリの CLAUDE.md を参照:
+See each app's CLAUDE.md for detailed guidelines:
 
-- **フロントエンド**: [apps/frontend/CLAUDE.md](./apps/frontend/CLAUDE.md)
-  - React 19, shadcn/ui, Tailwind CSS の使い方
-  - コンポーネント設計パターン
-  - i18n 対応
+- **Frontend**: [apps/frontend/CLAUDE.md](./apps/frontend/CLAUDE.md)
+  - React 19, shadcn/ui, Tailwind CSS usage
+  - Component design patterns
+  - i18n support
 
-- **バックエンド**: [apps/backend/CLAUDE.md](./apps/backend/CLAUDE.md)
-  - Fastify 5 ルーティング
-  - Drizzle ORM とデータベース操作
-  - Claude Agent SDK の使用方法
-  - プラグインシステム
+- **Backend**: [apps/backend/CLAUDE.md](./apps/backend/CLAUDE.md)
+  - Fastify 5 routing
+  - Drizzle ORM and database operations
+  - Claude Agent SDK usage
+  - Plugin system

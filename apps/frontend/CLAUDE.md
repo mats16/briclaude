@@ -1,43 +1,43 @@
 # Frontend Application
 
-React 19 + Vite 7 で構築された AI チャットアプリケーションのフロントエンド。
+React 19 + Vite 7 frontend for the AI chat application.
 
-## 技術スタック
+## Tech Stack
 
-| カテゴリ | 技術 |
-|---------|------|
-| フレームワーク | React 19.0.0 |
-| ビルドツール | Vite 7.2.0 |
-| スタイリング | Tailwind CSS 3.4.1 |
-| UI コンポーネント | shadcn/ui (Radix UI ベース) |
-| 国際化 | i18next, react-i18next |
-| ルーティング | react-router-dom 7.x |
-| アイコン | lucide-react |
+| Category | Technology |
+|----------|------------|
+| Framework | React 19.0.0 |
+| Build Tool | Vite 7.2.0 |
+| Styling | Tailwind CSS 3.4.1 |
+| UI Components | shadcn/ui (Radix UI based) |
+| Internationalization | i18next, react-i18next |
+| Routing | react-router-dom 7.x |
+| Icons | lucide-react |
 
-## ディレクトリ構造
+## Directory Structure
 
 ```
 src/
 ├── components/
-│   ├── layout/        # レイアウトコンポーネント (AppLayout)
-│   ├── main/          # メインエリア (MessageArea, InputArea)
-│   ├── settings/      # 設定関連 (UserSettingsModal)
-│   ├── sidebar/       # サイドバー (SessionList, ModelSelector)
-│   └── ui/            # shadcn/ui コンポーネント
-├── constants/         # 定数定義 (models, layout)
+│   ├── layout/        # Layout components (AppLayout)
+│   ├── main/          # Main area (MessageArea, InputArea)
+│   ├── settings/      # Settings (UserSettingsModal)
+│   ├── sidebar/       # Sidebar (SessionList, ModelSelector)
+│   └── ui/            # shadcn/ui components
+├── constants/         # Constants (models, layout)
 ├── contexts/          # React Context (UserContext)
-├── hooks/             # カスタムフック (useUser)
-├── i18n/              # 国際化 (en.json, ja.json)
-├── lib/               # ユーティリティ (cn, etc.)
-└── services/          # API サービス (api-client, session, user)
+├── hooks/             # Custom hooks (useUser)
+├── i18n/              # Internationalization (en.json, ja.json)
+├── lib/               # Utilities (cn, etc.)
+└── services/          # API services (api-client, session, user)
 ```
 
-## コンポーネントパターン
+## Component Patterns
 
-### 関数コンポーネント + TypeScript
+### Functional Components + TypeScript
 
 ```typescript
-// ✅ Good
+// Good
 interface ButtonProps {
   label: string;
   onClick: () => void;
@@ -48,11 +48,11 @@ function Button({ label, onClick, variant = 'primary' }: ButtonProps) {
   return <button onClick={onClick}>{label}</button>;
 }
 
-// ❌ Bad - any 型や PropTypes を使用しない
+// Bad - Don't use any types or PropTypes
 function Button({ label, onClick }: any) { /* ... */ }
 ```
 
-### Context の使用
+### Using Context
 
 ```typescript
 import { useUser } from '@/hooks/useUser';
@@ -65,55 +65,55 @@ function MyComponent() {
 
 ## Tailwind CSS
 
-### cn() ユーティリティを使用
+### Use cn() Utility
 
 ```typescript
 import { cn } from '@/lib/utils';
 
-// ✅ Good - 条件付きクラスには cn() を使用
+// Good - Use cn() for conditional classes
 <button className={cn(
   "px-4 py-2 rounded-md",
   variant === 'primary' && "bg-primary text-white",
   disabled && "opacity-50 cursor-not-allowed"
 )}>
 
-// ❌ Bad - 文字列連結
+// Bad - String concatenation
 <button className={`px-4 py-2 ${variant === 'primary' ? 'bg-primary' : ''}`}>
 ```
 
-### クラスの並び順
+### Class Order
 
-1. レイアウト (flex, grid)
-2. スペーシング (p-*, m-*)
-3. サイズ (w-*, h-*)
-4. タイポグラフィ (text-*, font-*)
-5. 色 (bg-*, text-*)
-6. エフェクト (shadow-*, rounded-*)
+1. Layout (flex, grid)
+2. Spacing (p-*, m-*)
+3. Sizing (w-*, h-*)
+4. Typography (text-*, font-*)
+5. Colors (bg-*, text-*)
+6. Effects (shadow-*, rounded-*)
 
 ## shadcn/ui
 
-### コンポーネントの追加
+### Adding Components
 
 ```bash
 npx shadcn@latest add button
 npx shadcn@latest add dialog
 ```
 
-### 使用方法
+### Usage
 
 ```typescript
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader } from '@/components/ui/dialog';
 ```
 
-## 国際化 (i18n)
+## Internationalization (i18n)
 
-### 翻訳ファイル
+### Translation Files
 
-- `src/i18n/locales/en.json` - 英語
-- `src/i18n/locales/ja.json` - 日本語
+- `src/i18n/locales/en.json` - English
+- `src/i18n/locales/ja.json` - Japanese
 
-### 使用方法
+### Usage
 
 ```typescript
 import { useTranslation } from 'react-i18next';
@@ -124,19 +124,19 @@ function MyComponent() {
 }
 ```
 
-## API 連携
+## API Integration
 
-### API クライアント
+### API Client
 
 ```typescript
 import { apiClient } from '@/services/api-client';
 import type { UserResponse } from '@repo/types';
 
-// 型安全な API 呼び出し
+// Type-safe API call
 const user = await apiClient.get<UserResponse>('/api/user');
 ```
 
-### エラーハンドリング
+### Error Handling
 
 ```typescript
 try {
@@ -151,59 +151,59 @@ try {
 }
 ```
 
-## パスエイリアス
+## Path Aliases
 
-`@/` は `src/` にマップ:
+`@/` maps to `src/`:
 
 ```typescript
-// ✅ Good
+// Good
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-// ❌ Bad - 深い相対パス
+// Bad - Deep relative paths
 import { Button } from '../../components/ui/button';
 ```
 
-## 環境変数
+## Environment Variables
 
-Vite は `VITE_` プレフィックス付きの環境変数を公開:
+Vite exposes environment variables with `VITE_` prefix:
 
 ```typescript
 const apiUrl = import.meta.env.VITE_API_URL;
 ```
 
-## 開発
+## Development
 
-### ローカル開発
+### Local Development
 
 ```bash
-npm run dev              # 開発サーバー起動 (port 3000)
-npm run build            # 本番ビルド
-npm run preview          # ビルドのプレビュー
+npm run dev              # Start dev server (port 3000)
+npm run build            # Production build
+npm run preview          # Preview build
 ```
 
-### API プロキシ
+### API Proxy
 
-開発時は `/api/*` が `http://localhost:8000` にプロキシ:
+In development, `/api/*` is proxied to `http://localhost:8000`:
 
 ```typescript
-fetch('/api/health');  // → http://localhost:8000/api/health
+fetch('/api/health');  // -> http://localhost:8000/api/health
 ```
 
-## トラブルシューティング
+## Troubleshooting
 
-### Tailwind クラスが効かない
+### Tailwind Classes Not Working
 
-1. `tailwind.config.ts` の content パスを確認
-2. `index.css` に Tailwind ディレクティブがあるか確認
-3. 開発サーバーを再起動
+1. Check content paths in `tailwind.config.ts`
+2. Verify Tailwind directives in `index.css`
+3. Restart dev server
 
-### shadcn/ui コンポーネントが見つからない
+### shadcn/ui Component Not Found
 
-1. コンポーネントをインストール: `npx shadcn@latest add <component>`
-2. インポートパスが `@/components/ui/` になっているか確認
+1. Install component: `npx shadcn@latest add <component>`
+2. Check import path is `@/components/ui/`
 
-### 型エラー
+### Type Errors
 
-1. `@repo/types` がビルドされているか確認
-2. エディタの TypeScript サーバーを再起動
+1. Verify `@repo/types` is built
+2. Restart TypeScript server in editor
