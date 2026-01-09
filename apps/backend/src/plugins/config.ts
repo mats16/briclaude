@@ -4,8 +4,6 @@ import path from 'path';
 
 const __dirname = import.meta.dirname;
 
-const homeDir = process.env.HOME ?? '/tmp';
-
 // JSON Schema for environment variables
 const schema = {
   type: 'object',
