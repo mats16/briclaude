@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { eq } from 'drizzle-orm';
 import { typeid } from 'typeid-js';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import type {
@@ -14,8 +15,9 @@ import { insertSessionEventInTx } from '../db/helpers.js';
  *
  * 処理フロー:
  * 1. TypeID で session_id 生成
- * 2. claude-agent-sdk で query() 実行し、init イベントから sdk_session_id 取得
- * 3. 単一トランザクション内でセッションとイベントを保存
+ * 2. sessions テーブルに status='init' でレコード挿入
+ * 3. claude-agent-sdk で query() 実行
+ * 4. init イベント受信時に status を 'running' に更新し、sdk_session_id を設定
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
@@ -38,7 +40,8 @@ export async function createSession(
     sonnet: fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL,
     haiku: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
   };
-  const modelName = modelMap[session_context.model] || fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL;
+  const modelName =
+    modelMap[session_context.model] || fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL;
 
   // 3. ユーザーメッセージのテキストを抽出（新形式）
   const userContent = events[0]?.data.message.content ?? '';
@@ -57,23 +60,7 @@ export async function createSession(
     outcomes: session_context.outcomes,
   };
 
-  // 6. claude-agent-sdk で query 実行し、init イベントから sdk_session_id 取得
-  let sdkSessionId = '';
-  const response = query({
-    prompt: userContent,
-    options: {
-      model: modelName,
-    },
-  });
-
-  for await (const message of response) {
-    if (message.type === 'system' && message.subtype === 'init') {
-      sdkSessionId = message.session_id;
-      break;
-    }
-  }
-
-  // 7. 単一トランザクション内でセッションとイベントを保存
+  // 6. sessions テーブルに status='init' でレコード挿入（SDK呼び出し前）
   let createdAt: Date = new Date();
   let updatedAt: Date = new Date();
 
@@ -82,27 +69,63 @@ export async function createSession(
     createdAt = now;
     updatedAt = now;
 
-    // セッションを sessions テーブルに保存
     await tx.insert(sessions).values({
       id: sessionId,
       userId,
       title: title ?? null,
-      status: 'running', // 初期ステータスは running
-      sdkSessionId: sdkSessionId || null,
+      status: 'init', // SDK呼び出し前なので init
+      sdkSessionId: null, // SDK呼び出し前なので null
       context: sessionContext,
     });
-
-    // イベントを session_events テーブルに保存（新形式）
-    for (const event of events) {
-      await insertSessionEventInTx(tx, {
-        uuid: event.data.uuid,
-        sessionId,
-        type: event.data.type,
-        subtype: null,
-        message: event.data.message,
-      });
-    }
   });
+
+  // 7. claude-agent-sdk で query 実行
+  let sdkSessionId = '';
+
+  try {
+    const response = query({
+      prompt: userContent,
+      options: {
+        model: modelName,
+      },
+    });
+
+    for await (const message of response) {
+      if (message.type === 'system' && message.subtype === 'init') {
+        sdkSessionId = message.session_id;
+
+        // 8. init イベント受信時に status を 'running' に更新 + イベント挿入
+        await fastify.withUserContext(userId, async tx => {
+          // sessions の status と sdk_session_id を更新
+          await tx
+            .update(sessions)
+            .set({
+              status: 'running',
+              sdkSessionId: sdkSessionId || null,
+            })
+            .where(eq(sessions.id, sessionId));
+
+          // イベントを session_events テーブルに保存
+          for (const event of events) {
+            await insertSessionEventInTx(tx, {
+              uuid: event.data.uuid,
+              sessionId,
+              type: event.data.type,
+              subtype: null,
+              message: event.data.message,
+            });
+          }
+        });
+
+        break;
+      }
+    }
+  } catch (error) {
+    // SDK呼び出し失敗時: status は 'init' のまま残る
+    // 後でクリーンアップジョブで処理可能
+    fastify.log.error({ sessionId, error }, 'SDK query failed');
+    throw error;
+  }
 
   return {
     id: sessionId,

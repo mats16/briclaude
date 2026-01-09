@@ -2,7 +2,7 @@
 // Session Status Types
 // =====================================================
 
-export type SessionStatus = 'running' | 'idle' | 'archived';
+export type SessionStatus = 'init' | 'running' | 'idle' | 'archived';
 
 // =====================================================
 // Source/Outcome Types

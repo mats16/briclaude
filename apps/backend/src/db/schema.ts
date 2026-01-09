@@ -169,7 +169,7 @@ export const sessions = pgTable(
     id: text('id').primaryKey(),
     userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
     title: text('title'),
-    status: text('status').notNull().default('idle'), // 'running' | 'idle' | 'archived'
+    status: text('status').notNull().default('init'), // 'init' | 'running' | 'idle' | 'archived'
     sdkSessionId: uuid('sdk_session_id'),
     context: jsonb('context'), // SessionContextResponse
     createdAt: timestamp('created_at', { mode: 'date' })
