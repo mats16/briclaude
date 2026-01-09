@@ -4,6 +4,7 @@ import { userService } from '@/services';
 
 export interface UserContextValue {
   user: UserInfo | null;
+  databricksHost: string | null;
   isLoading: boolean;
   error: Error | null;
   refetch: () => Promise<void>;
@@ -17,6 +18,7 @@ interface UserProviderProps {
 
 export function UserProvider({ children }: UserProviderProps) {
   const [user, setUser] = useState<UserInfo | null>(null);
+  const [databricksHost, setDatabricksHost] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -27,11 +29,13 @@ export function UserProvider({ children }: UserProviderProps) {
 
       const data = await userService.getCurrentUser();
       setUser(data.user);
+      setDatabricksHost(data.databricksHost);
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Unknown error');
       console.error('Failed to fetch user:', error);
       setError(error);
       setUser(null);
+      setDatabricksHost(null);
     } finally {
       setIsLoading(false);
     }
@@ -43,7 +47,7 @@ export function UserProvider({ children }: UserProviderProps) {
   }, [fetchUser]);
 
   return (
-    <UserContext.Provider value={{ user, isLoading, error, refetch: fetchUser }}>
+    <UserContext.Provider value={{ user, databricksHost, isLoading, error, refetch: fetchUser }}>
       {children}
     </UserContext.Provider>
   );

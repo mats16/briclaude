@@ -4,7 +4,6 @@ import {
   uuid,
   timestamp,
   text,
-  boolean,
   integer,
   index,
   uniqueIndex,
@@ -170,10 +169,9 @@ export const sessions = pgTable(
     id: text('id').primaryKey(),
     userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
     title: text('title'),
-    isArchived: boolean('is_archived').notNull().default(false),
+    status: text('status').notNull().default('init'), // 'init' | 'running' | 'idle' | 'archived'
     sdkSessionId: uuid('sdk_session_id'),
-    databricksWorkspacePath: text('databricks_workspace_path'),
-    databricksWorkspaceAutoPush: boolean('databricks_workspace_auto_push').notNull().default(false),
+    context: jsonb('context'), // SessionContextResponse
     createdAt: timestamp('created_at', { mode: 'date' })
       .notNull()
       .default(sql`now()`),
@@ -187,10 +185,12 @@ export const sessions = pgTable(
     userIdIdx: index('sessions_user_id_idx').on(table.userId),
     // updated_at インデックス（ソート用）
     updatedAtIdx: index('sessions_updated_at_idx').on(table.updatedAt),
-    // アクティブセッション用部分インデックス（is_archived = false のみ）
+    // status インデックス（フィルタリング用）
+    statusIdx: index('sessions_status_idx').on(table.status),
+    // アクティブセッション用部分インデックス（status != 'archived' のみ）
     activeSessionsIdx: index('sessions_active_idx')
       .on(table.userId, table.updatedAt)
-      .where(sql`is_archived = false`),
+      .where(sql`status != 'archived'`),
   })
 ).enableRLS();
 
@@ -208,15 +208,18 @@ export const sessionsPolicy = pgPolicy('sessions_user_isolation_policy', {
 /**
  * session_events テーブル
  * セッションイベントを時系列で管理
+ *
+ * 主キー: (session_id, seq) - セッション内でイベントを順序付け
+ * uuid: 冪等性キーとして使用（重複挿入防止）
  */
 export const sessionEvents = pgTable(
   'session_events',
   {
-    uuid: uuid('uuid').primaryKey(),
     sessionId: text('session_id')
       .notNull()
       .references(() => sessions.id, { onDelete: 'cascade' }),
     seq: integer('seq').notNull(),
+    uuid: uuid('uuid').notNull(),
     type: text('type').notNull(),
     subtype: text('subtype'),
     message: jsonb('message').notNull(),
@@ -229,11 +232,10 @@ export const sessionEvents = pgTable(
       .$onUpdate(() => new Date()),
   },
   table => ({
-    // (session_id, seq) ユニーク制約（セッション内で seq は一意）
-    sessionSeqUnique: uniqueIndex('session_events_session_id_seq_unique').on(
-      table.sessionId,
-      table.seq
-    ),
+    // 複合主キー: (session_id, seq)
+    pk: primaryKey({ columns: [table.sessionId, table.seq] }),
+    // uuid ユニーク制約（冪等性キー - 重複挿入防止）
+    uuidUnique: uniqueIndex('session_events_uuid_unique').on(table.uuid),
   })
 );
 

@@ -21,7 +21,10 @@ const userRoute: FastifyPluginAsync = async fastify => {
       email: requestUser.email,
     });
 
-    return reply.send({ user });
+    return reply.send({
+      user,
+      databricksHost: fastify.config.DATABRICKS_HOST,
+    });
   });
 };
 
