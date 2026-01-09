@@ -7,7 +7,6 @@ import type {
   SessionCreateRequest,
   SessionCreateResponse,
   SessionContextResponse,
-  SessionCreateEvent,
   SessionEventData,
   SessionListQuery,
   SessionListResponse,
@@ -76,11 +75,9 @@ async function waitForInit(
   userId: string,
   sessionId: string,
   title: string | null,
-  sessionContext: SessionContextResponse,
-  userEvents: SessionCreateEvent[]
+  sessionContext: SessionContextResponse
 ): Promise<WaitForInitResult> {
   const iterator = response[Symbol.asyncIterator]();
-  const preInitEvents: SDKMessage[] = []; // init 前のイベントを一時保持
 
   while (true) {
     const { value: message, done } = await iterator.next();
@@ -92,11 +89,11 @@ async function waitForInit(
     // init イベント前: WebSocket 送信のみ（DB 保存しない）
     saveAndBroadcastEvent(fastify, userId, sessionId, message, { skipDbSave: true });
 
-    // init イベントを検出
+    // init イベントを検出 (type: system, subtype: init)
     if (message.type === 'system' && message.subtype === 'init') {
       const sdkSessionId = message.session_id;
 
-      // 1トランザクションで sessions INSERT + session_events INSERT
+      // sessions テーブル INSERT + init イベント INSERT を1トランザクションで実行
       await fastify.withUserContext(userId, async tx => {
         // sessions テーブルに INSERT
         await tx.insert(sessions).values({
@@ -108,33 +105,7 @@ async function waitForInit(
           context: sessionContext,
         });
 
-        // ユーザーイベントを session_events テーブルに保存
-        for (const event of userEvents) {
-          await insertSessionEventInTx(tx, {
-            uuid: event.data.uuid,
-            sessionId,
-            type: event.data.type,
-            subtype: null,
-            message: event.data.message,
-          });
-        }
-
-        // init 前のイベントを session_events テーブルに保存
-        for (const preInitEvent of preInitEvents) {
-          const eventUuid =
-            'uuid' in preInitEvent ? (preInitEvent.uuid as string) : crypto.randomUUID();
-          const eventSubtype =
-            'subtype' in preInitEvent ? (preInitEvent.subtype as string | undefined) : undefined;
-          await insertSessionEventInTx(tx, {
-            uuid: eventUuid,
-            sessionId,
-            type: preInitEvent.type,
-            subtype: eventSubtype ?? null,
-            message: preInitEvent,
-          });
-        }
-
-        // init イベント自体も session_events テーブルに保存
+        // init イベントを session_events テーブルに INSERT
         const initEventUuid = 'uuid' in message ? (message.uuid as string) : crypto.randomUUID();
         await insertSessionEventInTx(tx, {
           uuid: initEventUuid,
@@ -150,9 +121,6 @@ async function waitForInit(
         iterator,
       };
     }
-
-    // init 前のイベントを保持（後で DB に保存するため）
-    preInitEvents.push(message);
   }
 }
 
@@ -290,15 +258,14 @@ export async function createSession(
       },
     });
 
-    // 7. init イベントまで待機（sessions/session_events への挿入もここで行う）
+    // 7. init イベントまで待機（sessions への挿入もここで行う）
     const { iterator } = await waitForInit(
       response,
       fastify,
       userId,
       sessionId,
       title ?? null,
-      sessionContext,
-      events
+      sessionContext
     );
 
     // 8. バックグラウンド処理開始（await しない）
