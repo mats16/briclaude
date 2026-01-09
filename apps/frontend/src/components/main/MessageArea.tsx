@@ -40,7 +40,10 @@ export function MessageArea({ events, isLoading, error }: MessageAreaProps) {
     <div className="flex-1 overflow-y-auto px-4">
       <div className="w-full max-w-[735px] mx-auto pb-24">
         {events.map((event, index) => (
-          <EventItem key={'uuid' in event ? (event.uuid as string) : `event-${index}`} event={event} />
+          <EventItem
+            key={'uuid' in event ? (event.uuid as string) : `event-${index}`}
+            event={event}
+          />
         ))}
         <div ref={bottomRef} />
       </div>

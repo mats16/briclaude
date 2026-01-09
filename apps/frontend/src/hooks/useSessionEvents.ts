@@ -14,9 +14,7 @@ interface UseSessionEventsReturn {
   error: Error | null;
 }
 
-export function useSessionEvents({
-  sessionId,
-}: UseSessionEventsOptions): UseSessionEventsReturn {
+export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSessionEventsReturn {
   const [events, setEvents] = useState<SDKMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);

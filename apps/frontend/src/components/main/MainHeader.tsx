@@ -123,7 +123,12 @@ export function MainHeader({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopySessionId}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={handleCopySessionId}
+                >
                   <Copy className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>

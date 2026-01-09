@@ -60,11 +60,15 @@ export function SessionList({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => setFilter('active')}>
-              <Check className={`mr-2 h-4 w-4 ${filter === 'active' ? 'opacity-100' : 'opacity-0'}`} />
+              <Check
+                className={`mr-2 h-4 w-4 ${filter === 'active' ? 'opacity-100' : 'opacity-0'}`}
+              />
               {t('sidebar.filter.active')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setFilter('archived')}>
-              <Check className={`mr-2 h-4 w-4 ${filter === 'archived' ? 'opacity-100' : 'opacity-0'}`} />
+              <Check
+                className={`mr-2 h-4 w-4 ${filter === 'archived' ? 'opacity-100' : 'opacity-0'}`}
+              />
               {t('sidebar.filter.archived')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setFilter('all')}>

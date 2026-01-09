@@ -66,10 +66,7 @@ export const sessionService = {
     return apiClient<SessionResponse>(`/api/sessions/${sessionId}`);
   },
 
-  async updateSession(
-    sessionId: string,
-    request: SessionUpdateRequest
-  ): Promise<SessionResponse> {
+  async updateSession(sessionId: string, request: SessionUpdateRequest): Promise<SessionResponse> {
     return apiClient<SessionResponse>(`/api/sessions/${sessionId}`, {
       method: 'PATCH',
       body: JSON.stringify(request),

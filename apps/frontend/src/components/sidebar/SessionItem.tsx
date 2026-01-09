@@ -57,7 +57,7 @@ export function SessionItem({ session, isSelected, onClick, onArchive }: Session
             role="button"
             tabIndex={0}
             onClick={handleArchive}
-            onKeyDown={(e) => {
+            onKeyDown={e => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.stopPropagation();
                 onArchive?.();

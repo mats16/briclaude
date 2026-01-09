@@ -22,7 +22,10 @@ import { wsManager } from './websocket-manager.service.js';
 /**
  * SessionCreateEventData を SDKUserMessage 形式に変換
  */
-function convertToSDKUserMessage(eventData: SessionCreateEventData, sessionId: string): SDKUserMessage {
+function convertToSDKUserMessage(
+  eventData: SessionCreateEventData,
+  sessionId: string
+): SDKUserMessage {
   return {
     type: 'user',
     message: {

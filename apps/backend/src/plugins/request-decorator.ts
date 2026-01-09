@@ -1,5 +1,6 @@
 import fp from 'fastify-plugin';
 import crypto from 'node:crypto';
+import path from 'node:path';
 
 interface RequestUser {
   /** The user identifier provided by the IdP. */
@@ -10,6 +11,8 @@ interface RequestUser {
   email: string;
   /** The user's access token as on-behalf-of-user authorization */
   oboAccessToken: string;
+  /** The user's home directory. */
+  home: string;
 }
 
 interface RequestContext {
@@ -36,15 +39,18 @@ export default fp(
 
     // Add preHandler hook for extracting request context
     fastify.addHook('preHandler', async (req, _reply) => {
+      const userEmail = (req.headers['x-forwarded-email'] ?? '') as string;
+      const userHome = path.join(fastify.config.USER_BASE_DIR, userEmail.split('@')[0]);
       req.ctx = {
         host: (req.headers['x-forwarded-host'] as string) ?? req.hostname,
         requestId: (req.headers['x-request-id'] as string) ?? crypto.randomUUID(),
         realIp: (req.headers['x-real-ip'] as string) ?? req.ip,
         user: {
-          id: (req.headers['x-forwarded-user'] as string) ?? '',
-          name: (req.headers['x-forwarded-preferred-username'] as string) ?? '',
-          email: (req.headers['x-forwarded-email'] as string) ?? '',
-          oboAccessToken: (req.headers['x-forwarded-access-token'] as string) ?? '',
+          id: (req.headers['x-forwarded-user'] ?? '') as string,
+          name: (req.headers['x-forwarded-preferred-username'] ?? '') as string,
+          email: userEmail,
+          oboAccessToken: (req.headers['x-forwarded-access-token'] ?? '') as string,
+          home: userHome,
         },
       };
     });
