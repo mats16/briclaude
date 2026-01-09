@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
 import Fastify, { FastifyInstance } from 'fastify';
 import configPlugin from '../plugins/config.js';
+import openaiClientPlugin from '../plugins/openai-client.js';
 import requestDecoratorPlugin from '../plugins/request-decorator.js';
 import titleRoute from './title.js';
 
@@ -50,9 +51,15 @@ describe('title route', () => {
     await app.close();
   });
 
+  async function registerPlugins() {
+    await app.register(configPlugin);
+    await app.register(requestDecoratorPlugin);
+    await app.register(openaiClientPlugin);
+    await app.register(titleRoute, { prefix: '/api' });
+  }
+
   describe('POST /generate_title', () => {
     it('should return generated title from LLM', async () => {
-      // Setup mock response
       mockCreate.mockResolvedValue({
         choices: [
           {
@@ -63,9 +70,7 @@ describe('title route', () => {
         ],
       });
 
-      await app.register(configPlugin);
-      await app.register(requestDecoratorPlugin);
-      await app.register(titleRoute, { prefix: '/api' });
+      await registerPlugins();
 
       const response = await app.inject({
         method: 'POST',
@@ -95,26 +100,27 @@ describe('title route', () => {
       });
     });
 
-    it('should return fallback title when first_session_message is missing', async () => {
-      await app.register(configPlugin);
-      await app.register(requestDecoratorPlugin);
-      await app.register(titleRoute, { prefix: '/api' });
+    it('should return 400 with ApiError when first_session_message is missing', async () => {
+      await registerPlugins();
 
       const response = await app.inject({
         method: 'POST',
         url: '/api/generate_title',
         payload: {},
+        headers: {
+          'x-forwarded-access-token': 'test-token',
+        },
       });
 
       expect(response.statusCode).toBe(400);
       const body = response.json();
-      expect(body.title).toBe('General coding session');
+      expect(body.error).toBe('ValidationError');
+      expect(body.message).toBe('first_session_message is required and must be a non-empty string');
+      expect(body.statusCode).toBe(400);
     });
 
-    it('should return fallback title when first_session_message is empty string', async () => {
-      await app.register(configPlugin);
-      await app.register(requestDecoratorPlugin);
-      await app.register(titleRoute, { prefix: '/api' });
+    it('should return 400 with ApiError when first_session_message is empty string', async () => {
+      await registerPlugins();
 
       const response = await app.inject({
         method: 'POST',
@@ -122,17 +128,18 @@ describe('title route', () => {
         payload: {
           first_session_message: '',
         },
+        headers: {
+          'x-forwarded-access-token': 'test-token',
+        },
       });
 
       expect(response.statusCode).toBe(400);
       const body = response.json();
-      expect(body.title).toBe('General coding session');
+      expect(body.error).toBe('ValidationError');
     });
 
-    it('should return fallback title when first_session_message is not a string', async () => {
-      await app.register(configPlugin);
-      await app.register(requestDecoratorPlugin);
-      await app.register(titleRoute, { prefix: '/api' });
+    it('should return 400 with ApiError when first_session_message is not a string', async () => {
+      await registerPlugins();
 
       const response = await app.inject({
         method: 'POST',
@@ -140,19 +147,38 @@ describe('title route', () => {
         payload: {
           first_session_message: 123,
         },
+        headers: {
+          'x-forwarded-access-token': 'test-token',
+        },
       });
 
       expect(response.statusCode).toBe(400);
       const body = response.json();
-      expect(body.title).toBe('General coding session');
+      expect(body.error).toBe('ValidationError');
     });
 
-    it('should return fallback title when LLM call fails', async () => {
+    it('should return 401 when access token is missing', async () => {
+      await registerPlugins();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/generate_title',
+        payload: {
+          first_session_message: 'Help me with Python',
+        },
+        // No x-forwarded-access-token header
+      });
+
+      expect(response.statusCode).toBe(401);
+      const body = response.json();
+      expect(body.error).toBe('Unauthorized');
+      expect(body.message).toBe('Access token is required');
+    });
+
+    it('should return 500 with ApiError when LLM call fails', async () => {
       mockCreate.mockRejectedValue(new Error('API error'));
 
-      await app.register(configPlugin);
-      await app.register(requestDecoratorPlugin);
-      await app.register(titleRoute, { prefix: '/api' });
+      await registerPlugins();
 
       const response = await app.inject({
         method: 'POST',
@@ -165,9 +191,11 @@ describe('title route', () => {
         },
       });
 
-      expect(response.statusCode).toBe(200);
+      expect(response.statusCode).toBe(500);
       const body = response.json();
-      expect(body.title).toBe('General coding session');
+      expect(body.error).toBe('InternalServerError');
+      expect(body.message).toBe('Failed to generate title');
+      expect(body.statusCode).toBe(500);
     });
 
     it('should return fallback title when LLM returns empty content', async () => {
@@ -181,9 +209,7 @@ describe('title route', () => {
         ],
       });
 
-      await app.register(configPlugin);
-      await app.register(requestDecoratorPlugin);
-      await app.register(titleRoute, { prefix: '/api' });
+      await registerPlugins();
 
       const response = await app.inject({
         method: 'POST',
@@ -206,9 +232,7 @@ describe('title route', () => {
         choices: [],
       });
 
-      await app.register(configPlugin);
-      await app.register(requestDecoratorPlugin);
-      await app.register(titleRoute, { prefix: '/api' });
+      await registerPlugins();
 
       const response = await app.inject({
         method: 'POST',
@@ -226,6 +250,93 @@ describe('title route', () => {
       expect(body.title).toBe('General coding session');
     });
 
+    it('should clean up LLM artifacts - remove surrounding quotes', async () => {
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: '"Python Data Analysis"',
+            },
+          },
+        ],
+      });
+
+      await registerPlugins();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/generate_title',
+        payload: {
+          first_session_message: 'Analyze this CSV file',
+        },
+        headers: {
+          'x-forwarded-access-token': 'test-token',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.title).toBe('Python Data Analysis');
+    });
+
+    it('should clean up LLM artifacts - remove markdown formatting', async () => {
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: '**React Component** Development',
+            },
+          },
+        ],
+      });
+
+      await registerPlugins();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/generate_title',
+        payload: {
+          first_session_message: 'Create a React component',
+        },
+        headers: {
+          'x-forwarded-access-token': 'test-token',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.title).toBe('React Component Development');
+    });
+
+    it('should clean up LLM artifacts - remove backticks', async () => {
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: '`API Integration`',
+            },
+          },
+        ],
+      });
+
+      await registerPlugins();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/generate_title',
+        payload: {
+          first_session_message: 'Help me integrate an API',
+        },
+        headers: {
+          'x-forwarded-access-token': 'test-token',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.title).toBe('API Integration');
+    });
+
     it('should trim whitespace from generated title', async () => {
       mockCreate.mockResolvedValue({
         choices: [
@@ -237,9 +348,7 @@ describe('title route', () => {
         ],
       });
 
-      await app.register(configPlugin);
-      await app.register(requestDecoratorPlugin);
-      await app.register(titleRoute, { prefix: '/api' });
+      await registerPlugins();
 
       const response = await app.inject({
         method: 'POST',
@@ -268,9 +377,7 @@ describe('title route', () => {
         ],
       });
 
-      await app.register(configPlugin);
-      await app.register(requestDecoratorPlugin);
-      await app.register(titleRoute, { prefix: '/api' });
+      await registerPlugins();
 
       const response = await app.inject({
         method: 'POST',
@@ -311,9 +418,7 @@ describe('title route', () => {
         ],
       });
 
-      await app.register(configPlugin);
-      await app.register(requestDecoratorPlugin);
-      await app.register(titleRoute, { prefix: '/api' });
+      await registerPlugins();
 
       await app.inject({
         method: 'POST',
