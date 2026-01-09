@@ -12,6 +12,7 @@ interface SidebarProps {
   sessions?: SessionResponse[];
   selectedSessionId?: string | null;
   onSelectSession?: (sessionId: string) => void;
+  onArchiveSession?: (sessionId: string) => void;
   isSessionsLoading?: boolean;
   onSessionCreated?: () => void;
 }
@@ -20,6 +21,7 @@ export function Sidebar({
   sessions = [],
   selectedSessionId,
   onSelectSession,
+  onArchiveSession,
   isSessionsLoading = false,
   onSessionCreated,
 }: SidebarProps) {
@@ -68,6 +70,7 @@ export function Sidebar({
         sessions={sessions}
         selectedSessionId={selectedSessionId}
         onSelectSession={onSelectSession}
+        onArchiveSession={onArchiveSession}
         isLoading={isSessionsLoading}
       />
       <UserMenu

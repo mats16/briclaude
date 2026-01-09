@@ -12,7 +12,7 @@ import { sessionEvents, sessions } from '../db/schema.js';
  * @param options - 取得オプション
  * @returns セッションイベントレスポンス
  */
-export async function getSessionEvents(
+export async function listSessionEvents(
   fastify: FastifyInstance,
   userId: string,
   sessionId: string,

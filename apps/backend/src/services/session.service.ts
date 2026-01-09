@@ -13,6 +13,7 @@ import type {
   SessionResponse,
   SessionStatus,
   SessionCreateEventData,
+  SessionUpdateRequest,
 } from '@repo/types';
 import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
@@ -341,7 +342,7 @@ export async function createSession(
  * @param options - クエリオプション（limit, status）
  * @returns セッション一覧レスポンス
  */
-export async function getSessions(
+export async function listSessions(
   fastify: FastifyInstance,
   userId: string,
   options: SessionListQuery = {}
@@ -423,6 +424,131 @@ export async function getSession(
     if (rows.length === 0) return null;
 
     const row = rows[0];
+    return {
+      id: row.id,
+      title: row.title,
+      session_status: row.status as SessionStatus,
+      created_at: row.createdAt.toISOString(),
+      updated_at: row.updatedAt.toISOString(),
+      session_context: (row.context as SessionContextResponse) ?? null,
+    };
+  });
+}
+
+/**
+ * セッションを更新する
+ *
+ * @param fastify - Fastify インスタンス
+ * @param userId - ユーザーID
+ * @param sessionId - セッションID
+ * @param request - 更新リクエスト
+ * @returns 更新後のセッション情報（見つからない場合は null）
+ */
+export async function updateSession(
+  fastify: FastifyInstance,
+  userId: string,
+  sessionId: string,
+  request: SessionUpdateRequest
+): Promise<SessionResponse | null> {
+  const { title, session_status } = request;
+
+  return fastify.withUserContext(userId, async tx => {
+    // セッションの存在確認
+    const existingRows = await tx
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .limit(1);
+
+    if (existingRows.length === 0) {
+      return null;
+    }
+
+    // 更新するフィールドを構築
+    const updateFields: { title?: string | null; status?: SessionStatus; updatedAt?: Date } = {};
+    if (title !== undefined) {
+      updateFields.title = title;
+    }
+    if (session_status !== undefined) {
+      updateFields.status = session_status;
+    }
+    updateFields.updatedAt = new Date();
+
+    // 更新を実行
+    await tx.update(sessions).set(updateFields).where(eq(sessions.id, sessionId));
+
+    // 更新後のセッションを取得して返却
+    const rows = await tx
+      .select({
+        id: sessions.id,
+        title: sessions.title,
+        status: sessions.status,
+        context: sessions.context,
+        createdAt: sessions.createdAt,
+        updatedAt: sessions.updatedAt,
+      })
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .limit(1);
+
+    const row = rows[0];
+    return {
+      id: row.id,
+      title: row.title,
+      session_status: row.status as SessionStatus,
+      created_at: row.createdAt.toISOString(),
+      updated_at: row.updatedAt.toISOString(),
+      session_context: (row.context as SessionContextResponse) ?? null,
+    };
+  });
+}
+
+/**
+ * セッションをアーカイブする
+ *
+ * @param fastify - Fastify インスタンス
+ * @param userId - ユーザーID
+ * @param sessionId - セッションID
+ * @returns アーカイブ後のセッション情報（見つからない場合は null）
+ */
+export async function archiveSession(
+  fastify: FastifyInstance,
+  userId: string,
+  sessionId: string
+): Promise<SessionResponse | null> {
+  return fastify.withUserContext(userId, async tx => {
+    // セッションの存在確認
+    const existingRows = await tx
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .limit(1);
+
+    if (existingRows.length === 0) {
+      return null;
+    }
+
+    // ステータスを 'archived' に更新
+    await tx
+      .update(sessions)
+      .set({ status: 'archived', updatedAt: new Date() })
+      .where(eq(sessions.id, sessionId));
+
+    // 更新後のセッションを取得して返却
+    const updatedRows = await tx
+      .select({
+        id: sessions.id,
+        title: sessions.title,
+        status: sessions.status,
+        context: sessions.context,
+        createdAt: sessions.createdAt,
+        updatedAt: sessions.updatedAt,
+      })
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .limit(1);
+
+    const row = updatedRows[0];
     return {
       id: row.id,
       title: row.title,

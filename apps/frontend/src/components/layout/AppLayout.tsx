@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSessions } from '@/hooks/useSessions';
+import { sessionService } from '@/services';
 import { Sidebar } from '@/components/sidebar/Sidebar';
 import { MainArea } from '@/components/main/MainArea';
 import { cn } from '@/lib/utils';
@@ -16,6 +17,19 @@ export function AppLayout() {
       navigate(`/${selectedSessionId}`);
     },
     [navigate]
+  );
+
+  const handleArchiveSession = useCallback(
+    async (targetSessionId: string) => {
+      await sessionService.updateSession(targetSessionId, {
+        session_status: 'archived',
+      });
+      refetchSessions();
+      if (sessionId === targetSessionId) {
+        navigate('/');
+      }
+    },
+    [refetchSessions, sessionId, navigate]
   );
 
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -75,6 +89,7 @@ export function AppLayout() {
           sessions={sessions}
           selectedSessionId={sessionId}
           onSelectSession={handleSelectSession}
+          onArchiveSession={handleArchiveSession}
           isSessionsLoading={isSessionsLoading}
           onSessionCreated={refetchSessions}
         />
@@ -92,7 +107,7 @@ export function AppLayout() {
 
       {/* Main Area */}
       <div className="flex-1 h-full min-w-0">
-        <MainArea />
+        <MainArea onSessionArchived={refetchSessions} />
       </div>
 
       {/* Overlay during drag to prevent text selection */}

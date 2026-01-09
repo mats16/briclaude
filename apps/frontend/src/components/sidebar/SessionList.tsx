@@ -20,6 +20,7 @@ interface SessionListProps {
   sessions: SessionResponse[];
   selectedSessionId?: string | null;
   onSelectSession?: (sessionId: string) => void;
+  onArchiveSession?: (sessionId: string) => void;
   isLoading?: boolean;
 }
 
@@ -27,6 +28,7 @@ export function SessionList({
   sessions,
   selectedSessionId,
   onSelectSession,
+  onArchiveSession,
   isLoading = false,
 }: SessionListProps) {
   const { t } = useTranslation();
@@ -92,6 +94,7 @@ export function SessionList({
                 session={session}
                 isSelected={session.id === selectedSessionId}
                 onClick={() => onSelectSession?.(session.id)}
+                onArchive={onArchiveSession ? () => onArchiveSession(session.id) : undefined}
               />
             ))
           )}

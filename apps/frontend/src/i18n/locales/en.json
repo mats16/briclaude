@@ -30,7 +30,11 @@
     "inputPlaceholder": "Type your message...",
     "send": "Send",
     "openInCli": "Open in CLI",
-    "emptyChat": "Start a conversation"
+    "emptyChat": "Start a conversation",
+    "renameSession": "Rename session",
+    "archiveSession": "Archive session",
+    "renameSessionDescription": "Enter a new name for this session.",
+    "sessionTitlePlaceholder": "Session title"
   },
   "user": {
     "settings": "Settings",
@@ -43,7 +47,8 @@
     "loading": "Loading...",
     "error": "An error occurred",
     "retry": "Retry",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "save": "Save"
   },
   "settings": {
     "title": "Settings",

@@ -111,6 +111,29 @@ export interface SessionListQuery {
 }
 
 // =====================================================
+// Session Archive Types (POST /api/sessions/:id/archive)
+// =====================================================
+
+/**
+ * POST /api/sessions/:session_id/archive のレスポンス
+ */
+export type SessionArchiveResponse = SessionResponse;
+
+// =====================================================
+// Session Update Types (PATCH /api/sessions/:session_id)
+// =====================================================
+
+/**
+ * PATCH /api/sessions/:session_id のリクエストボディ
+ */
+export interface SessionUpdateRequest {
+  /** セッションタイトル */
+  title?: string;
+  /** セッションステータス（アーカイブなど） */
+  session_status?: SessionStatus;
+}
+
+// =====================================================
 // Session Events Types (GET /api/sessions/:id/events)
 // =====================================================
 

@@ -8,12 +8,20 @@ import type {
   SessionListQuery,
   SessionListResponse,
   SessionResponse,
+  SessionArchiveResponse,
+  SessionUpdateRequest,
   WsConnectedMessage,
   WsErrorMessage,
   ApiError,
 } from '@repo/types';
-import { createSession, getSessions, getSession } from '../services/session.service.js';
-import { getSessionEvents, getSessionLastEventId } from '../services/session-events.service.js';
+import {
+  createSession,
+  listSessions,
+  getSession,
+  updateSession,
+  archiveSession,
+} from '../services/session.service.js';
+import { listSessionEvents, getSessionLastEventId } from '../services/session-events.service.js';
 import { wsManager } from '../services/websocket-manager.service.js';
 
 const sessionRoute: FastifyPluginAsync = async fastify => {
@@ -72,13 +80,13 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     const { limit, status } = request.query;
 
     try {
-      const result = await getSessions(fastify, user.id, {
+      const result = await listSessions(fastify, user.id, {
         limit: limit ? Number(limit) : undefined,
         status: status ?? undefined,
       });
       return reply.send(result);
     } catch (error) {
-      request.log.error(error, 'Failed to get sessions');
+      request.log.error(error, 'Failed to list sessions');
       return reply.status(500).send({
         error: 'InternalServerError',
         message: 'Failed to get sessions',
@@ -126,6 +134,98 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     }
   });
 
+  // PATCH /sessions/:session_id - セッション更新
+  fastify.patch<{
+    Params: { session_id: string };
+    Body: SessionUpdateRequest;
+    Reply: SessionResponse | ApiError;
+  }>('/sessions/:session_id', async (request, reply) => {
+    const { user } = request.ctx!;
+
+    if (!user.id) {
+      return reply.status(401).send({
+        error: 'Unauthorized',
+        message: 'User ID not found in request context',
+        statusCode: 401,
+      });
+    }
+
+    const { session_id } = request.params;
+    const { title, session_status } = request.body;
+
+    // リクエストボディのバリデーション
+    if (title === undefined && session_status === undefined) {
+      return reply.status(400).send({
+        error: 'BadRequest',
+        message: 'At least one field (title or session_status) is required',
+        statusCode: 400,
+      });
+    }
+
+    try {
+      const session = await updateSession(fastify, user.id, session_id, {
+        title,
+        session_status,
+      });
+
+      if (!session) {
+        return reply.status(404).send({
+          error: 'NotFound',
+          message: 'Session not found',
+          statusCode: 404,
+        });
+      }
+
+      return reply.send(session);
+    } catch (error) {
+      request.log.error(error, 'Failed to update session');
+      return reply.status(500).send({
+        error: 'InternalServerError',
+        message: 'Failed to update session',
+        statusCode: 500,
+      });
+    }
+  });
+
+  // POST /sessions/:session_id/archive - セッションアーカイブ
+  fastify.post<{
+    Params: { session_id: string };
+    Reply: SessionArchiveResponse | ApiError;
+  }>('/sessions/:session_id/archive', async (request, reply) => {
+    const { user } = request.ctx!;
+
+    if (!user.id) {
+      return reply.status(401).send({
+        error: 'Unauthorized',
+        message: 'User ID not found in request context',
+        statusCode: 401,
+      });
+    }
+
+    const { session_id } = request.params;
+
+    try {
+      const session = await archiveSession(fastify, user.id, session_id);
+
+      if (!session) {
+        return reply.status(404).send({
+          error: 'NotFound',
+          message: 'Session not found',
+          statusCode: 404,
+        });
+      }
+
+      return reply.send(session);
+    } catch (error) {
+      request.log.error(error, 'Failed to archive session');
+      return reply.status(500).send({
+        error: 'InternalServerError',
+        message: 'Failed to archive session',
+        statusCode: 500,
+      });
+    }
+  });
+
   // GET /sessions/:session_id/events - 過去イベント取得
   fastify.get<{
     Params: { session_id: string };
@@ -146,7 +246,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     const { after, limit } = request.query;
 
     try {
-      const result = await getSessionEvents(fastify, user.id, session_id, {
+      const result = await listSessionEvents(fastify, user.id, session_id, {
         after: after ?? undefined,
         limit: limit ? Number(limit) : undefined,
       });

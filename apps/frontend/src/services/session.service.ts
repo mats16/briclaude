@@ -5,6 +5,8 @@ import type {
   SessionEventsResponse,
   SessionListResponse,
   SessionListQuery,
+  SessionResponse,
+  SessionUpdateRequest,
   GenerateTitleRequest,
   GenerateTitleResponse,
 } from '@repo/types';
@@ -58,5 +60,19 @@ export const sessionService = {
     } catch {
       return null;
     }
+  },
+
+  async getSession(sessionId: string): Promise<SessionResponse> {
+    return apiClient<SessionResponse>(`/api/sessions/${sessionId}`);
+  },
+
+  async updateSession(
+    sessionId: string,
+    request: SessionUpdateRequest
+  ): Promise<SessionResponse> {
+    return apiClient<SessionResponse>(`/api/sessions/${sessionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(request),
+    });
   },
 };

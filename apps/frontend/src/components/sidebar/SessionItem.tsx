@@ -1,10 +1,12 @@
 import type { SessionResponse } from '@repo/types';
+import { Archive } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SessionItemProps {
   session: SessionResponse;
   isSelected?: boolean;
   onClick?: () => void;
+  onArchive?: () => void;
 }
 
 function formatRelativeTime(dateString: string): string {
@@ -26,23 +28,49 @@ function formatRelativeTime(dateString: string): string {
   });
 }
 
-export function SessionItem({ session, isSelected, onClick }: SessionItemProps) {
+export function SessionItem({ session, isSelected, onClick, onArchive }: SessionItemProps) {
+  const handleArchive = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onArchive?.();
+  };
+
   return (
     <button
       onClick={onClick}
       className={cn(
-        'w-full text-left px-3 py-2.5 rounded-md transition-colors',
+        'group w-full text-left px-3 py-2.5 rounded-md transition-colors',
         'hover:bg-muted/50',
         isSelected && 'bg-muted'
       )}
     >
-      <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-medium text-foreground line-clamp-1">
-          {session.title || 'Untitled Session'}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          {formatRelativeTime(session.updated_at)}
-        </span>
+      <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+          <span className="text-sm font-medium text-foreground line-clamp-1">
+            {session.title || 'Untitled Session'}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {formatRelativeTime(session.updated_at)}
+          </span>
+        </div>
+        {onArchive && (
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={handleArchive}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                onArchive?.();
+              }
+            }}
+            className={cn(
+              'p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity',
+              'hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Archive className="h-4 w-4" />
+          </div>
+        )}
       </div>
     </button>
   );
