@@ -1,74 +1,43 @@
-# Frontend Application - Development Guide
+# Frontend Application
 
-## Overview
-
-React 19 single-page application built with Vite 7, TypeScript, and shadcn/ui components.
+React 19 + Vite 7 frontend for the AI chat application.
 
 ## Tech Stack
 
-- **Framework**: React 19.0.0
-- **Build Tool**: Vite 7.2.0
-- **Styling**: Tailwind CSS 3.4.1
-- **UI Components**: shadcn/ui (default theme, slate base color)
-- **Icons**: lucide-react 0.562.0
-- **Type Safety**: TypeScript 5.8+ (strict mode)
+| Category | Technology |
+|----------|------------|
+| Framework | React 19.0.0 |
+| Build Tool | Vite 7.2.0 |
+| Styling | Tailwind CSS 3.4.1 |
+| UI Components | shadcn/ui (Radix UI based) |
+| Internationalization | i18next, react-i18next |
+| Routing | react-router-dom 7.x |
+| Icons | lucide-react |
 
 ## Directory Structure
 
 ```
-apps/frontend/
-├── src/
-│   ├── components/
-│   │   └── ui/           # shadcn/ui components
-│   ├── lib/
-│   │   └── utils.ts      # Utility functions (cn, etc.)
-│   ├── App.tsx           # Root component
-│   ├── main.tsx          # Entry point
-│   ├── index.css         # Global styles + Tailwind
-│   └── vite-env.d.ts     # Vite type definitions
-├── public/               # Static assets
-├── index.html            # HTML template
-├── vite.config.ts        # Vite configuration
-├── tailwind.config.ts    # Tailwind configuration
-├── components.json       # shadcn/ui configuration
-└── package.json
+src/
+├── components/
+│   ├── layout/        # Layout components (AppLayout)
+│   ├── main/          # Main area (MessageArea, InputArea)
+│   ├── settings/      # Settings (UserSettingsModal)
+│   ├── sidebar/       # Sidebar (SessionList, ModelSelector)
+│   └── ui/            # shadcn/ui components
+├── constants/         # Constants (models, layout)
+├── contexts/          # React Context (UserContext)
+├── hooks/             # Custom hooks (useUser)
+├── i18n/              # Internationalization (en.json, ja.json)
+├── lib/               # Utilities (cn, etc.)
+└── services/          # API services (api-client, session, user)
 ```
 
-## React 19 Specific Guidelines
+## Component Patterns
 
-### Component Patterns
-
-**Prefer functional components with hooks:**
+### Functional Components + TypeScript
 
 ```typescript
-// ✅ Good
-import { useState, useEffect } from 'react';
-
-function UserProfile({ userId }: { userId: string }) {
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    fetchUser(userId).then(setUser);
-  }, [userId]);
-
-  return <div>{user?.name}</div>;
-}
-
-// ❌ Bad - Don't use class components or PropTypes
-```
-
-### State Management
-
-- Use `useState` for local state
-- Use `useEffect` for side effects
-- For shared state, consider Context API or state management library (future)
-
-### Type Safety
-
-Always type component props and state:
-
-```typescript
-// ✅ Good
+// Good
 interface ButtonProps {
   label: string;
   onClick: () => void;
@@ -79,146 +48,97 @@ function Button({ label, onClick, variant = 'primary' }: ButtonProps) {
   return <button onClick={onClick}>{label}</button>;
 }
 
-// ❌ Bad - Don't use any or skip typing
+// Bad - Don't use any types or PropTypes
 function Button({ label, onClick }: any) { /* ... */ }
 ```
 
-## Styling with Tailwind CSS
-
-### Class Organization
-
-Order classes by category:
-
-1. Layout (flex, grid, block)
-2. Spacing (p-_, m-_, space-\*)
-3. Sizing (w-_, h-_)
-4. Typography (text-_, font-_)
-5. Colors (bg-_, text-_)
-6. Effects (shadow-_, rounded-_)
+### Using Context
 
 ```typescript
-// ✅ Good
-<div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
+import { useUser } from '@/hooks/useUser';
 
-// ❌ Bad - Random order
-<div className="shadow-sm p-4 flex rounded-lg items-center bg-white gap-4">
+function MyComponent() {
+  const { user, isLoading } = useUser();
+  // ...
+}
 ```
 
-### Using cn() Utility
+## Tailwind CSS
 
-Always use `cn()` for conditional classes:
+### Use cn() Utility
 
 ```typescript
 import { cn } from '@/lib/utils';
 
-// ✅ Good
+// Good - Use cn() for conditional classes
 <button className={cn(
   "px-4 py-2 rounded-md",
   variant === 'primary' && "bg-primary text-white",
-  variant === 'secondary' && "bg-secondary",
   disabled && "opacity-50 cursor-not-allowed"
 )}>
 
-// ❌ Bad - String concatenation
+// Bad - String concatenation
 <button className={`px-4 py-2 ${variant === 'primary' ? 'bg-primary' : ''}`}>
 ```
 
-### CSS Variables
+### Class Order
 
-Theme colors are defined using CSS variables in `src/index.css`:
+1. Layout (flex, grid)
+2. Spacing (p-*, m-*)
+3. Sizing (w-*, h-*)
+4. Typography (text-*, font-*)
+5. Colors (bg-*, text-*)
+6. Effects (shadow-*, rounded-*)
 
-```css
-:root {
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --primary: 222.2 47.4% 11.2%;
-  /* ... */
-}
-```
+## shadcn/ui
 
-Use Tailwind classes that reference these variables:
-
-```typescript
-<div className="bg-background text-foreground">
-<button className="bg-primary text-primary-foreground">
-```
-
-## shadcn/ui Components
-
-### Installing Components
+### Adding Components
 
 ```bash
-npx shadcn-ui@latest add button
-npx shadcn-ui@latest add card
-npx shadcn-ui@latest add input
-npx shadcn-ui@latest add dialog
+npx shadcn@latest add button
+npx shadcn@latest add dialog
 ```
 
-### Usage Pattern
+### Usage
 
 ```typescript
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-
-function Example() {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Title</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Button variant="default">Click me</Button>
-      </CardContent>
-    </Card>
-  );
-}
+import { Dialog, DialogContent, DialogHeader } from '@/components/ui/dialog';
 ```
 
-### Customization
+## Internationalization (i18n)
 
-- Components are fully customizable - edit files in `src/components/ui/`
-- Variants are defined using `class-variance-authority`
-- Base styles use Tailwind utility classes
+### Translation Files
 
-### Available Variants
+- `src/i18n/locales/en.json` - English
+- `src/i18n/locales/ja.json` - Japanese
 
-Check each component for available variants:
+### Usage
 
 ```typescript
-// Button variants
-<Button variant="default" size="default">
-<Button variant="destructive" size="sm">
-<Button variant="outline" size="lg">
-<Button variant="ghost" size="icon">
+import { useTranslation } from 'react-i18next';
+
+function MyComponent() {
+  const { t } = useTranslation();
+  return <span>{t('common.submit')}</span>;
+}
 ```
 
 ## API Integration
 
-### Fetching Data
-
-Always type API responses:
+### API Client
 
 ```typescript
-import type { HealthCheckResponse } from '@repo/types';
+import { apiClient } from '@/services/api-client';
+import type { UserResponse } from '@repo/types';
 
-// ✅ Good - With types
-async function checkHealth() {
-  const response = await fetch('/api/health');
-  const data: HealthCheckResponse = await response.json();
-  return data;
-}
-
-// ❌ Bad - No types
-async function checkHealth() {
-  const response = await fetch('/api/health');
-  return response.json();
-}
+// Type-safe API call
+const user = await apiClient.get<UserResponse>('/api/user');
 ```
 
 ### Error Handling
 
 ```typescript
-// ✅ Good - Comprehensive error handling
 try {
   const response = await fetch('/api/health');
   if (!response.ok) {
@@ -227,252 +147,63 @@ try {
   const data: HealthCheckResponse = await response.json();
   return data;
 } catch (error) {
-  console.error('Failed to fetch health:', error);
-  // Handle error appropriately
+  console.error('Failed to fetch:', error);
 }
-```
-
-### API Proxy
-
-In development, `/api/*` requests are proxied to `http://localhost:8000`:
-
-```typescript
-// Development
-fetch('/api/health'); // → http://localhost:8000/api/health
-
-// Production (use environment variable)
-const API_URL = import.meta.env.VITE_API_URL || '';
-fetch(`${API_URL}/api/health`);
 ```
 
 ## Path Aliases
 
-The `@/` alias maps to `src/`:
+`@/` maps to `src/`:
 
 ```typescript
-// ✅ Good - Use aliases
+// Good
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-// ❌ Bad - Relative paths for common imports
+// Bad - Deep relative paths
 import { Button } from '../../components/ui/button';
 ```
 
 ## Environment Variables
 
-Vite exposes environment variables with the `VITE_` prefix:
+Vite exposes environment variables with `VITE_` prefix:
 
 ```typescript
-// .env
-VITE_API_URL=https://api.example.com
-
-// Usage
 const apiUrl = import.meta.env.VITE_API_URL;
-
-// Type definition (add to vite-env.d.ts if needed)
-interface ImportMetaEnv {
-  readonly VITE_API_URL: string;
-}
 ```
 
-## Performance Best Practices
+## Development
 
-### Code Splitting
-
-```typescript
-// Lazy load components
-import { lazy, Suspense } from 'react';
-
-const HeavyComponent = lazy(() => import('./HeavyComponent'));
-
-function App() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <HeavyComponent />
-    </Suspense>
-  );
-}
-```
-
-### Memoization
-
-```typescript
-import { useMemo, useCallback } from 'react';
-
-// Expensive computations
-const expensiveValue = useMemo(() => {
-  return computeExpensiveValue(a, b);
-}, [a, b]);
-
-// Callback functions
-const handleClick = useCallback(() => {
-  doSomething(value);
-}, [value]);
-```
-
-## Accessibility
-
-### ARIA Labels
-
-```typescript
-// ✅ Good
-<button aria-label="Close dialog" onClick={onClose}>
-  <X className="h-4 w-4" />
-</button>
-
-// ❌ Bad - Icon button without label
-<button onClick={onClose}>
-  <X className="h-4 w-4" />
-</button>
-```
-
-### Keyboard Navigation
-
-Ensure interactive elements are keyboard accessible:
-
-```typescript
-<div
-  role="button"
-  tabIndex={0}
-  onClick={handleClick}
-  onKeyDown={(e) => e.key === 'Enter' && handleClick()}
->
-```
-
-## Common Patterns
-
-### Form Handling
-
-```typescript
-import { useState, FormEvent } from 'react';
-
-function LoginForm() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    // Handle login
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
-      <button type="submit">Login</button>
-    </form>
-  );
-}
-```
-
-### Loading States
-
-```typescript
-function DataComponent() {
-  const [data, setData] = useState<Data | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    fetchData()
-      .then(setData)
-      .catch(setError)
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error.message}</div>;
-  if (!data) return <div>No data</div>;
-
-  return <div>{/* Render data */}</div>;
-}
-```
-
-## Testing (Future)
-
-When adding tests:
-
-```typescript
-// Component.test.tsx
-import { render, screen } from '@testing-library/react';
-import { Button } from './Button';
-
-describe('Button', () => {
-  it('renders with label', () => {
-    render(<Button label="Click me" onClick={() => {}} />);
-    expect(screen.getByText('Click me')).toBeInTheDocument();
-  });
-});
-```
-
-## Build & Deployment
-
-### Build for Production
+### Local Development
 
 ```bash
-npm run build
+npm run dev              # Start dev server (port 3000)
+npm run build            # Production build
+npm run preview          # Preview build
 ```
 
-Output: `dist/` directory
+### API Proxy
 
-### Preview Production Build
+In development, `/api/*` is proxied to `http://localhost:8000`:
 
-```bash
-npm run preview
-```
-
-### Environment-Specific Builds
-
-```bash
-# Development
-VITE_API_URL=http://localhost:8000 npm run build
-
-# Production
-VITE_API_URL=https://api.production.com npm run build
+```typescript
+fetch('/api/health');  // -> http://localhost:8000/api/health
 ```
 
 ## Troubleshooting
 
-### Hot Module Replacement (HMR) Issues
-
-1. Check that Vite dev server is running on port 3000
-2. Ensure no syntax errors in files
-3. Restart dev server: `npm run dev`
-
 ### Tailwind Classes Not Working
 
-1. Check `tailwind.config.ts` content paths include your files
-2. Ensure `index.css` imports Tailwind directives
+1. Check content paths in `tailwind.config.ts`
+2. Verify Tailwind directives in `index.css`
 3. Restart dev server
 
-### shadcn/ui Components Not Found
+### shadcn/ui Component Not Found
 
-1. Verify component was installed: `npx shadcn-ui@latest add <component>`
-2. Check import path uses `@/components/ui/`
-3. Ensure `components.json` aliases are correct
+1. Install component: `npx shadcn@latest add <component>`
+2. Check import path is `@/components/ui/`
 
 ### Type Errors
 
-1. Ensure `@repo/types` is built: `npm run build --filter=@repo/types`
+1. Verify `@repo/types` is built
 2. Restart TypeScript server in editor
-3. Check `tsconfig.json` references
-
-## Code Review Checklist
-
-- [ ] All components are properly typed
-- [ ] No `any` types used
-- [ ] Tailwind classes are organized consistently
-- [ ] `cn()` utility is used for conditional classes
-- [ ] API responses are typed with `@repo/types`
-- [ ] Error handling is implemented
-- [ ] Accessibility attributes are present
-- [ ] Code is formatted with Prettier
-- [ ] No ESLint errors

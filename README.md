@@ -1,278 +1,292 @@
 # Claude Code on Databricks
 
-Claude Code-like application on Databricks Apps - React + Fastify モノレポ
+[日本語](./README.ja.md)
 
-## 概要
+A Claude Code-like AI chat application running on Databricks Apps - React + Fastify monorepo.
 
-React 19 + shadcn/ui のフロントエンドと Fastify 5 によるバックエンド API のモノレポです。
-Turborepo + npm workspaces で管理され、TypeScript により型安全性を確保しています。
+## Overview
 
-## 技術スタック
+A monorepo with React 19 + shadcn/ui frontend and Fastify 5 backend API.
+Managed with Turborepo + npm workspaces, with type safety ensured through TypeScript.
 
-| カテゴリ       | 技術                             |
-| -------------- | -------------------------------- |
-| モノレポ管理   | Turborepo, npm workspaces        |
-| 言語           | TypeScript 5.8+                  |
-| フロントエンド | React 19, Vite 7                 |
-| UI ライブラリ  | shadcn/ui, Tailwind CSS          |
-| バックエンド   | Fastify 5                        |
-| コード品質     | ESLint 9 (Flat Config), Prettier |
-| 必須環境       | Node.js 22.16 (LTS)              |
+## Tech Stack
 
-## プロジェクト構造
+| Category | Technology |
+|----------|------------|
+| Monorepo | Turborepo, npm workspaces |
+| Language | TypeScript 5.8+ |
+| Frontend | React 19, Vite 7, shadcn/ui, Tailwind CSS, i18next |
+| Backend | Fastify 5, Drizzle ORM, Claude Agent SDK |
+| Code Quality | ESLint 9 (Flat Config), Prettier |
+| Runtime | Node.js 22.16 (LTS) |
+
+## Project Structure
 
 ```
 claude-code-on-databricks/
 ├── apps/
 │   ├── frontend/          # React + Vite + shadcn/ui
-│   └── backend/           # Fastify API
+│   └── backend/           # Fastify API + Drizzle ORM
 ├── packages/
-│   ├── types/             # @repo/types - 共通の型定義
-│   ├── eslint-config/     # ESLint 共通設定
-│   └── typescript-config/ # TypeScript 共通設定
-├── package.json           # ルート - workspaces 定義
-└── turbo.json             # Turborepo 設定
+│   ├── types/             # @repo/types - Shared type definitions
+│   ├── eslint-config/     # Shared ESLint config
+│   └── typescript-config/ # Shared TypeScript config
+├── package.json           # Root - workspaces definition
+└── turbo.json             # Turborepo config
 ```
 
-## セットアップ
+## Setup
 
-### 必須要件
+### Prerequisites
 
 - Node.js 22.16 (LTS)
 - npm 10.0+
+- PostgreSQL (for backend)
 
-### インストール
+### Installation
 
 ```bash
-# 依存関係のインストール
+# Install dependencies
 npm install
 
-# 型パッケージのビルド
+# Build types package
 npm run build --filter=@repo/types
 ```
 
-### shadcn/ui コンポーネントの追加（オプション）
+### Adding shadcn/ui Components (Optional)
 
 ```bash
 cd apps/frontend
 
-# Button コンポーネント
-npx shadcn-ui@latest add button
+# Button component
+npx shadcn@latest add button
 
-# Card コンポーネント
-npx shadcn-ui@latest add card
+# Card component
+npx shadcn@latest add card
 ```
 
-## 開発
+## Development
 
-### 開発サーバー起動
+### Start Development Servers
 
 ```bash
-# すべてのアプリを並列起動 (Turborepo)
+# Start all apps in parallel (Turborepo)
 npm run dev
 
 # Frontend: http://localhost:3000
 # Backend: http://localhost:8000
 ```
 
-### 個別起動
+### Start Individual Apps
 
 ```bash
-# バックエンドのみ
+# Backend only
 npm run dev --filter=@repo/backend
 
-# フロントエンドのみ
+# Frontend only
 npm run dev --filter=@repo/frontend
 ```
 
-## ビルド
+## Build
 
 ```bash
-# すべてをビルド (依存関係を自動解決)
+# Build all (dependencies auto-resolved)
 npm run build
 
-# ビルド順序: @repo/types → @repo/backend → @repo/frontend
+# Build order: @repo/types → @repo/backend → @repo/frontend
 ```
 
-## コード品質
+## Code Quality
 
-### リント
+### Lint
 
 ```bash
-# すべてのパッケージをリント
+# Lint all packages
 npm run lint
 ```
 
-### フォーマット
+### Format
 
 ```bash
-# フォーマット適用
+# Apply formatting
 npm run format
 
-# フォーマットチェック
+# Check formatting
 npm run format:check
 ```
 
-### 型チェック
+### Type Check
 
 ```bash
-# 型チェック実行
+# Run type check
 npm run type-check
 ```
 
-## API 連携
+## Testing
 
-### 開発環境
+```bash
+# Run backend tests
+npm run test --filter=@repo/backend
 
-- Vite のプロキシ設定により `/api/*` は自動的に `http://localhost:8000` に転送
-- フロントエンドから `fetch('/api/health')` で API を呼び出し
+# Watch mode
+npm run test:watch --filter=@repo/backend
 
-### 本番環境
+# Coverage
+npm run test:coverage --filter=@repo/backend
+```
 
-- 環境変数 `VITE_API_URL` で API の URL を指定
-- バックエンドの CORS 設定でフロントエンドの URL を許可
+## API Integration
 
-## 型共有
+### Development
 
-`@repo/types` パッケージを通じて、フロントエンドとバックエンド間で型を共有します。
+- Vite proxy automatically forwards `/api/*` to `http://localhost:8000`
+- Call API from frontend with `fetch('/api/health')`
+
+### Production
+
+- Set API URL via `VITE_API_URL` environment variable
+- Configure backend CORS to allow frontend URL
+
+## Type Sharing
+
+Share types between frontend and backend via `@repo/types` package.
 
 ```typescript
-// packages/types/src/api.ts で定義
+// Define in packages/types/src/api.ts
 export interface HealthCheckResponse {
   status: 'ok' | 'error';
   timestamp: string;
   service: string;
 }
 
-// バックエンドとフロントエンドで使用
+// Use in backend and frontend
 import type { HealthCheckResponse } from '@repo/types';
 ```
 
-## Databricks Apps へのデプロイ
+## Deploying to Databricks Apps
 
-このプロジェクトは Databricks Apps へのデプロイに対応しており、Databricks Asset Bundle を使用して管理されます。
+This project supports deployment to Databricks Apps, managed via Databricks Asset Bundle.
 
-### 前提条件
+### Prerequisites
 
-- [Databricks CLI](https://docs.databricks.com/dev-tools/cli/index.html) がインストールされていること
-- Databricks ワークスペースへの認証が設定されていること
-- 適切な権限（アプリ作成、シークレット管理、SQL Warehouse 作成）があること
+- [Databricks CLI](https://docs.databricks.com/dev-tools/cli/index.html) installed
+- Authenticated to Databricks workspace
+- Required permissions (app creation, secret management, SQL Warehouse creation)
 
-### シークレットの作成
+### Create Secrets
 
-デプロイ前に、環境ごとにシークレットを作成する必要があります。
+Before deployment, create secrets for each environment.
 
-#### 1. シークレットスコープの作成
+#### 1. Create Secret Scope
 
-**開発環境用:**
+**Development:**
 
 ```bash
 databricks secrets create-scope claude-code-app-dev
 ```
 
-**本番環境用:**
+**Production:**
 
 ```bash
 databricks secrets create-scope claude-code-app-prod
 ```
 
-#### 2. 必須シークレットの設定
+#### 2. Set Required Secrets
 
-各環境に対して、以下のシークレットを設定します。
+Set the following secrets for each environment.
 
-**開発環境:**
+**Development:**
 
 ```bash
-# encryption-key (アプリケーションの暗号化キー)
+# encryption-key (Application encryption key)
 databricks secrets put-secret claude-code-app-dev encryption-key
 
-# database-url (データベース接続文字列)
+# database-url (Database connection string)
 databricks secrets put-secret claude-code-app-dev database-url
 ```
 
-**本番環境:**
+**Production:**
 
 ```bash
-# encryption-key (アプリケーションの暗号化キー)
+# encryption-key (Application encryption key)
 databricks secrets put-secret claude-code-app-prod encryption-key
 
-# database-url (データベース接続文字列)
+# database-url (Database connection string)
 databricks secrets put-secret claude-code-app-prod database-url
 ```
 
-コマンド実行後、エディタが開きます。それぞれのシークレット値を入力して保存してください。
+After running the command, an editor opens. Enter and save the secret value.
 
-データベース接続文字列の例: `postgresql://user:password@host:5432/database`
+Database connection string example: `postgresql://user:password@host:5432/database`
 
-#### 3. シークレットの確認
+#### 3. Verify Secrets
 
 ```bash
-# 開発環境のシークレット一覧を確認
+# List development secrets
 databricks secrets list-secrets claude-code-app-dev
 
-# 本番環境のシークレット一覧を確認
+# List production secrets
 databricks secrets list-secrets claude-code-app-prod
 ```
 
-### デプロイ
+### Deploy
 
-#### 開発環境へのデプロイ
+#### Deploy to Development
 
 ```bash
-# ビルド
+# Build
 npm run build
 
-# デプロイ
+# Deploy
 databricks bundle deploy
 ```
 
-デプロイ先: `/Workspace/Users/{yourUserName}/.bundle/claude-code-app/dev`
+Deploy path: `/Workspace/Users/{yourUserName}/.bundle/claude-code-app/dev`
 
-#### 本番環境へのデプロイ
+#### Deploy to Production
 
 ```bash
-# ビルド
+# Build
 npm run build
 
-# 本番環境にデプロイ
+# Deploy to production
 databricks bundle deploy --target prod
 ```
 
-デプロイ先: `/Workspace/Shared/.bundle/claude-code-app/prod`
+Deploy path: `/Workspace/Shared/.bundle/claude-code-app/prod`
 
-### デプロイされるリソース
+### Deployed Resources
 
-- **Claude Code App**: メインアプリケーション
-- **SQL Warehouse**: `claude-warehouse` (2X-Small, サーバーレス対応)
-- **Secrets**: 暗号化キーとデータベース URL
-- **Permissions**: `users` グループに `CAN_USE` 権限
+- **Claude Code App**: Main application
+- **SQL Warehouse**: `claude-warehouse` (2X-Small, serverless)
+- **Secrets**: Encryption key and database URL
+- **Permissions**: `CAN_USE` permission for `users` group
 
-### デプロイの確認
+### Verify Deployment
 
 ```bash
-# デプロイ済みリソースの確認
+# Validate deployed resources
 databricks bundle validate
 
-# アプリのステータス確認
+# Check app status
 databricks apps list
 ```
 
-## クリーンアップ
+## Cleanup
 
 ```bash
-# すべての node_modules と build 成果物を削除
+# Delete all node_modules and build artifacts
 npm run clean
 ```
 
-## 次のステップ
+## Documentation
 
-- [ ] CI/CD パイプライン (GitHub Actions)
-- [ ] Databricks Apps へのデプロイ設定 (asset bundles)
-- [ ] 追加の shadcn/ui コンポーネント
-- [ ] API エンドポイントの追加
-- [ ] ルーティング (React Router)
-- [ ] テストフレームワーク (Vitest, Testing Library)
+For detailed development guidelines, see:
 
-## ライセンス
+- [CLAUDE.md](./CLAUDE.md) - Project overview and coding standards
+- [apps/frontend/CLAUDE.md](./apps/frontend/CLAUDE.md) - Frontend development guide
+- [apps/backend/CLAUDE.md](./apps/backend/CLAUDE.md) - Backend development guide
+
+## License
 
 MIT
