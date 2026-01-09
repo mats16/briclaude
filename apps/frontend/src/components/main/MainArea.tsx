@@ -38,7 +38,7 @@ export function MainArea({
     <div className="relative z-0 flex flex-col w-full h-full min-w-0 overflow-hidden bg-background">
       <MainHeader title={sessionTitle} branchName={branchName} isConnected={isConnected} />
       <MessageArea events={events} isLoading={isLoading} error={error} />
-      <InputArea onSend={handleSend} />
+      <InputArea sessionId={sessionId} onSend={handleSend} />
     </div>
   );
 }

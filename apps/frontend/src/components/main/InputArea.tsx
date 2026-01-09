@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import useLocalStorageState from 'use-local-storage-state';
 import { Send, Image } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,13 +8,17 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { TEXTAREA_MAX_HEIGHT_MAIN } from '@/constants';
 
 interface InputAreaProps {
+  sessionId?: string;
   onSend?: (content: string) => Promise<void> | void;
   disabled?: boolean;
 }
 
-export function InputArea({ onSend, disabled }: InputAreaProps) {
+export function InputArea({ sessionId, onSend, disabled }: InputAreaProps) {
   const { t } = useTranslation();
-  const [content, setContent] = useState('');
+  const storageKey = sessionId ? `chat-draft-${sessionId}` : 'chat-draft-temp';
+  const [content, setContent] = useLocalStorageState(storageKey, {
+    defaultValue: '',
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import useLocalStorageState from 'use-local-storage-state';
 import { Send, Image, ChevronDown, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,7 +20,9 @@ interface NewSessionInputProps {
 
 export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
   const { t } = useTranslation();
-  const [content, setContent] = useState('');
+  const [content, setContent] = useLocalStorageState('chat-draft-new-session', {
+    defaultValue: '',
+  });
   const [selectedModel, setSelectedModel] = useState(DEFAULT_SESSION_MODEL);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
