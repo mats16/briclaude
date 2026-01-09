@@ -6,6 +6,7 @@ import requestDecoratorPlugin from './plugins/request-decorator.js';
 import staticPlugin from './plugins/static.js';
 import healthRoute from './routes/health.js';
 import userRoute from './routes/user.js';
+import userTokensRoute from './routes/user-tokens.js';
 import sessionRoute from './routes/session.js';
 
 export async function build() {
@@ -30,6 +31,7 @@ export async function build() {
   // ルート登録（静的ファイルより先に）
   await app.register(healthRoute, { prefix: '/api' });
   await app.register(userRoute, { prefix: '/api' });
+  await app.register(userTokensRoute, { prefix: '/api' });
   await app.register(sessionRoute, { prefix: '/api' });
 
   // APIルートのキャッシュ制御

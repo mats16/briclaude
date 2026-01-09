@@ -1,6 +1,8 @@
-import { Globe, LogOut, Check, Settings, AlertCircle, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
+import { Globe, Check, Settings, AlertCircle, RefreshCw, ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { UserSettingsModal } from '@/components/settings/UserSettingsModal';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,14 +18,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 interface UserMenuProps {
   userName?: string;
-  userEmail?: string;
+  databricksHost?: string | null;
   isLoading?: boolean;
   error?: Error | null;
   onRetry?: () => void;
 }
 
-export function UserMenu({ userName, userEmail, isLoading, error, onRetry }: UserMenuProps) {
+export function UserMenu({ userName, databricksHost, isLoading, error, onRetry }: UserMenuProps) {
   const { t, i18n } = useTranslation();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const displayName = userName || 'User';
   const initials = displayName
@@ -77,14 +80,15 @@ export function UserMenu({ userName, userEmail, isLoading, error, onRetry }: Use
             </Avatar>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel className="flex flex-col">
-            <span>{displayName}</span>
-            {userEmail && (
-              <span className="text-xs font-normal text-muted-foreground">{userEmail}</span>
-            )}
+        <DropdownMenuContent align="start" className="w-72">
+          <DropdownMenuLabel>
+            <span className="truncate">{displayName}</span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+            <Settings className="h-4 w-4 mr-2" />
+            {t('user.settings')}
+          </DropdownMenuItem>
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
               <Globe className="h-4 w-4 mr-2" />
@@ -93,25 +97,33 @@ export function UserMenu({ userName, userEmail, isLoading, error, onRetry }: Use
             <DropdownMenuSubContent>
               <DropdownMenuItem onClick={() => changeLanguage('en')}>
                 {i18n.language === 'en' && <Check className="h-4 w-4 mr-2" />}
-                <span className={i18n.language !== 'en' ? 'ml-6' : ''}>{t('language.en')}</span>
+                <span className={i18n.language !== 'en' ? 'ml-6' : ''}>English</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => changeLanguage('ja')}>
                 {i18n.language === 'ja' && <Check className="h-4 w-4 mr-2" />}
-                <span className={i18n.language !== 'ja' ? 'ml-6' : ''}>{t('language.ja')}</span>
+                <span className={i18n.language !== 'ja' ? 'ml-6' : ''}>日本語</span>
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
-          <DropdownMenuItem>
-            <Settings className="h-4 w-4 mr-2" />
-            {t('user.settings')}
-          </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-destructive">
-            <LogOut className="h-4 w-4 mr-2" />
-            {t('user.signOut')}
+          <DropdownMenuItem asChild>
+            <a
+              href={databricksHost ? `https://${databricksHost}` : '#'}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              {t('user.databricksConsole')}
+            </a>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <UserSettingsModal
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        databricksHost={databricksHost}
+      />
     </div>
   );
 }

@@ -45,7 +45,7 @@ export function Sidebar({
   onSelectSession,
 }: SidebarProps) {
   const navigate = useNavigate();
-  const { user, isLoading, error, refetch } = useUser();
+  const { user, databricksHost, isLoading, error, refetch } = useUser();
 
   const handleNewSession = async (content: string, modelId: string) => {
     const request: SessionStartRequest = {
@@ -82,7 +82,7 @@ export function Sidebar({
       />
       <UserMenu
         userName={user?.name}
-        userEmail={user?.email}
+        databricksHost={databricksHost}
         isLoading={isLoading}
         error={error}
         onRetry={refetch}

@@ -10,4 +10,5 @@ export interface UserInfo {
 
 export interface UserResponse {
   user: UserInfo;
+  databricksHost: string;
 }

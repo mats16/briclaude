@@ -31,13 +31,34 @@
     "settings": "Settings",
     "language": "Language",
     "theme": "Theme",
-    "signOut": "Sign Out",
+    "databricksConsole": "Databricks Console",
     "loadError": "Failed to load user"
   },
   "common": {
     "loading": "Loading...",
     "error": "An error occurred",
-    "retry": "Retry"
+    "retry": "Retry",
+    "cancel": "Cancel"
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Manage your account settings and integrations.",
+    "token": {
+      "label": "Databricks Personal Access Token",
+      "placeholder": "dapi...",
+      "help": "Your Databricks PAT is stored securely with encryption.",
+      "registered": "Registered",
+      "replace": "Replace Token",
+      "save": "Save Token",
+      "fetchError": "Failed to load token information",
+      "emptyError": "Please enter a token",
+      "formatError": "Invalid format. Databricks PAT should start with 'dapi'",
+      "saveSuccess": "Token saved successfully",
+      "saveError": "Failed to save token",
+      "deleteSuccess": "Token deleted successfully",
+      "deleteError": "Failed to delete token",
+      "createLink": "Create a new token in Databricks"
+    }
   },
   "time": {
     "justNow": "Just now",
