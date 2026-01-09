@@ -1,17 +1,156 @@
 import type { FastifyInstance } from 'fastify';
 import { eq } from 'drizzle-orm';
 import { typeid } from 'typeid-js';
-import { query } from '@anthropic-ai/claude-agent-sdk';
+import { query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import { requestContext } from '@fastify/request-context';
 import type {
   SessionCreateRequest,
   SessionCreateResponse,
   SessionContextResponse,
+  SessionCreateEvent,
   WsSessionEvent,
 } from '@repo/types';
 import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 import { wsManager } from './websocket-manager.service.js';
+
+/**
+ * イベントを DB に保存し、WebSocket にブロードキャストする
+ */
+async function saveAndBroadcastEvent(
+  fastify: FastifyInstance,
+  userId: string,
+  sessionId: string,
+  message: SDKMessage
+): Promise<void> {
+  const eventUuid = 'uuid' in message ? (message.uuid as string) : crypto.randomUUID();
+  const eventSubtype = 'subtype' in message ? (message.subtype as string | null) : null;
+
+  const inserted = await fastify.withUserContext(userId, async tx => {
+    return insertSessionEventInTx(tx, {
+      uuid: eventUuid,
+      sessionId,
+      type: message.type,
+      subtype: eventSubtype,
+      message: message,
+    });
+  });
+
+  const wsEvent: WsSessionEvent = {
+    seq: inserted.seq,
+    uuid: inserted.uuid,
+    type: inserted.type,
+    subtype: inserted.subtype,
+    message: inserted.message,
+    created_at: inserted.createdAt.toISOString(),
+  };
+  wsManager.broadcastEvent(sessionId, wsEvent);
+}
+
+/**
+ * init イベントを待機する
+ * init イベント受信までのすべてのイベントを DB 保存 & WebSocket 送信
+ */
+interface WaitForInitResult {
+  sdkSessionId: string;
+  iterator: AsyncIterator<SDKMessage, void>;
+}
+
+async function waitForInit(
+  response: AsyncIterable<SDKMessage>,
+  fastify: FastifyInstance,
+  userId: string,
+  sessionId: string,
+  userEvents: SessionCreateEvent[]
+): Promise<WaitForInitResult> {
+  const iterator = response[Symbol.asyncIterator]();
+
+  while (true) {
+    const { value: message, done } = await iterator.next();
+
+    if (done || !message) {
+      throw new Error('Stream ended before init event');
+    }
+
+    // イベントを DB 保存 & WebSocket 送信
+    await saveAndBroadcastEvent(fastify, userId, sessionId, message);
+
+    // init イベントを検出
+    if (message.type === 'system' && message.subtype === 'init') {
+      const sdkSessionId = message.session_id;
+
+      // sessions の status と sdk_session_id を更新 + ユーザーイベント挿入
+      await fastify.withUserContext(userId, async tx => {
+        await tx
+          .update(sessions)
+          .set({
+            status: 'running',
+            sdkSessionId: sdkSessionId || null,
+          })
+          .where(eq(sessions.id, sessionId));
+
+        // ユーザーイベントを session_events テーブルに保存
+        for (const event of userEvents) {
+          await insertSessionEventInTx(tx, {
+            uuid: event.data.uuid,
+            sessionId,
+            type: event.data.type,
+            subtype: null,
+            message: event.data.message,
+          });
+        }
+      });
+
+      return {
+        sdkSessionId,
+        iterator,
+      };
+    }
+  }
+}
+
+/**
+ * init 以降のイベントをバックグラウンドで処理する
+ */
+async function processRemainingEvents(
+  iterator: AsyncIterator<SDKMessage, void>,
+  fastify: FastifyInstance,
+  userId: string,
+  sessionId: string
+): Promise<void> {
+  try {
+    while (true) {
+      const { value: message, done } = await iterator.next();
+
+      if (done || !message) {
+        break;
+      }
+
+      // イベントを DB 保存 & WebSocket 送信
+      await saveAndBroadcastEvent(fastify, userId, sessionId, message);
+
+      // result イベント時にセッション状態を idle に更新
+      if (message.type === 'result') {
+        await fastify.withUserContext(userId, async tx => {
+          await tx.update(sessions).set({ status: 'idle' }).where(eq(sessions.id, sessionId));
+        });
+      }
+    }
+  } catch (error) {
+    fastify.log.error({ sessionId, error }, 'Error processing remaining events');
+
+    // セッション状態を error に更新
+    try {
+      await fastify.withUserContext(userId, async tx => {
+        await tx.update(sessions).set({ status: 'error' }).where(eq(sessions.id, sessionId));
+      });
+    } catch (updateError) {
+      fastify.log.error({ sessionId, updateError }, 'Failed to update session status to error');
+    }
+
+    throw error;
+  }
+}
 
 /**
  * 新規セッションを作成する
@@ -21,6 +160,7 @@ import { wsManager } from './websocket-manager.service.js';
  * 2. sessions テーブルに status='init' でレコード挿入
  * 3. claude-agent-sdk で query() 実行
  * 4. init イベント受信時に status を 'running' に更新し、sdk_session_id を設定
+ * 5. 即座にレスポンスを返し、残りのイベントはバックグラウンドで処理
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
@@ -74,16 +214,34 @@ export async function createSession(
   });
 
   // 6. claude-agent-sdk で query 実行
-  let sdkSessionId = '';
-  let initProcessed = false;
-
   try {
     const response = query({
       prompt: userContent,
       options: {
         cwd: '.',
         model: session_context.model,
+        maxTurns: 100,
         settingSources: ['user', 'project', 'local'],
+        permissionMode: 'bypassPermissions',
+        systemPrompt: {
+          type: 'preset',
+          preset: 'claude_code',
+        },
+        tools: {
+          type: 'preset',
+          preset: 'claude_code',
+        },
+        allowedTools: [
+          'Skill',
+          'Bash',
+          'Read',
+          'Write',
+          'Edit',
+          'Glob',
+          'Grep',
+          'WebSearch',
+          'WebFetch',
+        ],
         env: {
           PATH: fastify.config.PATH,
           HOME: fastify.config.HOME,
@@ -96,73 +254,17 @@ export async function createSession(
           ANTHROPIC_DEFAULT_HAIKU_MODEL: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
           // Databricks
           DATABRICKS_HOST: `https://${fastify.config.DATABRICKS_HOST}`,
-        }
+        },
       },
     });
 
-    for await (const message of response) {
-      // init イベント処理（1回のみ）
-      if (message.type === 'system' && message.subtype === 'init' && !initProcessed) {
-        sdkSessionId = message.session_id;
-        initProcessed = true;
+    // 7. init イベントまで待機
+    const { iterator } = await waitForInit(response, fastify, userId, sessionId, events);
 
-        // 7. init イベント受信時に status を 'running' に更新 + ユーザーイベント挿入
-        await fastify.withUserContext(userId, async tx => {
-          // sessions の status と sdk_session_id を更新
-          await tx
-            .update(sessions)
-            .set({
-              status: 'running',
-              sdkSessionId: sdkSessionId || null,
-            })
-            .where(eq(sessions.id, sessionId));
-
-          // ユーザーイベントを session_events テーブルに保存
-          for (const event of events) {
-            await insertSessionEventInTx(tx, {
-              uuid: event.data.uuid,
-              sessionId,
-              type: event.data.type,
-              subtype: null,
-              message: event.data.message,
-            });
-          }
-        });
-      }
-
-      // 8. 全イベントを DB に保存 & WebSocket にブロードキャスト
-      const eventUuid = 'uuid' in message ? (message.uuid as string) : crypto.randomUUID();
-      const eventSubtype = 'subtype' in message ? (message.subtype as string | null) : null;
-
-      // イベントを session_events テーブルに保存
-      const inserted = await fastify.withUserContext(userId, async tx => {
-        return insertSessionEventInTx(tx, {
-          uuid: eventUuid,
-          sessionId,
-          type: message.type,
-          subtype: eventSubtype,
-          message: message,
-        });
-      });
-
-      // WebSocket にブロードキャスト
-      const wsEvent: WsSessionEvent = {
-        seq: inserted.seq,
-        uuid: inserted.uuid,
-        type: inserted.type,
-        subtype: inserted.subtype,
-        message: inserted.message,
-        created_at: inserted.createdAt.toISOString(),
-      };
-      wsManager.broadcastEvent(sessionId, wsEvent);
-
-      // result イベント時にセッション状態を idle に更新
-      if (message.type === 'result') {
-        await fastify.withUserContext(userId, async tx => {
-          await tx.update(sessions).set({ status: 'idle' }).where(eq(sessions.id, sessionId));
-        });
-      }
-    }
+    // 8. バックグラウンド処理開始（await しない）
+    processRemainingEvents(iterator, fastify, userId, sessionId).catch(error => {
+      fastify.log.error({ sessionId, error }, 'Background event processing failed');
+    });
   } catch (error) {
     // SDK呼び出し失敗時: status は 'init' のまま残る
     // 後でクリーンアップジョブで処理可能
@@ -170,6 +272,7 @@ export async function createSession(
     throw error;
   }
 
+  // 9. 即座にレスポンス返却
   return {
     id: sessionId,
     session_status: 'running',
