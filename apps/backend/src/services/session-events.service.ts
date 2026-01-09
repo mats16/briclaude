@@ -23,7 +23,10 @@ export async function getSessionEvents(
 
   return fastify.withUserContext(userId, async tx => {
     // セッションの存在確認（RLS でユーザー所有確認も兼ねる）
-    const [session] = await tx.select({ id: sessions.id }).from(sessions).where(eq(sessions.id, sessionId));
+    const [session] = await tx
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(eq(sessions.id, sessionId));
 
     if (!session) {
       throw new Error('Session not found');
@@ -88,7 +91,10 @@ export async function getSessionLastSeq(
 ): Promise<number> {
   return fastify.withUserContext(userId, async tx => {
     // セッションの存在確認（RLS でユーザー所有確認も兼ねる）
-    const [session] = await tx.select({ id: sessions.id }).from(sessions).where(eq(sessions.id, sessionId));
+    const [session] = await tx
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(eq(sessions.id, sessionId));
 
     if (!session) {
       throw new Error('Session not found');

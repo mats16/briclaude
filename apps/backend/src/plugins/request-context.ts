@@ -72,7 +72,10 @@ export default fp(
 
       // コンテキストに設定（空文字列もundefinedとして扱う）
       requestContext.set('pat', pat);
-      requestContext.set('obo_access_token', oboAccessToken && oboAccessToken !== '' ? oboAccessToken : undefined);
+      requestContext.set(
+        'obo_access_token',
+        oboAccessToken && oboAccessToken !== '' ? oboAccessToken : undefined
+      );
       requestContext.set('sp_access_token', spAccessToken);
 
       // デバッグログ

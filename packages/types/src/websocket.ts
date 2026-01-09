@@ -40,11 +40,7 @@ export interface WsPongMessage {
 /**
  * WebSocket サーバー -> クライアントメッセージ
  */
-export type WsServerMessage =
-  | WsConnectedMessage
-  | WsSessionEvent
-  | WsErrorMessage
-  | WsPongMessage;
+export type WsServerMessage = WsConnectedMessage | WsSessionEvent | WsErrorMessage | WsPongMessage;
 
 /**
  * WebSocket クライアント -> サーバーメッセージ

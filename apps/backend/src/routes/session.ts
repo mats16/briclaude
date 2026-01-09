@@ -96,79 +96,75 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
   // WebSocket /sessions/:session_id/subscribe - リアルタイムイベント配信
   fastify.get<{
     Params: { session_id: string };
-  }>(
-    '/sessions/:session_id/subscribe',
-    { websocket: true },
-    async (socket, request) => {
-      const { user } = request.ctx!;
-      const { session_id } = request.params;
+  }>('/sessions/:session_id/subscribe', { websocket: true }, async (socket, request) => {
+    const { user } = request.ctx!;
+    const { session_id } = request.params;
 
-      if (!user.id) {
+    if (!user.id) {
+      const errorMsg: WsErrorMessage = {
+        type: 'error',
+        code: 'UNAUTHORIZED',
+        message: 'User ID not found',
+      };
+      socket.send(JSON.stringify(errorMsg));
+      socket.close(4001, 'Unauthorized');
+      return;
+    }
+
+    try {
+      // 最新 seq を取得して接続成功メッセージを送信
+      const lastSeq = await getSessionLastSeq(fastify, user.id, session_id);
+
+      // 接続を管理に追加
+      wsManager.addConnection(session_id, user.id, socket);
+
+      const connectedMsg: WsConnectedMessage = {
+        type: 'connected',
+        session_id,
+        last_seq: lastSeq,
+      };
+      socket.send(JSON.stringify(connectedMsg));
+
+      request.log.info({ sessionId: session_id, userId: user.id }, 'WebSocket connected');
+
+      // クライアントからのメッセージ処理（ping/pong）
+      socket.on('message', (data: Buffer) => {
+        try {
+          const msg = JSON.parse(data.toString());
+          if (msg.type === 'ping') {
+            socket.send(JSON.stringify({ type: 'pong' }));
+          }
+        } catch {
+          // JSON パースエラーは無視
+        }
+      });
+
+      socket.on('close', () => {
+        request.log.info({ sessionId: session_id, userId: user.id }, 'WebSocket disconnected');
+      });
+    } catch (error) {
+      request.log.error(error, 'WebSocket connection error');
+
+      if (error instanceof Error && error.message === 'Session not found') {
         const errorMsg: WsErrorMessage = {
           type: 'error',
-          code: 'UNAUTHORIZED',
-          message: 'User ID not found',
+          code: 'NOT_FOUND',
+          message: 'Session not found',
         };
         socket.send(JSON.stringify(errorMsg));
-        socket.close(4001, 'Unauthorized');
+        socket.close(4004, 'Session not found');
         return;
       }
 
-      try {
-        // 最新 seq を取得して接続成功メッセージを送信
-        const lastSeq = await getSessionLastSeq(fastify, user.id, session_id);
-
-        // 接続を管理に追加
-        wsManager.addConnection(session_id, user.id, socket);
-
-        const connectedMsg: WsConnectedMessage = {
-          type: 'connected',
-          session_id,
-          last_seq: lastSeq,
-        };
-        socket.send(JSON.stringify(connectedMsg));
-
-        request.log.info({ sessionId: session_id, userId: user.id }, 'WebSocket connected');
-
-        // クライアントからのメッセージ処理（ping/pong）
-        socket.on('message', (data: Buffer) => {
-          try {
-            const msg = JSON.parse(data.toString());
-            if (msg.type === 'ping') {
-              socket.send(JSON.stringify({ type: 'pong' }));
-            }
-          } catch {
-            // JSON パースエラーは無視
-          }
-        });
-
-        socket.on('close', () => {
-          request.log.info({ sessionId: session_id, userId: user.id }, 'WebSocket disconnected');
-        });
-      } catch (error) {
-        request.log.error(error, 'WebSocket connection error');
-
-        if (error instanceof Error && error.message === 'Session not found') {
-          const errorMsg: WsErrorMessage = {
-            type: 'error',
-            code: 'NOT_FOUND',
-            message: 'Session not found',
-          };
-          socket.send(JSON.stringify(errorMsg));
-          socket.close(4004, 'Session not found');
-          return;
-        }
-
-        const errorMsg: WsErrorMessage = {
-          type: 'error',
-          code: 'CONNECTION_ERROR',
-          message: 'Failed to establish connection',
-        };
-        socket.send(JSON.stringify(errorMsg));
-        socket.close(4000, 'Connection error');
-      }
+      const errorMsg: WsErrorMessage = {
+        type: 'error',
+        code: 'CONNECTION_ERROR',
+        message: 'Failed to establish connection',
+      };
+      socket.send(JSON.stringify(errorMsg));
+      socket.close(4000, 'Connection error');
     }
-  );
+  });
 };
 
 export default sessionRoute;

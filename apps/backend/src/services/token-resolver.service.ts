@@ -58,7 +58,9 @@ async function fetchServicePrincipalToken(
  * キャッシュされたService Principalトークンを取得
  * 有効期限が切れている場合は再取得
  */
-export async function getServicePrincipalToken(fastify: FastifyInstance): Promise<string | undefined> {
+export async function getServicePrincipalToken(
+  fastify: FastifyInstance
+): Promise<string | undefined> {
   const { DATABRICKS_HOST, DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET } = fastify.config;
 
   // 認証情報がない場合はundefined
@@ -87,7 +89,10 @@ export async function getServicePrincipalToken(fastify: FastifyInstance): Promis
 /**
  * DBからユーザーのPATを取得
  */
-export async function getUserPAT(fastify: FastifyInstance, userId: string): Promise<string | undefined> {
+export async function getUserPAT(
+  fastify: FastifyInstance,
+  userId: string
+): Promise<string | undefined> {
   if (!userId) return undefined;
 
   try {
