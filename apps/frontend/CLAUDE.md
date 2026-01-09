@@ -1,71 +1,40 @@
-# Frontend Application - Development Guide
+# Frontend Application
 
-## Overview
+React 19 + Vite 7 で構築された AI チャットアプリケーションのフロントエンド。
 
-React 19 single-page application built with Vite 7, TypeScript, and shadcn/ui components.
+## 技術スタック
 
-## Tech Stack
+| カテゴリ | 技術 |
+|---------|------|
+| フレームワーク | React 19.0.0 |
+| ビルドツール | Vite 7.2.0 |
+| スタイリング | Tailwind CSS 3.4.1 |
+| UI コンポーネント | shadcn/ui (Radix UI ベース) |
+| 国際化 | i18next, react-i18next |
+| ルーティング | react-router-dom 7.x |
+| アイコン | lucide-react |
 
-- **Framework**: React 19.0.0
-- **Build Tool**: Vite 7.2.0
-- **Styling**: Tailwind CSS 3.4.1
-- **UI Components**: shadcn/ui (default theme, slate base color)
-- **Icons**: lucide-react 0.562.0
-- **Type Safety**: TypeScript 5.8+ (strict mode)
-
-## Directory Structure
+## ディレクトリ構造
 
 ```
-apps/frontend/
-├── src/
-│   ├── components/
-│   │   └── ui/           # shadcn/ui components
-│   ├── lib/
-│   │   └── utils.ts      # Utility functions (cn, etc.)
-│   ├── App.tsx           # Root component
-│   ├── main.tsx          # Entry point
-│   ├── index.css         # Global styles + Tailwind
-│   └── vite-env.d.ts     # Vite type definitions
-├── public/               # Static assets
-├── index.html            # HTML template
-├── vite.config.ts        # Vite configuration
-├── tailwind.config.ts    # Tailwind configuration
-├── components.json       # shadcn/ui configuration
-└── package.json
+src/
+├── components/
+│   ├── layout/        # レイアウトコンポーネント (AppLayout)
+│   ├── main/          # メインエリア (MessageArea, InputArea)
+│   ├── settings/      # 設定関連 (UserSettingsModal)
+│   ├── sidebar/       # サイドバー (SessionList, ModelSelector)
+│   └── ui/            # shadcn/ui コンポーネント
+├── constants/         # 定数定義 (models, layout)
+├── contexts/          # React Context (UserContext)
+├── hooks/             # カスタムフック (useUser)
+├── i18n/              # 国際化 (en.json, ja.json)
+├── lib/               # ユーティリティ (cn, etc.)
+└── services/          # API サービス (api-client, session, user)
 ```
 
-## React 19 Specific Guidelines
+## コンポーネントパターン
 
-### Component Patterns
-
-**Prefer functional components with hooks:**
-
-```typescript
-// ✅ Good
-import { useState, useEffect } from 'react';
-
-function UserProfile({ userId }: { userId: string }) {
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    fetchUser(userId).then(setUser);
-  }, [userId]);
-
-  return <div>{user?.name}</div>;
-}
-
-// ❌ Bad - Don't use class components or PropTypes
-```
-
-### State Management
-
-- Use `useState` for local state
-- Use `useEffect` for side effects
-- For shared state, consider Context API or state management library (future)
-
-### Type Safety
-
-Always type component props and state:
+### 関数コンポーネント + TypeScript
 
 ```typescript
 // ✅ Good
@@ -79,146 +48,97 @@ function Button({ label, onClick, variant = 'primary' }: ButtonProps) {
   return <button onClick={onClick}>{label}</button>;
 }
 
-// ❌ Bad - Don't use any or skip typing
+// ❌ Bad - any 型や PropTypes を使用しない
 function Button({ label, onClick }: any) { /* ... */ }
 ```
 
-## Styling with Tailwind CSS
-
-### Class Organization
-
-Order classes by category:
-
-1. Layout (flex, grid, block)
-2. Spacing (p-_, m-_, space-\*)
-3. Sizing (w-_, h-_)
-4. Typography (text-_, font-_)
-5. Colors (bg-_, text-_)
-6. Effects (shadow-_, rounded-_)
+### Context の使用
 
 ```typescript
-// ✅ Good
-<div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
+import { useUser } from '@/hooks/useUser';
 
-// ❌ Bad - Random order
-<div className="shadow-sm p-4 flex rounded-lg items-center bg-white gap-4">
+function MyComponent() {
+  const { user, isLoading } = useUser();
+  // ...
+}
 ```
 
-### Using cn() Utility
+## Tailwind CSS
 
-Always use `cn()` for conditional classes:
+### cn() ユーティリティを使用
 
 ```typescript
 import { cn } from '@/lib/utils';
 
-// ✅ Good
+// ✅ Good - 条件付きクラスには cn() を使用
 <button className={cn(
   "px-4 py-2 rounded-md",
   variant === 'primary' && "bg-primary text-white",
-  variant === 'secondary' && "bg-secondary",
   disabled && "opacity-50 cursor-not-allowed"
 )}>
 
-// ❌ Bad - String concatenation
+// ❌ Bad - 文字列連結
 <button className={`px-4 py-2 ${variant === 'primary' ? 'bg-primary' : ''}`}>
 ```
 
-### CSS Variables
+### クラスの並び順
 
-Theme colors are defined using CSS variables in `src/index.css`:
+1. レイアウト (flex, grid)
+2. スペーシング (p-*, m-*)
+3. サイズ (w-*, h-*)
+4. タイポグラフィ (text-*, font-*)
+5. 色 (bg-*, text-*)
+6. エフェクト (shadow-*, rounded-*)
 
-```css
-:root {
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --primary: 222.2 47.4% 11.2%;
-  /* ... */
-}
-```
+## shadcn/ui
 
-Use Tailwind classes that reference these variables:
-
-```typescript
-<div className="bg-background text-foreground">
-<button className="bg-primary text-primary-foreground">
-```
-
-## shadcn/ui Components
-
-### Installing Components
+### コンポーネントの追加
 
 ```bash
-npx shadcn-ui@latest add button
-npx shadcn-ui@latest add card
-npx shadcn-ui@latest add input
-npx shadcn-ui@latest add dialog
+npx shadcn@latest add button
+npx shadcn@latest add dialog
 ```
 
-### Usage Pattern
+### 使用方法
 
 ```typescript
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader } from '@/components/ui/dialog';
+```
 
-function Example() {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Title</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Button variant="default">Click me</Button>
-      </CardContent>
-    </Card>
-  );
+## 国際化 (i18n)
+
+### 翻訳ファイル
+
+- `src/i18n/locales/en.json` - 英語
+- `src/i18n/locales/ja.json` - 日本語
+
+### 使用方法
+
+```typescript
+import { useTranslation } from 'react-i18next';
+
+function MyComponent() {
+  const { t } = useTranslation();
+  return <span>{t('common.submit')}</span>;
 }
 ```
 
-### Customization
+## API 連携
 
-- Components are fully customizable - edit files in `src/components/ui/`
-- Variants are defined using `class-variance-authority`
-- Base styles use Tailwind utility classes
-
-### Available Variants
-
-Check each component for available variants:
+### API クライアント
 
 ```typescript
-// Button variants
-<Button variant="default" size="default">
-<Button variant="destructive" size="sm">
-<Button variant="outline" size="lg">
-<Button variant="ghost" size="icon">
+import { apiClient } from '@/services/api-client';
+import type { UserResponse } from '@repo/types';
+
+// 型安全な API 呼び出し
+const user = await apiClient.get<UserResponse>('/api/user');
 ```
 
-## API Integration
-
-### Fetching Data
-
-Always type API responses:
+### エラーハンドリング
 
 ```typescript
-import type { HealthCheckResponse } from '@repo/types';
-
-// ✅ Good - With types
-async function checkHealth() {
-  const response = await fetch('/api/health');
-  const data: HealthCheckResponse = await response.json();
-  return data;
-}
-
-// ❌ Bad - No types
-async function checkHealth() {
-  const response = await fetch('/api/health');
-  return response.json();
-}
-```
-
-### Error Handling
-
-```typescript
-// ✅ Good - Comprehensive error handling
 try {
   const response = await fetch('/api/health');
   if (!response.ok) {
@@ -227,252 +147,63 @@ try {
   const data: HealthCheckResponse = await response.json();
   return data;
 } catch (error) {
-  console.error('Failed to fetch health:', error);
-  // Handle error appropriately
+  console.error('Failed to fetch:', error);
 }
 ```
 
-### API Proxy
+## パスエイリアス
 
-In development, `/api/*` requests are proxied to `http://localhost:8000`:
-
-```typescript
-// Development
-fetch('/api/health'); // → http://localhost:8000/api/health
-
-// Production (use environment variable)
-const API_URL = import.meta.env.VITE_API_URL || '';
-fetch(`${API_URL}/api/health`);
-```
-
-## Path Aliases
-
-The `@/` alias maps to `src/`:
-
-```typescript
-// ✅ Good - Use aliases
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-
-// ❌ Bad - Relative paths for common imports
-import { Button } from '../../components/ui/button';
-```
-
-## Environment Variables
-
-Vite exposes environment variables with the `VITE_` prefix:
-
-```typescript
-// .env
-VITE_API_URL=https://api.example.com
-
-// Usage
-const apiUrl = import.meta.env.VITE_API_URL;
-
-// Type definition (add to vite-env.d.ts if needed)
-interface ImportMetaEnv {
-  readonly VITE_API_URL: string;
-}
-```
-
-## Performance Best Practices
-
-### Code Splitting
-
-```typescript
-// Lazy load components
-import { lazy, Suspense } from 'react';
-
-const HeavyComponent = lazy(() => import('./HeavyComponent'));
-
-function App() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <HeavyComponent />
-    </Suspense>
-  );
-}
-```
-
-### Memoization
-
-```typescript
-import { useMemo, useCallback } from 'react';
-
-// Expensive computations
-const expensiveValue = useMemo(() => {
-  return computeExpensiveValue(a, b);
-}, [a, b]);
-
-// Callback functions
-const handleClick = useCallback(() => {
-  doSomething(value);
-}, [value]);
-```
-
-## Accessibility
-
-### ARIA Labels
+`@/` は `src/` にマップ:
 
 ```typescript
 // ✅ Good
-<button aria-label="Close dialog" onClick={onClose}>
-  <X className="h-4 w-4" />
-</button>
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
-// ❌ Bad - Icon button without label
-<button onClick={onClose}>
-  <X className="h-4 w-4" />
-</button>
+// ❌ Bad - 深い相対パス
+import { Button } from '../../components/ui/button';
 ```
 
-### Keyboard Navigation
+## 環境変数
 
-Ensure interactive elements are keyboard accessible:
+Vite は `VITE_` プレフィックス付きの環境変数を公開:
 
 ```typescript
-<div
-  role="button"
-  tabIndex={0}
-  onClick={handleClick}
-  onKeyDown={(e) => e.key === 'Enter' && handleClick()}
->
+const apiUrl = import.meta.env.VITE_API_URL;
 ```
 
-## Common Patterns
+## 開発
 
-### Form Handling
-
-```typescript
-import { useState, FormEvent } from 'react';
-
-function LoginForm() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    // Handle login
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
-      <button type="submit">Login</button>
-    </form>
-  );
-}
-```
-
-### Loading States
-
-```typescript
-function DataComponent() {
-  const [data, setData] = useState<Data | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    fetchData()
-      .then(setData)
-      .catch(setError)
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error.message}</div>;
-  if (!data) return <div>No data</div>;
-
-  return <div>{/* Render data */}</div>;
-}
-```
-
-## Testing (Future)
-
-When adding tests:
-
-```typescript
-// Component.test.tsx
-import { render, screen } from '@testing-library/react';
-import { Button } from './Button';
-
-describe('Button', () => {
-  it('renders with label', () => {
-    render(<Button label="Click me" onClick={() => {}} />);
-    expect(screen.getByText('Click me')).toBeInTheDocument();
-  });
-});
-```
-
-## Build & Deployment
-
-### Build for Production
+### ローカル開発
 
 ```bash
-npm run build
+npm run dev              # 開発サーバー起動 (port 3000)
+npm run build            # 本番ビルド
+npm run preview          # ビルドのプレビュー
 ```
 
-Output: `dist/` directory
+### API プロキシ
 
-### Preview Production Build
+開発時は `/api/*` が `http://localhost:8000` にプロキシ:
 
-```bash
-npm run preview
+```typescript
+fetch('/api/health');  // → http://localhost:8000/api/health
 ```
 
-### Environment-Specific Builds
+## トラブルシューティング
 
-```bash
-# Development
-VITE_API_URL=http://localhost:8000 npm run build
+### Tailwind クラスが効かない
 
-# Production
-VITE_API_URL=https://api.production.com npm run build
-```
+1. `tailwind.config.ts` の content パスを確認
+2. `index.css` に Tailwind ディレクティブがあるか確認
+3. 開発サーバーを再起動
 
-## Troubleshooting
+### shadcn/ui コンポーネントが見つからない
 
-### Hot Module Replacement (HMR) Issues
+1. コンポーネントをインストール: `npx shadcn@latest add <component>`
+2. インポートパスが `@/components/ui/` になっているか確認
 
-1. Check that Vite dev server is running on port 3000
-2. Ensure no syntax errors in files
-3. Restart dev server: `npm run dev`
+### 型エラー
 
-### Tailwind Classes Not Working
-
-1. Check `tailwind.config.ts` content paths include your files
-2. Ensure `index.css` imports Tailwind directives
-3. Restart dev server
-
-### shadcn/ui Components Not Found
-
-1. Verify component was installed: `npx shadcn-ui@latest add <component>`
-2. Check import path uses `@/components/ui/`
-3. Ensure `components.json` aliases are correct
-
-### Type Errors
-
-1. Ensure `@repo/types` is built: `npm run build --filter=@repo/types`
-2. Restart TypeScript server in editor
-3. Check `tsconfig.json` references
-
-## Code Review Checklist
-
-- [ ] All components are properly typed
-- [ ] No `any` types used
-- [ ] Tailwind classes are organized consistently
-- [ ] `cn()` utility is used for conditional classes
-- [ ] API responses are typed with `@repo/types`
-- [ ] Error handling is implemented
-- [ ] Accessibility attributes are present
-- [ ] Code is formatted with Prettier
-- [ ] No ESLint errors
+1. `@repo/types` がビルドされているか確認
+2. エディタの TypeScript サーバーを再起動

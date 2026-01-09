@@ -1,101 +1,84 @@
-# Claude Code on Databricks - Development Guide
+# Claude Code on Databricks
 
-## Project Overview
+Databricks Apps 上で動作する Claude Code のような AI チャットアプリケーションのモノレポ。
 
-This is a monorepo containing a React frontend and Fastify backend for a Claude Code-like application on Databricks Apps. The project uses Turborepo for build orchestration and npm workspaces for dependency management.
-
-## Architecture
+## アーキテクチャ
 
 ```
 claude-code-on-databricks/
 ├── apps/
-│   ├── frontend/     # React 19 + Vite 7 + shadcn/ui
-│   └── backend/      # Fastify 5 API server
+│   ├── frontend/          # React 19 + Vite 7 + shadcn/ui
+│   └── backend/           # Fastify 5 + Drizzle ORM + Claude Agent SDK
 └── packages/
-    ├── types/        # Shared TypeScript type definitions
-    ├── eslint-config/        # Shared ESLint configuration
-    └── typescript-config/    # Shared TypeScript configuration
+    ├── types/             # 共有 TypeScript 型定義
+    ├── eslint-config/     # 共有 ESLint 設定
+    └── typescript-config/ # 共有 TypeScript 設定
 ```
 
-## Technology Stack
+## 技術スタック
 
-- **Language**: TypeScript 5.8+
-- **Frontend**: React 19, Vite 7, Tailwind CSS, shadcn/ui
-- **Backend**: Fastify 5
-- **Monorepo**: Turborepo 2.x, npm workspaces
-- **Code Quality**: ESLint 9 (Flat Config), Prettier
-- **Runtime**: Node.js 22.16 (LTS)
+| カテゴリ | 技術 |
+|---------|------|
+| 言語 | TypeScript 5.8+ (strict mode) |
+| フロントエンド | React 19, Vite 7, Tailwind CSS, shadcn/ui, i18next |
+| バックエンド | Fastify 5, Drizzle ORM, Claude Agent SDK |
+| モノレポ | Turborepo 2.x, npm workspaces |
+| コード品質 | ESLint 9 (Flat Config), Prettier |
+| ランタイム | Node.js 22.16 (LTS) |
 
-## Development Workflow
-
-### Commands
+## 開発コマンド
 
 ```bash
-# Install dependencies
-npm install
-
-# Start all apps in development mode
-npm run dev
-
-# Build all packages
-npm run build
-
-# Run linter
-npm run lint
-
-# Format code
-npm run format
-
-# Type check
-npm run type-check
+npm install          # 依存関係をインストール
+npm run dev          # 全アプリを開発モードで起動
+npm run build        # 全パッケージをビルド
+npm run lint         # リンターを実行
+npm run format       # コードをフォーマット
+npm run type-check   # 型チェック
 ```
 
-### Working with Individual Apps
+### 個別アプリの操作
 
 ```bash
-# Frontend only
-npm run dev --filter=@repo/frontend
-
-# Backend only
-npm run dev --filter=@repo/backend
-
-# Build types package
-npm run build --filter=@repo/types
+npm run dev --filter=@repo/frontend   # フロントエンドのみ
+npm run dev --filter=@repo/backend    # バックエンドのみ
+npm run build --filter=@repo/types    # types パッケージをビルド
 ```
 
-## Code Style & Best Practices
+## コードスタイル
 
-### General Guidelines
+### 必須ルール
 
-1. **TypeScript First**: All code must be written in TypeScript with strict mode enabled
-2. **Type Safety**: Never use `any` - use `unknown` or proper types
-3. **Shared Types**: API types must be defined in `packages/types` and shared between frontend and backend
-4. **ESLint**: Follow ESLint 9 Flat Config rules - no unused variables, proper imports
-5. **Prettier**: All code must be formatted with Prettier before committing
+- **TypeScript First**: 全コードは TypeScript で記述（`any` 禁止、`unknown` または適切な型を使用）
+- **共有型**: API 型は `packages/types` で定義し、フロントエンド・バックエンド間で共有
+- **ESLint 9 Flat Config**: `.eslintrc.*` は使用しない（`eslint.config.js` のみ）
+- **Prettier**: コミット前にフォーマット必須
 
-### File Naming
+### ファイル命名規則
 
-- **Components**: PascalCase (e.g., `UserProfile.tsx`)
-- **Utilities**: camelCase (e.g., `formatDate.ts`)
-- **Types**: PascalCase with `.ts` extension (e.g., `UserTypes.ts`)
-- **Config**: kebab-case (e.g., `eslint.config.js`)
+| 種類 | 規則 | 例 |
+|------|------|-----|
+| コンポーネント | PascalCase | `UserProfile.tsx` |
+| ユーティリティ | camelCase | `formatDate.ts` |
+| 型定義 | PascalCase | `UserTypes.ts` |
+| 設定ファイル | kebab-case | `eslint.config.js` |
 
-### Import Order
-
-1. External libraries (React, etc.)
-2. Internal packages (`@repo/*`)
-3. Relative imports (`./`, `../`)
-4. Type imports (use `import type`)
+### インポート順序
 
 ```typescript
+// 1. 外部ライブラリ
 import { useState } from 'react';
+
+// 2. 内部パッケージ
 import type { HealthCheckResponse } from '@repo/types';
+
+// 3. 相対インポート
 import { formatDate } from './utils';
 ```
 
-## Type Sharing
+## 型の共有
 
-Types are shared between frontend and backend through the `@repo/types` package:
+`@repo/types` パッケージで API 型を定義し、フロントエンド・バックエンド間で共有:
 
 ```typescript
 // packages/types/src/api.ts
@@ -105,183 +88,44 @@ export interface HealthCheckResponse {
   service: string;
 }
 
-// Backend usage
-import type { HealthCheckResponse } from '@repo/types';
-
-// Frontend usage
+// 使用側（フロントエンド・バックエンド共通）
 import type { HealthCheckResponse } from '@repo/types';
 ```
 
-## Important Notes
+## API 開発フロー
 
-### ESLint 9 Flat Config
+新しいエンドポイントを追加する手順:
 
-This project uses ESLint 9 with Flat Config (`eslint.config.js`). Do NOT use legacy `.eslintrc.*` files.
+1. `packages/types/src/` に型を定義
+2. `apps/backend/src/routes/` にルートを実装
+3. `apps/backend/src/app.ts` でルートを登録
+4. フロントエンドで型を使用して API を呼び出し
 
-### React 19
-
-- PropTypes are deprecated and ignored
-- Use TypeScript for type checking instead
-- Prefer functional components with hooks
-
-### Vite 7
-
-- Node.js 22.16 is required
-- Use `import.meta.env` for environment variables
-- Proxy setup: `/api` → `http://localhost:8000` (development only)
-
-### Fastify 5
-
-- Node.js 22+ recommended (20+ supported)
-- All deprecated APIs from v4 have been removed
-- Use TypeScript generics for route typing
+## 重要な注意事項
 
 ### Turborepo
 
-- Build tasks automatically resolve dependencies
-- Cache is stored in `.turbo/` (git-ignored)
-- Use `--force` to bypass cache if needed
+- ビルドタスクは依存関係を自動解決
+- キャッシュは `.turbo/` に保存（git-ignored）
+- キャッシュをバイパスするには `--force` を使用
 
-## API Development
+### ビルドエラーの対処
 
-### Adding a New Endpoint
+1. `@repo/types` を先にビルド: `npm run build --filter=@repo/types`
+2. Turborepo キャッシュをクリア: `rm -rf .turbo`
+3. node_modules を再インストール: `npm run clean && npm install`
 
-1. Define types in `packages/types/src/api.ts`
-2. Implement route in `apps/backend/src/routes/`
-3. Register route in `apps/backend/src/app.ts`
-4. Use types in frontend for API calls
+## アプリ固有のガイドライン
 
-Example:
+詳細なガイドラインは各アプリの CLAUDE.md を参照:
 
-```typescript
-// 1. Define type
-export interface UserResponse {
-  id: string;
-  name: string;
-  email: string;
-}
+- **フロントエンド**: [apps/frontend/CLAUDE.md](./apps/frontend/CLAUDE.md)
+  - React 19, shadcn/ui, Tailwind CSS の使い方
+  - コンポーネント設計パターン
+  - i18n 対応
 
-// 2. Backend route
-fastify.get<{ Reply: UserResponse }>('/user/:id', async (request, reply) => {
-  const user: UserResponse = {
-    /* ... */
-  };
-  return reply.send(user);
-});
-
-// 3. Frontend usage
-const response = await fetch(`/api/user/${id}`);
-const user: UserResponse = await response.json();
-```
-
-## shadcn/ui Components
-
-### Installing Components
-
-```bash
-cd apps/frontend
-npx shadcn-ui@latest add button
-npx shadcn-ui@latest add card
-```
-
-### Usage
-
-```typescript
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-```
-
-### Customization
-
-- Tailwind config: `apps/frontend/tailwind.config.ts`
-- Component config: `apps/frontend/components.json`
-- Theme variables: `apps/frontend/src/index.css`
-
-## Testing (Future)
-
-When adding tests:
-
-- Use Vitest for unit tests
-- Use Testing Library for React component tests
-- Place tests next to source files with `.test.ts` or `.spec.ts` extension
-
-## Deployment
-
-### Databricks Apps (Future)
-
-- Use asset bundles for deployment
-- Environment variables must be set in Databricks workspace
-- Build artifacts: `apps/frontend/dist`, `apps/backend/dist`
-
-## Common Tasks
-
-### Adding a New Dependency
-
-```bash
-# Frontend
-cd apps/frontend
-npm install <package-name>
-
-# Backend
-cd apps/backend
-npm install <package-name>
-
-# Shared types
-cd packages/types
-npm install <package-name>
-```
-
-### Updating Dependencies
-
-```bash
-# Update all workspaces
-npm update
-
-# Check for outdated packages
-npm outdated
-```
-
-### Cleaning Build Artifacts
-
-```bash
-# Clean all packages
-npm run clean
-
-# Rebuild from scratch
-npm run clean && npm install && npm run build
-```
-
-## Troubleshooting
-
-### Build Failures
-
-1. Ensure `@repo/types` is built first: `npm run build --filter=@repo/types`
-2. Clear Turborepo cache: `rm -rf .turbo`
-3. Clear node_modules: `npm run clean && npm install`
-
-### Type Errors
-
-1. Check that types package is built and up-to-date
-2. Restart TypeScript server in your editor
-3. Run `npm run type-check` to see all errors
-
-### CORS Errors
-
-1. Check `apps/backend/.env` has correct `CORS_ORIGIN`
-2. Ensure backend is running on port 8000
-3. Check Vite proxy configuration in `apps/frontend/vite.config.ts`
-
-## Additional Resources
-
-- [Turborepo Documentation](https://turbo.build/repo/docs)
-- [Fastify v5 Documentation](https://fastify.dev/docs/v5.2.x/)
-- [shadcn/ui Documentation](https://ui.shadcn.com/)
-- [Vite Documentation](https://vite.dev/)
-- [React 19 Documentation](https://react.dev/)
-
-## App-Specific Guidelines
-
-For detailed guidelines specific to each application, see:
-
-- Frontend: [apps/frontend/CLAUDE.md](./apps/frontend/CLAUDE.md)
-- Backend: [apps/backend/CLAUDE.md](./apps/backend/CLAUDE.md)
+- **バックエンド**: [apps/backend/CLAUDE.md](./apps/backend/CLAUDE.md)
+  - Fastify 5 ルーティング
+  - Drizzle ORM とデータベース操作
+  - Claude Agent SDK の使用方法
+  - プラグインシステム
