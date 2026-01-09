@@ -227,9 +227,9 @@ export async function createSession(
   const userEvent = events[0];
   const userContent = userEvent?.data.message.content ?? '';
 
-  // 3. cwd の生成（SESSION_BASE_DIR + sessionId の末尾部分）
-  const sessionIdSuffix = sessionId.replace('session_', '');
-  const cwd = `${fastify.config.SESSION_BASE_DIR}/${sessionIdSuffix}`;
+  // 3. cwd の生成（userHome + sessionId）
+  const userHome = requestContext.get('user_home') || fastify.config.HOME;
+  const cwd = `${userHome}/${sessionId}`;
 
   // 4. context オブジェクトの構築
   const sessionContext: SessionContextResponse = {
@@ -299,6 +299,7 @@ export async function createSession(
         env: {
           PATH: fastify.config.PATH,
           HOME: fastify.config.HOME,
+          CLAUDE_CONFIG_DIR: `${userHome}/.claude`,
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
           ANTHROPIC_AUTH_TOKEN: requestContext.get('pat'),

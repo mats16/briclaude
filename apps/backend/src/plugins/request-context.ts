@@ -1,5 +1,6 @@
 // apps/backend/src/plugins/request-context.ts
 import fp from 'fastify-plugin';
+import path from 'node:path';
 import { requestContext, fastifyRequestContext } from '@fastify/request-context';
 import { getUserPAT, getServicePrincipalToken } from '../services/token-resolver.service.js';
 
@@ -21,6 +22,7 @@ declare module '@fastify/request-context' {
     pat: string | undefined;
     obo_access_token: string | undefined;
     sp_access_token: string | undefined;
+    user_home: string;
   }
 }
 
@@ -55,6 +57,7 @@ export default fp(
         pat: undefined,
         obo_access_token: undefined,
         sp_access_token: undefined,
+        user_home: '',
       },
       hook: 'preHandler',
     });
@@ -62,7 +65,11 @@ export default fp(
     // preHandler フックでトークンを取得
     fastify.addHook('preHandler', async request => {
       const userId = request.ctx?.user.id ?? '';
+      const userEmail = request.ctx?.user.email ?? '';
       const oboAccessToken = request.ctx?.user.oboAccessToken;
+
+      // userHome を計算（USER_BASE_DIR + ユーザー名）
+      const userHome = path.join(fastify.config.USER_BASE_DIR, userEmail.split('@')[0]);
 
       // 各トークンを並列で取得
       const [pat, spAccessToken] = await Promise.all([
@@ -77,6 +84,7 @@ export default fp(
         oboAccessToken && oboAccessToken !== '' ? oboAccessToken : undefined
       );
       requestContext.set('sp_access_token', spAccessToken);
+      requestContext.set('user_home', userHome);
 
       // デバッグログ
       request.log.debug(
