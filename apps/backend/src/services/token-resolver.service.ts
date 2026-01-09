@@ -72,7 +72,11 @@ export async function getServicePrincipalToken(fastify: FastifyInstance): Promis
 
   // 新しいトークンを取得
   try {
-    return await fetchServicePrincipalToken(DATABRICKS_HOST, DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET);
+    return await fetchServicePrincipalToken(
+      DATABRICKS_HOST,
+      DATABRICKS_CLIENT_ID,
+      DATABRICKS_CLIENT_SECRET
+    );
   } catch (error) {
     fastify.log.error(error, 'Failed to get Service Principal token');
     return null;
@@ -90,7 +94,13 @@ export async function getUserPAT(fastify: FastifyInstance, userId: string): Prom
       return tx
         .select()
         .from(oauthTokens)
-        .where(and(eq(oauthTokens.userId, userId), eq(oauthTokens.provider, 'databricks'), eq(oauthTokens.authType, 'pat')));
+        .where(
+          and(
+            eq(oauthTokens.userId, userId),
+            eq(oauthTokens.provider, 'databricks'),
+            eq(oauthTokens.authType, 'pat')
+          )
+        );
     });
 
     if (tokens.length > 0) {

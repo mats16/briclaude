@@ -61,7 +61,10 @@ export default fp(
       const oboAccessToken = request.ctx?.user.oboAccessToken;
 
       // 各トークンを並列で取得
-      const [pat, spAccessToken] = await Promise.all([getUserPAT(fastify, userId), getServicePrincipalToken(fastify)]);
+      const [pat, spAccessToken] = await Promise.all([
+        getUserPAT(fastify, userId),
+        getServicePrincipalToken(fastify),
+      ]);
 
       // コンテキストに設定
       requestContext.set('pat', pat);
