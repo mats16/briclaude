@@ -8,41 +8,20 @@ import { UserMenu } from './UserMenu';
 import { useUser } from '@/hooks/useUser';
 import { sessionService } from '@/services';
 
-// Mock data for development
-const MOCK_SESSIONS: SessionSummary[] = [
-  {
-    id: '1',
-    title: 'Summarize context content clearly',
-    session_status: 'idle',
-    created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    updated_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-  },
-  {
-    id: '2',
-    title: 'Debug authentication flow',
-    session_status: 'idle',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    updated_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-  },
-  {
-    id: '3',
-    title: 'Implement user dashboard',
-    session_status: 'archived',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    updated_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-  },
-];
-
 interface SidebarProps {
   sessions?: SessionSummary[];
   selectedSessionId?: string | null;
   onSelectSession?: (sessionId: string) => void;
+  isSessionsLoading?: boolean;
+  onSessionCreated?: () => void;
 }
 
 export function Sidebar({
-  sessions = MOCK_SESSIONS,
-  selectedSessionId = '1',
+  sessions = [],
+  selectedSessionId,
   onSelectSession,
+  isSessionsLoading = false,
+  onSessionCreated,
 }: SidebarProps) {
   const navigate = useNavigate();
   const { user, databricksHost, isLoading, error, refetch } = useUser();
@@ -76,6 +55,7 @@ export function Sidebar({
     };
 
     const response = await sessionService.createSession(request);
+    onSessionCreated?.();
     navigate(`/${response.id}`);
   };
 
@@ -88,6 +68,7 @@ export function Sidebar({
         sessions={sessions}
         selectedSessionId={selectedSessionId}
         onSelectSession={onSelectSession}
+        isLoading={isSessionsLoading}
       />
       <UserMenu
         userName={user?.name}

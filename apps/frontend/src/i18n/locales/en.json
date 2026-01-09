@@ -12,6 +12,11 @@
     "searchPlaceholder": "Search sessions...",
     "sessions": "Sessions",
     "noSessions": "No sessions yet",
+    "filter": {
+      "active": "Active",
+      "archived": "Archived",
+      "all": "All"
+    },
     "model": {
       "label": "Model",
       "default": "Default",

@@ -12,6 +12,11 @@
     "searchPlaceholder": "セッションを検索...",
     "sessions": "セッション",
     "noSessions": "セッションがありません",
+    "filter": {
+      "active": "アクティブ",
+      "archived": "アーカイブ済み",
+      "all": "すべて"
+    },
     "model": {
       "label": "モデル",
       "default": "デフォルト",

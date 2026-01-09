@@ -3,6 +3,8 @@ import type {
   SessionCreateRequest,
   SessionCreateResponse,
   SessionEventsResponse,
+  SessionListResponse,
+  SessionListQuery,
   GenerateTitleRequest,
   GenerateTitleResponse,
 } from '@repo/types';
@@ -13,6 +15,19 @@ export const sessionService = {
       method: 'POST',
       body: JSON.stringify(request),
     });
+  },
+
+  async getSessions(options?: SessionListQuery): Promise<SessionListResponse> {
+    const params = new URLSearchParams();
+    if (options?.limit !== undefined) {
+      params.set('limit', String(options.limit));
+    }
+    if (options?.status !== undefined) {
+      params.set('status', options.status);
+    }
+    const queryString = params.toString();
+    const url = `/api/sessions${queryString ? `?${queryString}` : ''}`;
+    return apiClient<SessionListResponse>(url);
   },
 
   async getSessionEvents(

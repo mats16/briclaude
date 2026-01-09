@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useSessions } from '@/hooks/useSessions';
 import { Sidebar } from '@/components/sidebar/Sidebar';
 import { MainArea } from '@/components/main/MainArea';
 import { cn } from '@/lib/utils';
@@ -7,6 +8,16 @@ import { SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_DEFAULT_WIDTH } from '@/c
 
 export function AppLayout() {
   const { sessionId } = useParams<{ sessionId?: string }>();
+  const navigate = useNavigate();
+  const { sessions, isLoading: isSessionsLoading, refetch: refetchSessions } = useSessions();
+
+  const handleSelectSession = useCallback(
+    (selectedSessionId: string) => {
+      navigate(`/${selectedSessionId}`);
+    },
+    [navigate]
+  );
+
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem('sidebar-width');
     if (saved) {
@@ -60,7 +71,13 @@ export function AppLayout() {
     <div ref={containerRef} className="flex h-screen w-screen overflow-hidden bg-background">
       {/* Sidebar */}
       <div style={{ width: sidebarWidth }} className="h-full shrink-0">
-        <Sidebar selectedSessionId={sessionId} />
+        <Sidebar
+          sessions={sessions}
+          selectedSessionId={sessionId}
+          onSelectSession={handleSelectSession}
+          isSessionsLoading={isSessionsLoading}
+          onSessionCreated={refetchSessions}
+        />
       </div>
 
       {/* Resize Handle */}
