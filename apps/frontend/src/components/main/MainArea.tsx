@@ -1,4 +1,5 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
+import type { SessionEventData } from '@repo/types';
 import { MainHeader } from './MainHeader';
 import { MessageArea } from './MessageArea';
 import { InputArea } from './InputArea';
@@ -10,15 +11,22 @@ interface MainAreaProps {
   onSendMessage?: (content: string) => void;
 }
 
+interface LocationState {
+  initialEvents?: SessionEventData[];
+}
+
 export function MainArea({
   sessionTitle = 'New Session',
   branchName,
   onSendMessage,
 }: MainAreaProps) {
   const { sessionId } = useParams<{ sessionId?: string }>();
+  const location = useLocation();
+  const locationState = location.state as LocationState | null;
 
   const { events, isLoading, isConnected, error } = useSessionEvents({
     sessionId: sessionId ?? null,
+    initialEvents: locationState?.initialEvents,
   });
 
   const handleSend = (content: string) => {

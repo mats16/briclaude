@@ -78,6 +78,8 @@ export interface SessionCreateResponse {
   created_at: string;
   updated_at: string;
   session_context: SessionContextResponse;
+  /** ユーザーが送信したイベント（初期表示用） */
+  initial_events: SessionEventData[];
 }
 
 // =====================================================

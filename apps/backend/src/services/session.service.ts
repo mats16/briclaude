@@ -277,7 +277,18 @@ export async function createSession(
     throw error;
   }
 
-  // 9. 即座にレスポンス返却
+  // 9. ユーザーイベントを SessionEventData 形式に変換
+  const initialEvents: SessionEventData[] = events.map(event => ({
+    uuid: event.data.uuid,
+    type: event.data.type,
+    subtype: undefined,
+    data: {
+      type: event.data.type,
+      message: event.data.message,
+    } as SessionEventData['data'],
+  }));
+
+  // 10. 即座にレスポンス返却
   return {
     id: sessionId,
     session_status: 'running',
@@ -285,5 +296,6 @@ export async function createSession(
     created_at: createdAt.toISOString(),
     updated_at: updatedAt.toISOString(),
     session_context: sessionContext,
+    initial_events: initialEvents,
   };
 }

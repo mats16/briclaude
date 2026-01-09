@@ -5,6 +5,7 @@ import { useSessionWebSocket } from './useSessionWebSocket';
 
 interface UseSessionEventsOptions {
   sessionId: string | null;
+  initialEvents?: SessionEventData[];
 }
 
 interface UseSessionEventsReturn {
@@ -14,11 +15,29 @@ interface UseSessionEventsReturn {
   error: Error | null;
 }
 
-export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSessionEventsReturn {
+export function useSessionEvents({
+  sessionId,
+  initialEvents,
+}: UseSessionEventsOptions): UseSessionEventsReturn {
   const [events, setEvents] = useState<SessionEventData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const seenUuidsRef = useRef<Set<string>>(new Set());
+  const initialEventsAppliedRef = useRef<string | null>(null);
+
+  // 初期イベントを適用（POST レスポンスから取得した場合）
+  useEffect(() => {
+    if (
+      sessionId &&
+      initialEvents &&
+      initialEvents.length > 0 &&
+      initialEventsAppliedRef.current !== sessionId
+    ) {
+      initialEventsAppliedRef.current = sessionId;
+      setEvents(initialEvents);
+      seenUuidsRef.current = new Set(initialEvents.map(e => e.uuid));
+    }
+  }, [sessionId, initialEvents]);
 
   // 過去イベントの取得
   const loadPastEvents = useCallback(async () => {
@@ -52,10 +71,13 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
   // WebSocket 接続成功時のハンドラ
   const handleConnected = useCallback(
     (_msg: { last_seq: number }) => {
-      // 接続時に過去イベントを取得
+      // initialEvents がある場合は過去イベント取得をスキップ
+      if (initialEventsAppliedRef.current === sessionId) {
+        return;
+      }
       loadPastEvents();
     },
-    [loadPastEvents]
+    [loadPastEvents, sessionId]
   );
 
   // WebSocket 接続
@@ -65,14 +87,20 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
     onConnected: handleConnected,
   });
 
-  // セッション ID が変わったら過去イベントを取得
+  // セッション ID が変わったら状態をリセット
+  // initialEvents がない場合のみ過去イベントを取得
   useEffect(() => {
     if (sessionId) {
+      // initialEvents がある場合はリセットしない（初期イベント用 useEffect で処理）
+      if (initialEvents && initialEvents.length > 0) {
+        return;
+      }
       setEvents([]);
       seenUuidsRef.current.clear();
+      initialEventsAppliedRef.current = null;
       loadPastEvents();
     }
-  }, [sessionId, loadPastEvents]);
+  }, [sessionId, initialEvents, loadPastEvents]);
 
   return {
     events,
