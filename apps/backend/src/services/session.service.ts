@@ -3,7 +3,7 @@ import { typeid } from 'typeid-js';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import type { SessionStartRequest } from '@repo/types';
 import { sessions } from '../db/schema.js';
-import { insertSessionEvent } from '../db/helpers.js';
+import { insertSessionEventInTx } from '../db/helpers.js';
 
 export interface CreateSessionResult {
   sessionId: string;
@@ -16,8 +16,7 @@ export interface CreateSessionResult {
  * 処理フロー:
  * 1. TypeID で session_id 生成
  * 2. claude-agent-sdk で query() 実行し、init イベントから sdk_session_id 取得
- * 3. セッションを sessions テーブルに保存
- * 4. イベントを session_events テーブルに保存
+ * 3. 単一トランザクション内でセッションとイベントを保存
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
@@ -65,8 +64,11 @@ export async function createSession(
     }
   }
 
-  // 5. セッションを sessions テーブルに保存
+  // 5. 単一トランザクション内でセッションとイベントを保存
+  // セッション保存とイベント保存が同一トランザクション内で実行されるため、
+  // どちらかが失敗した場合は両方ロールバックされる
   await fastify.withUserContext(userId, async tx => {
+    // セッションを sessions テーブルに保存
     await tx.insert(sessions).values({
       id: sessionId,
       userId,
@@ -75,18 +77,18 @@ export async function createSession(
       databricksWorkspacePath: session_context.databricksWorkspacePath,
       databricksWorkspaceAutoPush: session_context.databricksWorkspaceAutoPush,
     });
-  });
 
-  // 6. イベントを session_events テーブルに保存
-  for (const event of events) {
-    await insertSessionEvent(fastify.db, {
-      uuid: event.uuid,
-      sessionId,
-      type: event.type,
-      subtype: null,
-      message: event.message as unknown as Record<string, unknown>,
-    });
-  }
+    // イベントを session_events テーブルに保存
+    for (const event of events) {
+      await insertSessionEventInTx(tx, {
+        uuid: event.uuid,
+        sessionId,
+        type: event.type,
+        subtype: null,
+        message: event.message as unknown as Record<string, unknown>,
+      });
+    }
+  });
 
   return { sessionId, sdkSessionId };
 }
