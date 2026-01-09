@@ -5,11 +5,13 @@ import type {
   SessionCreateResponse,
   SessionEventsResponse,
   SessionEventsQuery,
+  SessionListQuery,
+  SessionListResponse,
   WsConnectedMessage,
   WsErrorMessage,
   ApiError,
 } from '@repo/types';
-import { createSession } from '../services/session.service.js';
+import { createSession, getSessions } from '../services/session.service.js';
 import { getSessionEvents, getSessionLastSeq } from '../services/session-events.service.js';
 import { wsManager } from '../services/websocket-manager.service.js';
 
@@ -46,6 +48,39 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
       return reply.status(500).send({
         error: 'InternalServerError',
         message: 'Failed to create session',
+        statusCode: 500,
+      });
+    }
+  });
+
+  // GET /sessions - セッション一覧取得
+  fastify.get<{
+    Querystring: SessionListQuery;
+    Reply: SessionListResponse | ApiError;
+  }>('/sessions', async (request, reply) => {
+    const { user } = request.ctx!;
+
+    if (!user.id) {
+      return reply.status(401).send({
+        error: 'Unauthorized',
+        message: 'User ID not found in request context',
+        statusCode: 401,
+      });
+    }
+
+    const { limit, status } = request.query;
+
+    try {
+      const result = await getSessions(fastify, user.id, {
+        limit: limit ? Number(limit) : undefined,
+        status: status ?? undefined,
+      });
+      return reply.send(result);
+    } catch (error) {
+      request.log.error(error, 'Failed to get sessions');
+      return reply.status(500).send({
+        error: 'InternalServerError',
+        message: 'Failed to get sessions',
         statusCode: 500,
       });
     }

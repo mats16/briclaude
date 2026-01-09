@@ -31,6 +31,16 @@ export function useSessionWebSocket({
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttempts = useRef(0);
 
+  // stale closure 問題を回避するため、コールバックを ref で保持
+  const onEventRef = useRef(onEvent);
+  const onConnectedRef = useRef(onConnected);
+  const onErrorRef = useRef(onError);
+
+  // 毎レンダリングで ref を更新
+  onEventRef.current = onEvent;
+  onConnectedRef.current = onConnected;
+  onErrorRef.current = onError;
+
   const connect = useCallback(() => {
     if (!sessionId) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -55,18 +65,18 @@ export function useSessionWebSocket({
         const message = JSON.parse(event.data) as WsServerMessage;
 
         if ('session_id' in message && message.type === 'connected') {
-          // WsConnectedMessage
-          onConnected?.(message as WsConnectedMessage);
+          // WsConnectedMessage - ref 経由で最新のコールバックを呼び出す
+          onConnectedRef.current?.(message as WsConnectedMessage);
         } else if ('code' in message && message.type === 'error') {
           // WsErrorMessage
           const errorMessage = (message as { message: string }).message;
           setError(new Error(errorMessage));
-          onError?.(new Error(errorMessage));
+          onErrorRef.current?.(new Error(errorMessage));
         } else if (message.type === 'pong') {
           // Pong message - ignore
         } else if ('uuid' in message && 'data' in message) {
-          // SessionEventData
-          onEvent?.(message as SessionEventData);
+          // SessionEventData - ref 経由で最新のコールバックを呼び出す
+          onEventRef.current?.(message as SessionEventData);
         }
       } catch (e) {
         console.error('Failed to parse WebSocket message:', e);
@@ -89,7 +99,7 @@ export function useSessionWebSocket({
         reconnectTimeoutRef.current = setTimeout(connect, delay);
       }
     };
-  }, [sessionId, onEvent, onConnected, onError]);
+  }, [sessionId]); // コールバックは ref 経由で参照するため依存配列から削除
 
   const reconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {

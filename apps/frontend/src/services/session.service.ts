@@ -17,7 +17,7 @@ export const sessionService = {
 
   async getSessionEvents(
     sessionId: string,
-    options?: { after?: number; limit?: number }
+    options?: { after?: string; limit?: number }
   ): Promise<SessionEventsResponse> {
     const params = new URLSearchParams();
     if (options?.after !== undefined) {

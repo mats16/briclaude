@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { typeid } from 'typeid-js';
 import { query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import { requestContext } from '@fastify/request-context';
@@ -9,6 +9,10 @@ import type {
   SessionContextResponse,
   SessionCreateEvent,
   SessionEventData,
+  SessionListQuery,
+  SessionListResponse,
+  SessionSummary,
+  SessionStatus,
 } from '@repo/types';
 import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
@@ -298,4 +302,62 @@ export async function createSession(
     session_context: sessionContext,
     initial_events: initialEvents,
   };
+}
+
+/**
+ * ユーザーのセッション一覧を取得する
+ *
+ * @param fastify - Fastify インスタンス
+ * @param userId - ユーザーID
+ * @param options - クエリオプション（limit, status）
+ * @returns セッション一覧レスポンス
+ */
+export async function getSessions(
+  fastify: FastifyInstance,
+  userId: string,
+  options: SessionListQuery = {}
+): Promise<SessionListResponse> {
+  const { limit = 20, status } = options;
+
+  // limit のバリデーション（1-100）
+  const safeLimit = Math.min(Math.max(1, limit), 100);
+
+  return fastify.withUserContext(userId, async tx => {
+    // フィルタ条件を構築
+    const whereClause = status ? eq(sessions.status, status) : undefined;
+
+    // limit + 1 で取得して has_more を判定
+    const rows = await tx
+      .select({
+        id: sessions.id,
+        title: sessions.title,
+        status: sessions.status,
+        createdAt: sessions.createdAt,
+        updatedAt: sessions.updatedAt,
+      })
+      .from(sessions)
+      .where(whereClause)
+      .orderBy(desc(sessions.updatedAt))
+      .limit(safeLimit + 1);
+
+    // has_more 判定
+    const hasMore = rows.length > safeLimit;
+    const resultRows = hasMore ? rows.slice(0, safeLimit) : rows;
+
+    // SessionSummary 形式に変換
+    const data: SessionSummary[] = resultRows.map(row => ({
+      id: row.id,
+      title: row.title,
+      session_status: row.status as SessionStatus,
+      created_at: row.createdAt.toISOString(),
+      updated_at: row.updatedAt.toISOString(),
+    }));
+
+    return {
+      data,
+      first_id: data.length > 0 ? data[0].id : '',
+      last_id: data.length > 0 ? data[data.length - 1].id : '',
+      has_more: hasMore,
+    };
+  });
 }

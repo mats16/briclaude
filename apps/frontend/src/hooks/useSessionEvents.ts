@@ -39,25 +39,34 @@ export function useSessionEvents({
     }
   }, [sessionId, initialEvents]);
 
-  // 過去イベントの取得
-  const loadPastEvents = useCallback(async () => {
-    if (!sessionId) return;
+  // 過去イベントの取得（sessionId を引数として受け取る）
+  const loadPastEvents = useCallback(async (targetSessionId: string) => {
+    console.log('[loadPastEvents] Called with', { targetSessionId });
+    if (!targetSessionId) {
+      console.log('[loadPastEvents] Early return - no sessionId');
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await sessionService.getSessionEvents(sessionId);
+      console.log('[loadPastEvents] Calling API');
+      const response = await sessionService.getSessionEvents(targetSessionId);
+      console.log('[loadPastEvents] API response', { eventCount: response.data.length });
       setEvents(response.data);
 
       // 既知の uuid を記録
       seenUuidsRef.current = new Set(response.data.map(e => e.uuid));
+      // 取得完了をマーク
+      initialEventsAppliedRef.current = targetSessionId;
     } catch (e) {
+      console.error('[loadPastEvents] API error', e);
       setError(e instanceof Error ? e : new Error('Failed to load events'));
     } finally {
       setIsLoading(false);
     }
-  }, [sessionId]);
+  }, []); // 依存配列を空にして関数の参照を安定化
 
   // WebSocket イベントハンドラ
   const handleEvent = useCallback((event: SessionEventData) => {
@@ -69,16 +78,10 @@ export function useSessionEvents({
   }, []);
 
   // WebSocket 接続成功時のハンドラ
-  const handleConnected = useCallback(
-    (_msg: { last_seq: number }) => {
-      // initialEvents がある場合は過去イベント取得をスキップ
-      if (initialEventsAppliedRef.current === sessionId) {
-        return;
-      }
-      loadPastEvents();
-    },
-    [loadPastEvents, sessionId]
-  );
+  // 過去イベント取得は useEffect で行うため、ここでは何もしない
+  const handleConnected = useCallback((_msg: { last_seq: number }) => {
+    // WebSocket 接続成功時はリアルタイム更新を受け取る準備のみ
+  }, []);
 
   // WebSocket 接続
   const { isConnected, error: wsError } = useSessionWebSocket({
@@ -87,18 +90,25 @@ export function useSessionEvents({
     onConnected: handleConnected,
   });
 
-  // セッション ID が変わったら状態をリセット
-  // initialEvents がない場合のみ過去イベントを取得
+  // セッション ID が変わったら過去イベントを取得
+  // WebSocket から分離し、直接 API を呼び出す
   useEffect(() => {
+    console.log('[useSessionEvents] useEffect fired', {
+      sessionId,
+      hasInitialEvents: initialEvents && initialEvents.length > 0,
+    });
     if (sessionId) {
-      // initialEvents がある場合はリセットしない（初期イベント用 useEffect で処理）
+      // initialEvents がある場合はスキップ（初期イベント用 useEffect で処理）
       if (initialEvents && initialEvents.length > 0) {
+        console.log('[useSessionEvents] Skipping loadPastEvents (initialEvents exists)');
         return;
       }
+      // 既存セッションを開いた場合は過去イベントを取得
+      console.log('[useSessionEvents] Calling loadPastEvents', { sessionId });
       setEvents([]);
       seenUuidsRef.current.clear();
       initialEventsAppliedRef.current = null;
-      loadPastEvents();
+      loadPastEvents(sessionId);
     }
   }, [sessionId, initialEvents, loadPastEvents]);
 

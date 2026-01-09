@@ -41,7 +41,7 @@ export function SessionItem({ session, isSelected, onClick }: SessionItemProps) 
           {session.title || 'Untitled Session'}
         </span>
         <span className="text-xs text-muted-foreground">
-          {formatRelativeTime(session.updatedAt)}
+          {formatRelativeTime(session.updated_at)}
         </span>
       </div>
     </button>

@@ -14,22 +14,22 @@ const MOCK_SESSIONS: SessionSummary[] = [
     id: '1',
     title: 'Summarize context content clearly',
     session_status: 'idle',
-    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+    created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+    updated_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
   },
   {
     id: '2',
     title: 'Debug authentication flow',
     session_status: 'idle',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+    updated_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
   },
   {
     id: '3',
     title: 'Implement user dashboard',
     session_status: 'archived',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+    updated_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
   },
 ];
 

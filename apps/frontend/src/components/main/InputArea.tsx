@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import useLocalStorageState from 'use-local-storage-state';
-import { Send, Image } from 'lucide-react';
+import { Send, Image, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -85,7 +85,11 @@ export function InputArea({ sessionId, onSend, disabled }: InputAreaProps) {
                     onClick={handleSubmit}
                     disabled={!content.trim() || disabled || isSubmitting}
                   >
-                    <Send className="h-4 w-4" />
+                    {isSubmitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>

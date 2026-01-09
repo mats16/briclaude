@@ -90,8 +90,8 @@ export interface SessionSummary {
   id: string;
   title: string | null;
   session_status: SessionStatus;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface SessionDetail extends SessionSummary {
@@ -100,8 +100,20 @@ export interface SessionDetail extends SessionSummary {
 }
 
 export interface SessionListResponse {
-  sessions: SessionSummary[];
-  total: number;
+  data: SessionSummary[];
+  first_id: string;
+  last_id: string;
+  has_more: boolean;
+}
+
+/**
+ * GET /api/sessions のクエリパラメータ
+ */
+export interface SessionListQuery {
+  /** 取得件数上限（デフォルト: 20、最大: 100） */
+  limit?: number;
+  /** ステータスでフィルタリング */
+  status?: SessionStatus;
 }
 
 // =====================================================
