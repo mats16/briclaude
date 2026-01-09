@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, gt, and, asc, desc } from 'drizzle-orm';
-import type { SessionEventsResponse, SessionEventData } from '@repo/types';
+import type { SessionEventsResponse, SessionEventData, SDKMessage } from '@repo/types';
 import { sessionEvents, sessions } from '../db/schema.js';
 
 /**
@@ -16,9 +16,9 @@ export async function getSessionEvents(
   fastify: FastifyInstance,
   userId: string,
   sessionId: string,
-  options: { after?: number; limit?: number } = {}
+  options: { after?: string; limit?: number } = {}
 ): Promise<SessionEventsResponse> {
-  const { after = 0, limit = 100 } = options;
+  const { after, limit = 100 } = options;
   const safeLimit = Math.min(Math.max(1, limit), 1000);
 
   return fastify.withUserContext(userId, async tx => {
@@ -29,18 +29,28 @@ export async function getSessionEvents(
       throw new Error('Session not found');
     }
 
+    // after uuid から seq を取得
+    let afterSeq = 0;
+    if (after) {
+      const [afterEvent] = await tx
+        .select({ seq: sessionEvents.seq })
+        .from(sessionEvents)
+        .where(and(eq(sessionEvents.sessionId, sessionId), eq(sessionEvents.uuid, after)));
+      if (afterEvent) {
+        afterSeq = afterEvent.seq;
+      }
+    }
+
     // イベント取得（seq の昇順）
     const events = await tx
       .select({
-        seq: sessionEvents.seq,
         uuid: sessionEvents.uuid,
         type: sessionEvents.type,
         subtype: sessionEvents.subtype,
         message: sessionEvents.message,
-        createdAt: sessionEvents.createdAt,
       })
       .from(sessionEvents)
-      .where(and(eq(sessionEvents.sessionId, sessionId), gt(sessionEvents.seq, after)))
+      .where(and(eq(sessionEvents.sessionId, sessionId), gt(sessionEvents.seq, afterSeq)))
       .orderBy(asc(sessionEvents.seq))
       .limit(safeLimit + 1); // +1 で has_more 判定
 
@@ -48,12 +58,10 @@ export async function getSessionEvents(
     const resultEvents = hasMore ? events.slice(0, safeLimit) : events;
 
     const data: SessionEventData[] = resultEvents.map(e => ({
-      seq: e.seq,
       uuid: e.uuid,
       type: e.type,
-      subtype: e.subtype,
-      message: e.message,
-      created_at: e.createdAt.toISOString(),
+      subtype: e.subtype ?? undefined,
+      data: e.message as SDKMessage,
     }));
 
     return {

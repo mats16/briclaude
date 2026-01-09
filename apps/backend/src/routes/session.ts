@@ -72,7 +72,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
 
     try {
       const result = await getSessionEvents(fastify, user.id, session_id, {
-        after: after ? Number(after) : undefined,
+        after: after ?? undefined,
         limit: limit ? Number(limit) : undefined,
       });
       return reply.send(result);

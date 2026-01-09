@@ -1,5 +1,5 @@
 import type { WebSocket } from 'ws';
-import type { WsSessionEvent, WsServerMessage } from '@repo/types';
+import type { SessionEventData, WsServerMessage } from '@repo/types';
 
 interface SessionConnection {
   ws: WebSocket;
@@ -63,7 +63,7 @@ class WebSocketManager {
   /**
    * セッションイベントをブロードキャスト
    */
-  broadcastEvent(sessionId: string, event: WsSessionEvent): void {
+  broadcastEvent(sessionId: string, event: SessionEventData): void {
     this.broadcast(sessionId, event);
   }
 

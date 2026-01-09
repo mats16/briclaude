@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { WsServerMessage, WsSessionEvent, WsConnectedMessage } from '@repo/types';
+import type { WsServerMessage, SessionEventData, WsConnectedMessage } from '@repo/types';
 
 interface UseSessionWebSocketOptions {
   sessionId: string | null;
-  onEvent?: (event: WsSessionEvent) => void;
+  onEvent?: (event: SessionEventData) => void;
   onConnected?: (message: WsConnectedMessage) => void;
   onError?: (error: Error) => void;
 }
@@ -64,9 +64,9 @@ export function useSessionWebSocket({
           onError?.(new Error(errorMessage));
         } else if (message.type === 'pong') {
           // Pong message - ignore
-        } else if ('seq' in message) {
-          // WsSessionEvent
-          onEvent?.(message as WsSessionEvent);
+        } else if ('uuid' in message && 'data' in message) {
+          // SessionEventData
+          onEvent?.(message as SessionEventData);
         }
       } catch (e) {
         console.error('Failed to parse WebSocket message:', e);

@@ -106,24 +106,31 @@ export interface SessionListResponse {
 // Session Events Types (GET /api/sessions/:id/events)
 // =====================================================
 
+import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+
+// SDK Message 型を re-export
+export type { SDKMessage };
+
 /**
- * イベントデータ（DB の session_events レコード）
+ * セッションイベント（REST API / WebSocket 共通）
  */
 export interface SessionEventData {
-  seq: number;
+  /** イベント UUID */
   uuid: string;
+  /** イベントタイプ（user, assistant, system, result など） */
   type: string;
-  subtype: string | null;
-  message: unknown;
-  created_at: string;
+  /** サブタイプ（init, status, success, error など） */
+  subtype?: string;
+  /** SDK Message データ */
+  data: SDKMessage;
 }
 
 /**
  * GET /api/sessions/:session_id/events のクエリパラメータ
  */
 export interface SessionEventsQuery {
-  /** 取得開始位置（この seq より大きいイベントを取得） */
-  after?: number;
+  /** 取得開始位置（この uuid より後のイベントを取得） */
+  after?: string;
   /** 取得件数上限（デフォルト: 100） */
   limit?: number;
 }

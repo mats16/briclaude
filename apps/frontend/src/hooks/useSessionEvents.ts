@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { WsSessionEvent, SessionEventData } from '@repo/types';
+import type { SessionEventData } from '@repo/types';
 import { sessionService } from '@/services/session.service';
 import { useSessionWebSocket } from './useSessionWebSocket';
 
@@ -18,7 +18,7 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
   const [events, setEvents] = useState<SessionEventData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const lastSeqRef = useRef<number>(0);
+  const seenUuidsRef = useRef<Set<string>>(new Set());
 
   // 過去イベントの取得
   const loadPastEvents = useCallback(async () => {
@@ -31,9 +31,8 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
       const response = await sessionService.getSessionEvents(sessionId);
       setEvents(response.data);
 
-      if (response.data.length > 0) {
-        lastSeqRef.current = response.data[response.data.length - 1].seq;
-      }
+      // 既知の uuid を記録
+      seenUuidsRef.current = new Set(response.data.map(e => e.uuid));
     } catch (e) {
       setError(e instanceof Error ? e : new Error('Failed to load events'));
     } finally {
@@ -42,32 +41,19 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
   }, [sessionId]);
 
   // WebSocket イベントハンドラ
-  const handleEvent = useCallback((event: WsSessionEvent) => {
-    // 重複チェック（seq ベース）
-    if (event.seq <= lastSeqRef.current) return;
+  const handleEvent = useCallback((event: SessionEventData) => {
+    // 重複チェック（uuid ベース）
+    if (seenUuidsRef.current.has(event.uuid)) return;
+    seenUuidsRef.current.add(event.uuid);
 
-    lastSeqRef.current = event.seq;
-
-    const eventData: SessionEventData = {
-      seq: event.seq,
-      uuid: event.uuid,
-      type: event.type,
-      subtype: event.subtype,
-      message: event.message,
-      created_at: event.created_at,
-    };
-
-    setEvents(prev => [...prev, eventData]);
+    setEvents(prev => [...prev, event]);
   }, []);
 
   // WebSocket 接続成功時のハンドラ
   const handleConnected = useCallback(
-    (msg: { last_seq: number }) => {
-      // 接続時に last_seq を確認
-      if (msg.last_seq > lastSeqRef.current) {
-        // 抜けがある可能性があるので再取得
-        loadPastEvents();
-      }
+    (_msg: { last_seq: number }) => {
+      // 接続時に過去イベントを取得
+      loadPastEvents();
     },
     [loadPastEvents]
   );
@@ -82,8 +68,8 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
   // セッション ID が変わったら過去イベントを取得
   useEffect(() => {
     if (sessionId) {
-      lastSeqRef.current = 0;
       setEvents([]);
+      seenUuidsRef.current.clear();
       loadPastEvents();
     }
   }, [sessionId, loadPastEvents]);

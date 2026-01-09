@@ -8,43 +8,48 @@ import type {
   SessionCreateResponse,
   SessionContextResponse,
   SessionCreateEvent,
-  WsSessionEvent,
+  SessionEventData,
 } from '@repo/types';
 import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 import { wsManager } from './websocket-manager.service.js';
 
 /**
- * イベントを DB に保存し、WebSocket にブロードキャストする
+ * イベントを WebSocket にブロードキャストし、DB に保存する（並列処理）
+ * WebSocket 送信は即座に行い、DB 書き込みは待たない
  */
-async function saveAndBroadcastEvent(
+function saveAndBroadcastEvent(
   fastify: FastifyInstance,
   userId: string,
   sessionId: string,
   message: SDKMessage
-): Promise<void> {
+): void {
   const eventUuid = 'uuid' in message ? (message.uuid as string) : crypto.randomUUID();
-  const eventSubtype = 'subtype' in message ? (message.subtype as string | null) : null;
+  const eventSubtype = 'subtype' in message ? (message.subtype as string | undefined) : undefined;
 
-  const inserted = await fastify.withUserContext(userId, async tx => {
-    return insertSessionEventInTx(tx, {
-      uuid: eventUuid,
-      sessionId,
-      type: message.type,
-      subtype: eventSubtype,
-      message: message,
-    });
-  });
-
-  const wsEvent: WsSessionEvent = {
-    seq: inserted.seq,
-    uuid: inserted.uuid,
-    type: inserted.type,
-    subtype: inserted.subtype,
-    message: inserted.message,
-    created_at: inserted.createdAt.toISOString(),
+  // WebSocket にブロードキャスト（即座に送信）
+  const event: SessionEventData = {
+    uuid: eventUuid,
+    type: message.type,
+    subtype: eventSubtype,
+    data: message,
   };
-  wsManager.broadcastEvent(sessionId, wsEvent);
+  wsManager.broadcastEvent(sessionId, event);
+
+  // DB に保存（バックグラウンドで実行、待たない）
+  fastify
+    .withUserContext(userId, async tx => {
+      return insertSessionEventInTx(tx, {
+        uuid: eventUuid,
+        sessionId,
+        type: message.type,
+        subtype: eventSubtype ?? null,
+        message: message,
+      });
+    })
+    .catch(error => {
+      fastify.log.error({ sessionId, eventUuid, error }, 'Failed to save event to DB');
+    });
 }
 
 /**
@@ -72,8 +77,8 @@ async function waitForInit(
       throw new Error('Stream ended before init event');
     }
 
-    // イベントを DB 保存 & WebSocket 送信
-    await saveAndBroadcastEvent(fastify, userId, sessionId, message);
+    // WebSocket 送信 & DB 保存（並列）
+    saveAndBroadcastEvent(fastify, userId, sessionId, message);
 
     // init イベントを検出
     if (message.type === 'system' && message.subtype === 'init') {
@@ -126,8 +131,8 @@ async function processRemainingEvents(
         break;
       }
 
-      // イベントを DB 保存 & WebSocket 送信
-      await saveAndBroadcastEvent(fastify, userId, sessionId, message);
+      // WebSocket 送信 & DB 保存（並列）
+      saveAndBroadcastEvent(fastify, userId, sessionId, message);
 
       // result イベント時にセッション状態を idle に更新
       if (message.type === 'result') {

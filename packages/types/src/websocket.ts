@@ -2,24 +2,15 @@
  * WebSocket 関連の型定義
  */
 
+import type { SessionEventData } from './session.js';
+
+// SessionEventData を re-export（WebSocket でも使用）
+export type { SessionEventData };
+
 /**
- * WebSocket イベント型（SDK Message をラップ）
- * session_events.message と同一の構造
+ * @deprecated Use SessionEventData instead
  */
-export interface WsSessionEvent {
-  /** イベント連番 */
-  seq: number;
-  /** イベント UUID */
-  uuid: string;
-  /** イベントタイプ（user, assistant, system, result など） */
-  type: string;
-  /** サブタイプ（init, status, success, error など） */
-  subtype: string | null;
-  /** SDK Message そのまま */
-  message: unknown;
-  /** 作成日時 */
-  created_at: string;
-}
+export type WsSessionEvent = SessionEventData;
 
 /**
  * WebSocket 接続時のサーバーからの初期メッセージ

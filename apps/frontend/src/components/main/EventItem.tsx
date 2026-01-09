@@ -12,11 +12,11 @@ interface ParsedContent {
 }
 
 export function EventItem({ event }: EventItemProps) {
-  const { type, subtype, message } = event;
+  const { type, subtype, data } = event;
 
   // SDK メッセージの種類に応じて表示を変更
   const content = useMemo((): ParsedContent | null => {
-    const msg = message as Record<string, unknown>;
+    const msg = data as Record<string, unknown>;
 
     // user メッセージ
     if (type === 'user' && msg.message) {
@@ -81,7 +81,7 @@ export function EventItem({ event }: EventItemProps) {
 
     // その他のイベントは非表示
     return null;
-  }, [type, subtype, message]);
+  }, [type, subtype, data]);
 
   if (!content) return null;
 
