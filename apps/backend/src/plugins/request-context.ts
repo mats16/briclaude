@@ -17,7 +17,11 @@ export interface TokenContextData {
 
 // @fastify/request-context の型拡張
 declare module '@fastify/request-context' {
-  interface RequestContextData extends TokenContextData {}
+  interface RequestContextData {
+    pat: string | null;
+    obo_access_token: string | null;
+    sp_access_token: string | null;
+  }
 }
 
 /**
