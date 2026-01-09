@@ -2,6 +2,7 @@ import { apiClient } from './api-client';
 import type {
   SessionCreateRequest,
   SessionCreateResponse,
+  SessionEventsResponse,
   GenerateTitleRequest,
   GenerateTitleResponse,
 } from '@repo/types';
@@ -12,6 +13,22 @@ export const sessionService = {
       method: 'POST',
       body: JSON.stringify(request),
     });
+  },
+
+  async getSessionEvents(
+    sessionId: string,
+    options?: { after?: number; limit?: number }
+  ): Promise<SessionEventsResponse> {
+    const params = new URLSearchParams();
+    if (options?.after !== undefined) {
+      params.set('after', String(options.after));
+    }
+    if (options?.limit !== undefined) {
+      params.set('limit', String(options.limit));
+    }
+    const queryString = params.toString();
+    const url = `/api/sessions/${sessionId}/events${queryString ? `?${queryString}` : ''}`;
+    return apiClient<SessionEventsResponse>(url);
   },
 
   async generateTitle(message: string): Promise<string | null> {

@@ -103,6 +103,42 @@ export interface SessionListResponse {
 }
 
 // =====================================================
+// Session Events Types (GET /api/sessions/:id/events)
+// =====================================================
+
+/**
+ * イベントデータ（DB の session_events レコード）
+ */
+export interface SessionEventData {
+  seq: number;
+  uuid: string;
+  type: string;
+  subtype: string | null;
+  message: unknown;
+  created_at: string;
+}
+
+/**
+ * GET /api/sessions/:session_id/events のクエリパラメータ
+ */
+export interface SessionEventsQuery {
+  /** 取得開始位置（この seq より大きいイベントを取得） */
+  after?: number;
+  /** 取得件数上限（デフォルト: 100） */
+  limit?: number;
+}
+
+/**
+ * GET /api/sessions/:session_id/events のレスポンス
+ */
+export interface SessionEventsResponse {
+  data: SessionEventData[];
+  first_id: string;
+  last_id: string;
+  has_more: boolean;
+}
+
+// =====================================================
 // Message Types
 // =====================================================
 

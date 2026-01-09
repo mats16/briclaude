@@ -8,19 +8,19 @@ import { getUserPAT, getServicePrincipalToken } from '../services/token-resolver
  */
 export interface TokenContextData {
   /** ユーザーの PAT（DB から取得） */
-  pat: string | null;
+  pat: string | undefined;
   /** OBO アクセストークン（Databricks Apps ヘッダーから取得） */
-  obo_access_token: string | null;
+  obo_access_token: string | undefined;
   /** Service Principal アクセストークン（OAuth Client Credentials から取得） */
-  sp_access_token: string | null;
+  sp_access_token: string | undefined;
 }
 
 // @fastify/request-context の型拡張
 declare module '@fastify/request-context' {
   interface RequestContextData {
-    pat: string | null;
-    obo_access_token: string | null;
-    sp_access_token: string | null;
+    pat: string | undefined;
+    obo_access_token: string | undefined;
+    sp_access_token: string | undefined;
   }
 }
 
@@ -52,9 +52,9 @@ export default fp(
     // @fastify/request-context を登録
     await fastify.register(fastifyRequestContext, {
       defaultStoreValues: {
-        pat: null,
-        obo_access_token: null,
-        sp_access_token: null,
+        pat: undefined,
+        obo_access_token: undefined,
+        sp_access_token: undefined,
       },
       hook: 'preHandler',
     });
@@ -70,9 +70,9 @@ export default fp(
         getServicePrincipalToken(fastify),
       ]);
 
-      // コンテキストに設定（空文字列もnullとして扱う）
+      // コンテキストに設定（空文字列もundefinedとして扱う）
       requestContext.set('pat', pat);
-      requestContext.set('obo_access_token', oboAccessToken && oboAccessToken !== '' ? oboAccessToken : null);
+      requestContext.set('obo_access_token', oboAccessToken && oboAccessToken !== '' ? oboAccessToken : undefined);
       requestContext.set('sp_access_token', spAccessToken);
 
       // デバッグログ

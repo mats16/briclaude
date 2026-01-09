@@ -12,17 +12,31 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 interface MainHeaderProps {
   title?: string;
   branchName?: string;
+  isConnected?: boolean;
 }
 
 export function MainHeader({
-  title = 'Summarize context content clearly',
-  branchName = 'claude/summarize-context-f7NYV',
+  title = 'New Session',
+  branchName,
+  isConnected = false,
 }: MainHeaderProps) {
   const { t } = useTranslation();
 
   return (
     <div className="flex items-center justify-between h-[50px] px-4 border-b border-border">
       <div className="flex items-center gap-2 min-w-0">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-muted-foreground'}`}
+              />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{isConnected ? 'Connected' : 'Disconnected'}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-1 font-medium text-foreground">
