@@ -46,13 +46,13 @@ const schema = {
     // User and session directories (optional)
     USER_BASE_DIR: {
       type: 'string',
-      default: path.join(homeDir, 'users'),
-      description: 'The base directory for user directories (e.g. /home/app/users).',
+      default: './tmp/users',
+      description: 'The base directory for user directories (default: ./tmp/users).',
     },
     SESSION_BASE_DIR: {
       type: 'string',
-      default: path.join(homeDir, 'ws'),
-      description: 'The base directory for working directories (e.g. /home/app/ws).',
+      default: './tmp/sessions',
+      description: 'The base directory for working directories (default: ./tmp/sessions).',
     },
     // Warehouse IDs (optional)
     SQL_WAREHOUSE_ID: {
