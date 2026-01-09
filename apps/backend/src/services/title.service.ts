@@ -61,7 +61,7 @@ export class TitleService {
     const { firstSessionMessage, accessToken } = params;
 
     const client = new OpenAI({
-      baseURL: `https://${this.config.databricksHost}/serving-endpoints/${this.config.model}`,
+      baseURL: `https://${this.config.databricksHost}/serving-endpoints`,
       apiKey: accessToken,
       timeout: REQUEST_TIMEOUT_MS,
     });
