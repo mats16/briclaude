@@ -40,7 +40,8 @@ export async function createSession(
     sonnet: fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL,
     haiku: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
   };
-  const modelName = modelMap[session_context.model] || fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL;
+  const modelName =
+    modelMap[session_context.model] || fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL;
 
   // 3. ユーザーメッセージのテキストを抽出
   const userContent = events[0]?.message.content
