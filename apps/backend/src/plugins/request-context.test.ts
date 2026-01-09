@@ -169,15 +169,17 @@ describe('request-context plugin', () => {
               const mockTx = {
                 select: () => ({
                   from: () => ({
-                    where: () =>
-                      Promise.resolve([
-                        {
-                          userId: 'test-user-123',
-                          provider: 'databricks',
-                          authType: 'pat',
-                          accessToken: 'user-pat-token-12345',
-                        },
-                      ]),
+                    where: () => ({
+                      limit: () =>
+                        Promise.resolve([
+                          {
+                            userId: 'test-user-123',
+                            provider: 'databricks',
+                            authType: 'pat',
+                            accessToken: 'user-pat-token-12345',
+                          },
+                        ]),
+                    }),
                   }),
                 }),
               };
@@ -450,15 +452,17 @@ describe('request-context plugin', () => {
               const mockTx = {
                 select: () => ({
                   from: () => ({
-                    where: () =>
-                      Promise.resolve([
-                        {
-                          userId: 'test-user',
-                          provider: 'databricks',
-                          authType: 'pat',
-                          accessToken: 'user-pat-parallel',
-                        },
-                      ]),
+                    where: () => ({
+                      limit: () =>
+                        Promise.resolve([
+                          {
+                            userId: 'test-user',
+                            provider: 'databricks',
+                            authType: 'pat',
+                            accessToken: 'user-pat-parallel',
+                          },
+                        ]),
+                    }),
                   }),
                 }),
               };
