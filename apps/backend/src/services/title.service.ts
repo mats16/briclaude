@@ -7,6 +7,7 @@ Message: `;
 
 const MAX_TOKENS = 50;
 const FALLBACK_TITLE = 'General coding session';
+const REQUEST_TIMEOUT_MS = 30000; // 30 seconds
 
 /**
  * Cleans up the generated title by removing common LLM artifacts.
@@ -62,6 +63,7 @@ export class TitleService {
     const client = new OpenAI({
       baseURL: `https://${this.config.databricksHost}/serving-endpoints/${this.config.model}`,
       apiKey: accessToken,
+      timeout: REQUEST_TIMEOUT_MS,
     });
 
     const response = await client.chat.completions.create({
