@@ -70,9 +70,9 @@ export default fp(
         getServicePrincipalToken(fastify),
       ]);
 
-      // コンテキストに設定
+      // コンテキストに設定（空文字列もnullとして扱う）
       requestContext.set('pat', pat);
-      requestContext.set('obo_access_token', oboAccessToken ?? null);
+      requestContext.set('obo_access_token', oboAccessToken && oboAccessToken !== '' ? oboAccessToken : null);
       requestContext.set('sp_access_token', spAccessToken);
 
       // デバッグログ
@@ -80,7 +80,7 @@ export default fp(
         {
           userId: userId || 'anonymous',
           hasPat: pat !== null,
-          hasObo: !!oboAccessToken,
+          hasObo: !!(oboAccessToken && oboAccessToken !== ''),
           hasSp: spAccessToken !== null,
         },
         'Token context resolved'

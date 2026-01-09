@@ -48,7 +48,11 @@ export function Sidebar({
   const { user, databricksHost, isLoading, error, refetch } = useUser();
 
   const handleNewSession = async (content: string, modelId: string) => {
+    // タイトルを生成（失敗時は null）
+    const title = await sessionService.generateTitle(content);
+
     const request: SessionCreateRequest = {
+      title: title ?? undefined,
       events: [
         {
           type: 'event',

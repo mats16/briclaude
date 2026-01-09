@@ -67,7 +67,7 @@ const mockRequestDecoratorPlugin = fp(
       const userId = (request.headers['x-forwarded-user'] as string) ?? '';
       const userName = (request.headers['x-forwarded-preferred-username'] as string) ?? '';
       const userEmail = (request.headers['x-forwarded-email'] as string) ?? '';
-      const oboAccessToken = (request.headers['x-forwarded-access-token'] as string) ?? '';
+      const oboAccessToken = request.headers['x-forwarded-access-token'] as string | undefined;
 
       request.ctx = {
         host: 'localhost',
@@ -121,6 +121,8 @@ describe('request-context plugin', () => {
         };
       });
 
+      await app.ready();
+
       const response = await app.inject({
         method: 'GET',
         url: '/test',
@@ -145,6 +147,8 @@ describe('request-context plugin', () => {
         return { pat: requestContext.get('pat') };
       });
 
+      await app.ready();
+
       const response = await app.inject({
         method: 'GET',
         url: '/test',
@@ -165,15 +169,17 @@ describe('request-context plugin', () => {
               const mockTx = {
                 select: () => ({
                   from: () => ({
-                    where: () =>
-                      Promise.resolve([
-                        {
-                          userId: 'test-user-123',
-                          provider: 'databricks',
-                          authType: 'pat',
-                          accessToken: 'user-pat-token-12345',
-                        },
-                      ]),
+                    where: () => ({
+                      limit: () =>
+                        Promise.resolve([
+                          {
+                            userId: 'test-user-123',
+                            provider: 'databricks',
+                            authType: 'pat',
+                            accessToken: 'user-pat-token-12345',
+                          },
+                        ]),
+                    }),
                   }),
                 }),
               };
@@ -192,6 +198,8 @@ describe('request-context plugin', () => {
       app.get('/test', async () => {
         return { pat: requestContext.get('pat') };
       });
+
+      await app.ready();
 
       const response = await app.inject({
         method: 'GET',
@@ -215,6 +223,8 @@ describe('request-context plugin', () => {
         return { obo_access_token: requestContext.get('obo_access_token') };
       });
 
+      await app.ready();
+
       const response = await app.inject({
         method: 'GET',
         url: '/test',
@@ -233,6 +243,8 @@ describe('request-context plugin', () => {
       app.get('/test', async () => {
         return { obo_access_token: requestContext.get('obo_access_token') };
       });
+
+      await app.ready();
 
       const response = await app.inject({
         method: 'GET',
@@ -255,6 +267,8 @@ describe('request-context plugin', () => {
       app.get('/test', async () => {
         return { sp_access_token: requestContext.get('sp_access_token') };
       });
+
+      await app.ready();
 
       const response = await app.inject({
         method: 'GET',
@@ -314,6 +328,8 @@ describe('request-context plugin', () => {
         return { sp_access_token: requestContext.get('sp_access_token') };
       });
 
+      await app.ready();
+
       const response = await app.inject({
         method: 'GET',
         url: '/test',
@@ -372,6 +388,8 @@ describe('request-context plugin', () => {
       app.get('/test', async () => {
         return { sp_access_token: requestContext.get('sp_access_token') };
       });
+
+      await app.ready();
 
       // First request
       await app.inject({ method: 'GET', url: '/test' });
@@ -434,15 +452,17 @@ describe('request-context plugin', () => {
               const mockTx = {
                 select: () => ({
                   from: () => ({
-                    where: () =>
-                      Promise.resolve([
-                        {
-                          userId: 'test-user',
-                          provider: 'databricks',
-                          authType: 'pat',
-                          accessToken: 'user-pat-parallel',
-                        },
-                      ]),
+                    where: () => ({
+                      limit: () =>
+                        Promise.resolve([
+                          {
+                            userId: 'test-user',
+                            provider: 'databricks',
+                            authType: 'pat',
+                            accessToken: 'user-pat-parallel',
+                          },
+                        ]),
+                    }),
                   }),
                 }),
               };
@@ -465,6 +485,8 @@ describe('request-context plugin', () => {
           sp_access_token: requestContext.get('sp_access_token'),
         };
       });
+
+      await app.ready();
 
       const response = await app.inject({
         method: 'GET',
