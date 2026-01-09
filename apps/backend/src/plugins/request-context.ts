@@ -72,7 +72,7 @@ export default fp(
 
       // コンテキストに設定
       requestContext.set('pat', pat);
-      requestContext.set('obo_access_token', oboAccessToken || null);
+      requestContext.set('obo_access_token', oboAccessToken ?? null);
       requestContext.set('sp_access_token', spAccessToken);
 
       // デバッグログ
