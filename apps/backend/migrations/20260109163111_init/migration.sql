@@ -12,15 +12,12 @@ CREATE TABLE "oauth_tokens" (
 --> statement-breakpoint
 ALTER TABLE "oauth_tokens" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "session_events" (
-	"session_id" text,
-	"seq" integer,
-	"uuid" uuid NOT NULL,
+	"uuid" uuid PRIMARY KEY,
+	"session_id" text NOT NULL,
 	"type" text NOT NULL,
 	"subtype" text,
 	"message" jsonb NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "session_events_pkey" PRIMARY KEY("session_id","seq")
+	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "sessions" (
@@ -50,7 +47,7 @@ CREATE TABLE "users" (
 );
 --> statement-breakpoint
 CREATE INDEX "oauth_tokens_user_id_idx" ON "oauth_tokens" ("user_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "session_events_uuid_unique" ON "session_events" ("uuid");--> statement-breakpoint
+CREATE INDEX "session_events_session_created_at_idx" ON "session_events" ("session_id","created_at");--> statement-breakpoint
 CREATE INDEX "sessions_user_id_idx" ON "sessions" ("user_id");--> statement-breakpoint
 CREATE INDEX "sessions_updated_at_idx" ON "sessions" ("updated_at");--> statement-breakpoint
 CREATE INDEX "sessions_status_idx" ON "sessions" ("status");--> statement-breakpoint

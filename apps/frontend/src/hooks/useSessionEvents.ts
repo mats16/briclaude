@@ -50,7 +50,7 @@ export function useSessionEvents({
   }, []);
 
   // WebSocket 接続成功時のハンドラ
-  const handleConnected = useCallback((_msg: { last_seq: number }) => {
+  const handleConnected = useCallback((_msg: { last_event_id: string | null }) => {
     // WebSocket 接続成功時はリアルタイム更新を受け取る準備のみ
   }, []);
 

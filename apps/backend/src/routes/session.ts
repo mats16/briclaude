@@ -12,7 +12,7 @@ import type {
   ApiError,
 } from '@repo/types';
 import { createSession, getSessions } from '../services/session.service.js';
-import { getSessionEvents, getSessionLastSeq } from '../services/session-events.service.js';
+import { getSessionEvents, getSessionLastEventId } from '../services/session-events.service.js';
 import { wsManager } from '../services/websocket-manager.service.js';
 
 const sessionRoute: FastifyPluginAsync = async fastify => {
@@ -147,8 +147,8 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     }
 
     try {
-      // 最新 seq を取得して接続成功メッセージを送信
-      const lastSeq = await getSessionLastSeq(fastify, user.id, session_id);
+      // 最新イベント ID を取得して接続成功メッセージを送信
+      const lastEventId = await getSessionLastEventId(fastify, user.id, session_id);
 
       // 接続を管理に追加
       wsManager.addConnection(session_id, user.id, socket);
@@ -156,7 +156,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
       const connectedMsg: WsConnectedMessage = {
         type: 'connected',
         session_id,
-        last_seq: lastSeq,
+        last_event_id: lastEventId,
       };
       socket.send(JSON.stringify(connectedMsg));
 

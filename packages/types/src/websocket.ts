@@ -18,7 +18,7 @@ export type WsSessionEvent = SessionEventData;
 export interface WsConnectedMessage {
   type: 'connected';
   session_id: string;
-  last_seq: number;
+  last_event_id: string | null;
 }
 
 /**
