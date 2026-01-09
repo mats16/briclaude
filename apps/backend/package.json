@@ -20,6 +20,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.1",
     "@fastify/compress": "^8.3.1",
     "@fastify/env": "^5.0.3",
     "@fastify/static": "^9.0.0",
@@ -28,7 +29,8 @@
     "drizzle-orm": "^1.0.0-beta.8",
     "fastify": "^5.2.0",
     "fastify-plugin": "^5.1.0",
-    "postgres": "^3.4.5"
+    "postgres": "^3.4.5",
+    "typeid-js": "^1.2.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",

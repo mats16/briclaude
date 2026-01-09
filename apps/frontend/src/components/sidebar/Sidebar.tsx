@@ -1,10 +1,12 @@
-import type { SessionSummary } from '@repo/types';
+import { useNavigate } from 'react-router-dom';
+import type { SessionSummary, SessionStartRequest } from '@repo/types';
 import { SidebarHeader } from './SidebarHeader';
 import { NewSessionInput } from './NewSessionInput';
 import { ModelSelector } from './ModelSelector';
 import { SessionList } from './SessionList';
 import { UserMenu } from './UserMenu';
 import { useUser } from '@/hooks/useUser';
+import { sessionService } from '@/services';
 
 // Mock data for development
 const MOCK_SESSIONS: SessionSummary[] = [
@@ -35,21 +37,43 @@ interface SidebarProps {
   sessions?: SessionSummary[];
   selectedSessionId?: string | null;
   onSelectSession?: (sessionId: string) => void;
-  onNewSession?: (content: string, modelId: string) => void;
 }
 
 export function Sidebar({
   sessions = MOCK_SESSIONS,
   selectedSessionId = '1',
   onSelectSession,
-  onNewSession,
 }: SidebarProps) {
+  const navigate = useNavigate();
   const { user, isLoading, error, refetch } = useUser();
+
+  const handleNewSession = async (content: string, modelId: string) => {
+    const request: SessionStartRequest = {
+      events: [
+        {
+          uuid: crypto.randomUUID(),
+          type: 'user',
+          message: {
+            role: 'user',
+            content: [{ type: 'text', text: content }],
+          },
+        },
+      ],
+      session_context: {
+        model: modelId as 'opus' | 'sonnet' | 'haiku',
+        databricksWorkspacePath: null,
+        databricksWorkspaceAutoPush: false,
+      },
+    };
+
+    const response = await sessionService.startSession(request);
+    navigate(`/${response.session_id}`);
+  };
 
   return (
     <div className="relative z-10 flex flex-col w-full h-full min-w-0 overflow-hidden bg-card border-r border-border">
       <SidebarHeader />
-      <NewSessionInput onSubmit={onNewSession} />
+      <NewSessionInput onSubmit={handleNewSession} />
       <ModelSelector />
       <SessionList
         sessions={sessions}

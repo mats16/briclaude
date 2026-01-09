@@ -1,10 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { Sidebar } from '@/components/sidebar/Sidebar';
 import { MainArea } from '@/components/main/MainArea';
 import { cn } from '@/lib/utils';
 import { SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_DEFAULT_WIDTH } from '@/constants';
 
 export function AppLayout() {
+  const { sessionId } = useParams<{ sessionId?: string }>();
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem('sidebar-width');
     if (saved) {
@@ -58,7 +60,7 @@ export function AppLayout() {
     <div ref={containerRef} className="flex h-screen w-screen overflow-hidden bg-background">
       {/* Sidebar */}
       <div style={{ width: sidebarWidth }} className="h-full shrink-0">
-        <Sidebar />
+        <Sidebar selectedSessionId={sessionId} />
       </div>
 
       {/* Resize Handle */}
