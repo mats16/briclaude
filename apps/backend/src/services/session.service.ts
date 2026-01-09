@@ -85,7 +85,7 @@ export async function createSession(
         sessionId,
         type: event.type,
         subtype: null,
-        message: event.message as unknown as Record<string, unknown>,
+        message: event.message,
       });
     }
   });

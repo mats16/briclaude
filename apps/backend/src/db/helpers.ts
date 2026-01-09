@@ -4,13 +4,20 @@ import { sql, eq } from 'drizzle-orm';
 import * as schema from './schema.js';
 import { sessionEvents, type InsertSessionEvent } from './schema.js';
 import type { RLSTransaction } from '../plugins/database.js';
+import type { SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
+
+/**
+ * JSON シリアライズ可能なメッセージ型
+ * claude-agent-sdk の SDKUserMessage.message と互換性あり
+ */
+export type SerializableMessage = SDKUserMessage['message'];
 
 /**
  * insertSessionEvent の引数型
  * seq は自動計算されるため含まない
  */
 export type InsertSessionEventInput = Omit<InsertSessionEvent, 'seq' | 'message'> & {
-  message: Record<string, unknown>;
+  message: SerializableMessage;
 };
 
 /**

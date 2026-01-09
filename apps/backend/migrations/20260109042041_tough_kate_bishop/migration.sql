@@ -12,14 +12,15 @@ CREATE TABLE "oauth_tokens" (
 --> statement-breakpoint
 ALTER TABLE "oauth_tokens" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "session_events" (
-	"uuid" uuid PRIMARY KEY,
-	"session_id" text NOT NULL,
-	"seq" integer NOT NULL,
+	"session_id" text,
+	"seq" integer,
+	"uuid" uuid NOT NULL,
 	"type" text NOT NULL,
 	"subtype" text,
 	"message" jsonb NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "session_events_pkey" PRIMARY KEY("session_id","seq")
 );
 --> statement-breakpoint
 CREATE TABLE "sessions" (
@@ -50,8 +51,10 @@ CREATE TABLE "users" (
 );
 --> statement-breakpoint
 CREATE INDEX "oauth_tokens_user_id_idx" ON "oauth_tokens" ("user_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "session_events_session_id_seq_unique" ON "session_events" ("session_id","seq");--> statement-breakpoint
+CREATE UNIQUE INDEX "session_events_uuid_unique" ON "session_events" ("uuid");--> statement-breakpoint
 CREATE INDEX "sessions_user_id_idx" ON "sessions" ("user_id");--> statement-breakpoint
+CREATE INDEX "sessions_updated_at_idx" ON "sessions" ("updated_at");--> statement-breakpoint
+CREATE INDEX "sessions_active_idx" ON "sessions" ("user_id","updated_at") WHERE is_archived = false;--> statement-breakpoint
 ALTER TABLE "oauth_tokens" ADD CONSTRAINT "oauth_tokens_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "session_events" ADD CONSTRAINT "session_events_session_id_sessions_id_fkey" FOREIGN KEY ("session_id") REFERENCES "sessions"("id") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL;--> statement-breakpoint

@@ -208,15 +208,18 @@ export const sessionsPolicy = pgPolicy('sessions_user_isolation_policy', {
 /**
  * session_events テーブル
  * セッションイベントを時系列で管理
+ *
+ * 主キー: (session_id, seq) - セッション内でイベントを順序付け
+ * uuid: 冪等性キーとして使用（重複挿入防止）
  */
 export const sessionEvents = pgTable(
   'session_events',
   {
-    uuid: uuid('uuid').primaryKey(),
     sessionId: text('session_id')
       .notNull()
       .references(() => sessions.id, { onDelete: 'cascade' }),
     seq: integer('seq').notNull(),
+    uuid: uuid('uuid').notNull(),
     type: text('type').notNull(),
     subtype: text('subtype'),
     message: jsonb('message').notNull(),
@@ -229,11 +232,10 @@ export const sessionEvents = pgTable(
       .$onUpdate(() => new Date()),
   },
   table => ({
-    // (session_id, seq) ユニーク制約（セッション内で seq は一意）
-    sessionSeqUnique: uniqueIndex('session_events_session_id_seq_unique').on(
-      table.sessionId,
-      table.seq
-    ),
+    // 複合主キー: (session_id, seq)
+    pk: primaryKey({ columns: [table.sessionId, table.seq] }),
+    // uuid ユニーク制約（冪等性キー - 重複挿入防止）
+    uuidUnique: uniqueIndex('session_events_uuid_unique').on(table.uuid),
   })
 );
 
