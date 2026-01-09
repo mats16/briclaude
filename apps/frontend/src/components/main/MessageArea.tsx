@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
-import type { SessionEventData } from '@repo/types';
+import type { SDKMessage } from '@repo/types';
 import { EventItem } from './EventItem';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface MessageAreaProps {
-  events: SessionEventData[];
+  events: SDKMessage[];
   isLoading?: boolean;
   error?: Error | null;
 }
@@ -39,8 +39,8 @@ export function MessageArea({ events, isLoading, error }: MessageAreaProps) {
   return (
     <div className="flex-1 overflow-y-auto px-4">
       <div className="w-full max-w-[735px] mx-auto pb-24">
-        {events.map(event => (
-          <EventItem key={event.uuid} event={event} />
+        {events.map((event, index) => (
+          <EventItem key={'uuid' in event ? (event.uuid as string) : `event-${index}`} event={event} />
         ))}
         <div ref={bottomRef} />
       </div>

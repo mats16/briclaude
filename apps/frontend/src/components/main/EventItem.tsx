@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
-import type { SessionEventData } from '@repo/types';
+import type { SDKMessage } from '@repo/types';
 import { cn } from '@/lib/utils';
 
 interface EventItemProps {
-  event: SessionEventData;
+  event: SDKMessage;
 }
 
 interface ParsedContent {
@@ -12,12 +12,13 @@ interface ParsedContent {
 }
 
 export function EventItem({ event }: EventItemProps) {
-  const { type, subtype, data } = event;
+  // SDKMessage を直接使用
+  const msg = event as Record<string, unknown>;
+  const type = event.type;
+  const subtype = 'subtype' in event ? (event.subtype as string | undefined) : undefined;
 
   // SDK メッセージの種類に応じて表示を変更
   const content = useMemo((): ParsedContent | null => {
-    const msg = data as Record<string, unknown>;
-
     // user メッセージ
     if (type === 'user' && msg.message) {
       const userMsg = msg.message as { role: string; content: unknown };
@@ -81,7 +82,7 @@ export function EventItem({ event }: EventItemProps) {
 
     // その他のイベントは非表示
     return null;
-  }, [type, subtype, data]);
+  }, [type, subtype, msg]);
 
   if (!content) return null;
 

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, gt, and, asc, desc } from 'drizzle-orm';
-import type { SessionEventsResponse, SessionEventData, SDKMessage } from '@repo/types';
+import type { SessionEventsResponse, SDKMessage } from '@repo/types';
 import { sessionEvents, sessions } from '../db/schema.js';
 
 /**
@@ -64,17 +64,13 @@ export async function getSessionEvents(
     const hasMore = events.length > safeLimit;
     const resultEvents = hasMore ? events.slice(0, safeLimit) : events;
 
-    const data: SessionEventData[] = resultEvents.map(e => ({
-      uuid: e.uuid,
-      type: e.type,
-      subtype: e.subtype ?? undefined,
-      data: e.message as SDKMessage,
-    }));
+    // DB から取得した message を SDKMessage としてそのまま返す
+    const data: SDKMessage[] = resultEvents.map(e => e.message as SDKMessage);
 
     return {
       data,
-      first_id: data.length > 0 ? data[0].uuid : '',
-      last_id: data.length > 0 ? data[data.length - 1].uuid : '',
+      first_id: resultEvents.length > 0 ? resultEvents[0].uuid : '',
+      last_id: resultEvents.length > 0 ? resultEvents[resultEvents.length - 1].uuid : '',
       has_more: hasMore,
     };
   });

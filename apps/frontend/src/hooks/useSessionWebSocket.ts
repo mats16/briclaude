@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { WsServerMessage, SessionEventData, WsConnectedMessage } from '@repo/types';
+import type { WsServerMessage, SDKMessage, WsConnectedMessage } from '@repo/types';
 
 interface UseSessionWebSocketOptions {
   sessionId: string | null;
-  onEvent?: (event: SessionEventData) => void;
+  onEvent?: (event: SDKMessage) => void;
   onConnected?: (message: WsConnectedMessage) => void;
   onError?: (error: Error) => void;
 }
@@ -64,19 +64,19 @@ export function useSessionWebSocket({
       try {
         const message = JSON.parse(event.data) as WsServerMessage;
 
-        if ('session_id' in message && message.type === 'connected') {
+        if (message.type === 'connected') {
           // WsConnectedMessage - ref 経由で最新のコールバックを呼び出す
           onConnectedRef.current?.(message as WsConnectedMessage);
-        } else if ('code' in message && message.type === 'error') {
+        } else if (message.type === 'error') {
           // WsErrorMessage
           const errorMessage = (message as { message: string }).message;
           setError(new Error(errorMessage));
           onErrorRef.current?.(new Error(errorMessage));
         } else if (message.type === 'pong') {
           // Pong message - ignore
-        } else if ('uuid' in message && 'data' in message) {
-          // SessionEventData - ref 経由で最新のコールバックを呼び出す
-          onEventRef.current?.(message as SessionEventData);
+        } else if ('session_id' in message) {
+          // SDKMessage - ref 経由で最新のコールバックを呼び出す
+          onEventRef.current?.(message as SDKMessage);
         }
       } catch (e) {
         console.error('Failed to parse WebSocket message:', e);

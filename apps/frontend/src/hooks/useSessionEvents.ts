@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { SessionEventData } from '@repo/types';
+import type { SDKMessage } from '@repo/types';
 import { sessionService } from '@/services/session.service';
 import { useSessionWebSocket } from './useSessionWebSocket';
 
@@ -8,7 +8,7 @@ interface UseSessionEventsOptions {
 }
 
 interface UseSessionEventsReturn {
-  events: SessionEventData[];
+  events: SDKMessage[];
   isLoading: boolean;
   isConnected: boolean;
   error: Error | null;
@@ -17,7 +17,7 @@ interface UseSessionEventsReturn {
 export function useSessionEvents({
   sessionId,
 }: UseSessionEventsOptions): UseSessionEventsReturn {
-  const [events, setEvents] = useState<SessionEventData[]>([]);
+  const [events, setEvents] = useState<SDKMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const seenUuidsRef = useRef<Set<string>>(new Set());
@@ -32,7 +32,10 @@ export function useSessionEvents({
     try {
       const response = await sessionService.getSessionEvents(targetSessionId);
       setEvents(response.data);
-      seenUuidsRef.current = new Set(response.data.map(e => e.uuid));
+      // SDKMessage.uuid を使用して seen set を構築（uuid がない場合はスキップ）
+      seenUuidsRef.current = new Set(
+        response.data.filter(e => 'uuid' in e && e.uuid).map(e => e.uuid as string)
+      );
     } catch (e) {
       setError(e instanceof Error ? e : new Error('Failed to load events'));
     } finally {
@@ -41,10 +44,13 @@ export function useSessionEvents({
   }, []);
 
   // WebSocket イベントハンドラ
-  const handleEvent = useCallback((event: SessionEventData) => {
-    // 重複チェック（uuid ベース）
-    if (seenUuidsRef.current.has(event.uuid)) return;
-    seenUuidsRef.current.add(event.uuid);
+  const handleEvent = useCallback((event: SDKMessage) => {
+    // 重複チェック（uuid ベース、uuid がない場合はスキップ）
+    if ('uuid' in event && event.uuid) {
+      const uuid = event.uuid as string;
+      if (seenUuidsRef.current.has(uuid)) return;
+      seenUuidsRef.current.add(uuid);
+    }
 
     setEvents(prev => [...prev, event]);
   }, []);

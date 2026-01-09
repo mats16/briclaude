@@ -1,21 +1,56 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, desc } from 'drizzle-orm';
 import { typeid } from 'typeid-js';
-import { query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+import { query, type SDKMessage, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 import { requestContext } from '@fastify/request-context';
+import type { UUID } from 'crypto';
 import type {
   SessionCreateRequest,
   SessionCreateResponse,
   SessionContextResponse,
-  SessionEventData,
   SessionListQuery,
   SessionListResponse,
   SessionSummary,
   SessionStatus,
+  SessionCreateEventData,
 } from '@repo/types';
 import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 import { wsManager } from './websocket-manager.service.js';
+
+/**
+ * SessionCreateEventData を SDKUserMessage 形式に変換
+ */
+function convertToSDKUserMessage(eventData: SessionCreateEventData, sessionId: string): SDKUserMessage {
+  return {
+    type: 'user',
+    message: {
+      role: 'user',
+      content: eventData.message.content,
+    },
+    parent_tool_use_id: eventData.parent_tool_use_id,
+    uuid: eventData.uuid as UUID,
+    session_id: sessionId,
+  };
+}
+
+/**
+ * セッションのステータスを更新するヘルパー関数
+ */
+async function updateSessionStatus(
+  fastify: FastifyInstance,
+  userId: string,
+  sessionId: string,
+  status: SessionStatus
+): Promise<void> {
+  try {
+    await fastify.withUserContext(userId, async tx => {
+      await tx.update(sessions).set({ status }).where(eq(sessions.id, sessionId));
+    });
+  } catch (error) {
+    fastify.log.error({ sessionId, status, error }, 'Failed to update session status');
+  }
+}
 
 /**
  * イベントを WebSocket にブロードキャストし、DB に保存する（並列処理）
@@ -33,14 +68,8 @@ function saveAndBroadcastEvent(
   const eventUuid = 'uuid' in message ? (message.uuid as string) : crypto.randomUUID();
   const eventSubtype = 'subtype' in message ? (message.subtype as string | undefined) : undefined;
 
-  // WebSocket にブロードキャスト（常に実行）
-  const event: SessionEventData = {
-    uuid: eventUuid,
-    type: message.type,
-    subtype: eventSubtype,
-    data: message,
-  };
-  wsManager.broadcastEvent(sessionId, event);
+  // WebSocket にブロードキャスト（SDKMessage をそのまま送信）
+  wsManager.broadcastEvent(sessionId, message);
 
   // DB に保存（skipDbSave が false の場合のみ）
   if (!options.skipDbSave) {
@@ -62,7 +91,7 @@ function saveAndBroadcastEvent(
 
 /**
  * init イベントを待機する
- * init イベント受信まで WebSocket 送信のみ行い、DB 書き込みは init 受信時に一括で行う
+ * セッションは既に作成済みなので、init 受信時に UPDATE + init イベント INSERT を行う
  */
 interface WaitForInitResult {
   sdkSessionId: string;
@@ -73,9 +102,7 @@ async function waitForInit(
   response: AsyncIterable<SDKMessage>,
   fastify: FastifyInstance,
   userId: string,
-  sessionId: string,
-  title: string | null,
-  sessionContext: SessionContextResponse
+  sessionId: string
 ): Promise<WaitForInitResult> {
   const iterator = response[Symbol.asyncIterator]();
 
@@ -93,17 +120,16 @@ async function waitForInit(
     if (message.type === 'system' && message.subtype === 'init') {
       const sdkSessionId = message.session_id;
 
-      // sessions テーブル INSERT + init イベント INSERT を1トランザクションで実行
+      // sessions テーブル UPDATE + init イベント INSERT を1トランザクションで実行
       await fastify.withUserContext(userId, async tx => {
-        // sessions テーブルに INSERT
-        await tx.insert(sessions).values({
-          id: sessionId,
-          userId,
-          title,
-          status: 'running',
-          sdkSessionId: sdkSessionId || null,
-          context: sessionContext,
-        });
+        // sessions テーブルを UPDATE（status を running に、sdkSessionId を設定）
+        await tx
+          .update(sessions)
+          .set({
+            status: 'running',
+            sdkSessionId: sdkSessionId || null,
+          })
+          .where(eq(sessions.id, sessionId));
 
         // init イベントを session_events テーブルに INSERT
         const initEventUuid = 'uuid' in message ? (message.uuid as string) : crypto.randomUUID();
@@ -172,9 +198,11 @@ async function processRemainingEvents(
  *
  * 処理フロー:
  * 1. TypeID で session_id 生成
- * 2. claude-agent-sdk で query() 実行
- * 3. init イベント受信時に sessions/session_events を 1 トランザクションで挿入
- * 4. 即座にレスポンスを返し、残りのイベントはバックグラウンドで処理
+ * 2. sessions INSERT (status='init') + user message INSERT
+ * 3. claude-agent-sdk で query() 実行
+ * 4. init イベント受信時に sessions UPDATE (status='running') + init イベント INSERT
+ * 5. 即座にレスポンスを返し、残りのイベントはバックグラウンドで処理
+ * 6. query() 失敗時は sessions status を 'error' に更新
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
@@ -192,7 +220,8 @@ export async function createSession(
   const sessionId = typeid('session').toString();
 
   // 2. ユーザーメッセージのテキストを抽出
-  const userContent = events[0]?.data.message.content ?? '';
+  const userEvent = events[0];
+  const userContent = userEvent?.data.message.content ?? '';
 
   // 3. cwd の生成（SESSION_BASE_DIR + sessionId の末尾部分）
   const sessionIdSuffix = sessionId.replace('session_', '');
@@ -213,7 +242,28 @@ export async function createSession(
   const createdAt = now;
   const updatedAt = now;
 
-  // 6. claude-agent-sdk で query 実行
+  // 6. sessions と user message を先に INSERT (status='init')
+  const userMessage = convertToSDKUserMessage(userEvent.data, sessionId);
+  await fastify.withUserContext(userId, async tx => {
+    await tx.insert(sessions).values({
+      id: sessionId,
+      userId,
+      title: title ?? null,
+      status: 'init',
+      sdkSessionId: null,
+      context: sessionContext,
+    });
+
+    await insertSessionEventInTx(tx, {
+      uuid: userEvent.data.uuid,
+      sessionId,
+      type: 'user',
+      subtype: null,
+      message: userMessage,
+    });
+  });
+
+  // 7. claude-agent-sdk で query 実行
   try {
     const response = query({
       prompt: userContent,
@@ -258,27 +308,21 @@ export async function createSession(
       },
     });
 
-    // 7. init イベントまで待機（sessions への挿入もここで行う）
-    const { iterator } = await waitForInit(
-      response,
-      fastify,
-      userId,
-      sessionId,
-      title ?? null,
-      sessionContext
-    );
+    // 8. init イベントまで待機（status を 'running' に UPDATE）
+    const { iterator } = await waitForInit(response, fastify, userId, sessionId);
 
-    // 8. バックグラウンド処理開始（await しない）
+    // 9. バックグラウンド処理開始（await しない）
     processRemainingEvents(iterator, fastify, userId, sessionId).catch(error => {
       fastify.log.error({ sessionId, error }, 'Background event processing failed');
     });
   } catch (error) {
-    // SDK呼び出し失敗時: sessions/session_events には何も残らない（クリーン）
+    // SDK呼び出し失敗時: sessions status を 'error' に更新
     fastify.log.error({ sessionId, error }, 'SDK query failed');
+    await updateSessionStatus(fastify, userId, sessionId, 'error');
     throw error;
   }
 
-  // 9. 即座にレスポンス返却
+  // 10. 即座にレスポンス返却
   return {
     id: sessionId,
     session_status: 'running',

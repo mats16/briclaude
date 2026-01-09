@@ -1,13 +1,13 @@
 // apps/backend/src/db/helpers.ts
 import { sessionEvents } from './schema.js';
 import type { RLSTransaction } from '../plugins/database.js';
-import type { SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
+import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 
 /**
  * JSON シリアライズ可能なメッセージ型
- * claude-agent-sdk の SDKUserMessage.message と互換性あり
+ * claude-agent-sdk の SDKMessage 全体を保存
  */
-export type SerializableMessage = SDKUserMessage['message'];
+export type SerializableMessage = SDKMessage;
 
 /**
  * insertSessionEvent の引数型

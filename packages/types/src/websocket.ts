@@ -2,15 +2,10 @@
  * WebSocket 関連の型定義
  */
 
-import type { SessionEventData } from './session.js';
+import type { SDKMessage } from './session.js';
 
-// SessionEventData を re-export（WebSocket でも使用）
-export type { SessionEventData };
-
-/**
- * @deprecated Use SessionEventData instead
- */
-export type WsSessionEvent = SessionEventData;
+// SDKMessage を re-export（WebSocket でも使用）
+export type { SDKMessage };
 
 /**
  * WebSocket 接続時のサーバーからの初期メッセージ
@@ -40,7 +35,7 @@ export interface WsPongMessage {
 /**
  * WebSocket サーバー -> クライアントメッセージ
  */
-export type WsServerMessage = WsConnectedMessage | WsSessionEvent | WsErrorMessage | WsPongMessage;
+export type WsServerMessage = WsConnectedMessage | SDKMessage | WsErrorMessage | WsPongMessage;
 
 /**
  * WebSocket クライアント -> サーバーメッセージ
