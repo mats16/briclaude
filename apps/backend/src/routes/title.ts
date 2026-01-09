@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import type { GenerateTitleRequest, GenerateTitleResponse, ApiError } from '@repo/types';
 import { TitleService } from '../services/title.service.js';
+import { requestContext } from '@fastify/request-context';
 
 const titleRoute: FastifyPluginAsync = async fastify => {
   const titleService = new TitleService({
@@ -24,11 +25,12 @@ const titleRoute: FastifyPluginAsync = async fastify => {
       return reply.status(400).send(error);
     }
 
-    const accessToken = request.ctx?.user.oboAccessToken;
+    // PAT を優先的に取得、なければ SP トークンにフォールバック
+    const accessToken = requestContext.get('pat') ?? requestContext.get('sp_access_token');
     if (!accessToken) {
       const error: ApiError = {
         error: 'Unauthorized',
-        message: 'Access token is required',
+        message: 'Access token is required (PAT or Service Principal)',
         statusCode: 401,
       };
       return reply.status(401).send(error);

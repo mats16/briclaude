@@ -19,6 +19,14 @@ vi.mock('openai', () => {
   return { default: MockOpenAI };
 });
 
+// Mock requestContext
+const mockRequestContextGet = vi.fn();
+vi.mock('@fastify/request-context', () => ({
+  requestContext: {
+    get: (key: string) => mockRequestContextGet(key),
+  },
+}));
+
 describe('title route', () => {
   let app: FastifyInstance;
   let originalEnv: NodeJS.ProcessEnv;
@@ -40,6 +48,13 @@ describe('title route', () => {
 
     // Reset mocks
     vi.clearAllMocks();
+
+    // Default: return PAT token
+    mockRequestContextGet.mockImplementation((key: string) => {
+      if (key === 'pat') return 'test-pat-token';
+      if (key === 'sp_access_token') return null;
+      return null;
+    });
   });
 
   afterEach(async () => {
@@ -76,9 +91,6 @@ describe('title route', () => {
         payload: {
           first_session_message: 'Help me create a React component',
         },
-        headers: {
-          'x-forwarded-access-token': 'test-token',
-        },
       });
 
       expect(response.statusCode).toBe(200);
@@ -105,9 +117,6 @@ describe('title route', () => {
         method: 'POST',
         url: '/api/generate_title',
         payload: {},
-        headers: {
-          'x-forwarded-access-token': 'test-token',
-        },
       });
 
       expect(response.statusCode).toBe(400);
@@ -126,9 +135,6 @@ describe('title route', () => {
         payload: {
           first_session_message: '',
         },
-        headers: {
-          'x-forwarded-access-token': 'test-token',
-        },
       });
 
       expect(response.statusCode).toBe(400);
@@ -145,9 +151,6 @@ describe('title route', () => {
         payload: {
           first_session_message: 123,
         },
-        headers: {
-          'x-forwarded-access-token': 'test-token',
-        },
       });
 
       expect(response.statusCode).toBe(400);
@@ -155,7 +158,10 @@ describe('title route', () => {
       expect(body.error).toBe('ValidationError');
     });
 
-    it('should return 401 when access token is missing', async () => {
+    it('should return 401 when no token is available (PAT and SP both missing)', async () => {
+      // Mock: No PAT and no SP token
+      mockRequestContextGet.mockImplementation(() => null);
+
       await registerPlugins();
 
       const response = await app.inject({
@@ -164,13 +170,81 @@ describe('title route', () => {
         payload: {
           first_session_message: 'Help me with Python',
         },
-        // No x-forwarded-access-token header
       });
 
       expect(response.statusCode).toBe(401);
       const body = response.json();
       expect(body.error).toBe('Unauthorized');
-      expect(body.message).toBe('Access token is required');
+      expect(body.message).toBe('Access token is required (PAT or Service Principal)');
+    });
+
+    it('should use SP token when PAT is not available', async () => {
+      // Mock: No PAT, but SP token is available
+      mockRequestContextGet.mockImplementation((key: string) => {
+        if (key === 'pat') return null;
+        if (key === 'sp_access_token') return 'test-sp-token';
+        return null;
+      });
+
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: 'SP Token Test',
+            },
+          },
+        ],
+      });
+
+      await registerPlugins();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/generate_title',
+        payload: {
+          first_session_message: 'Test with SP token',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.title).toBe('SP Token Test');
+    });
+
+    it('should prefer PAT over SP token', async () => {
+      // Mock: Both PAT and SP token available
+      mockRequestContextGet.mockImplementation((key: string) => {
+        if (key === 'pat') return 'test-pat-token';
+        if (key === 'sp_access_token') return 'test-sp-token';
+        return null;
+      });
+
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: 'PAT Priority Test',
+            },
+          },
+        ],
+      });
+
+      await registerPlugins();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/generate_title',
+        payload: {
+          first_session_message: 'Test PAT priority',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.title).toBe('PAT Priority Test');
+
+      // Verify that requestContext.get was called for 'pat' first
+      expect(mockRequestContextGet).toHaveBeenCalledWith('pat');
     });
 
     it('should return 500 with ApiError when LLM call fails', async () => {
@@ -183,9 +257,6 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Help me with Python',
-        },
-        headers: {
-          'x-forwarded-access-token': 'test-token',
         },
       });
 
@@ -215,9 +286,6 @@ describe('title route', () => {
         payload: {
           first_session_message: 'Help me with something',
         },
-        headers: {
-          'x-forwarded-access-token': 'test-token',
-        },
       });
 
       expect(response.statusCode).toBe(200);
@@ -237,9 +305,6 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Test message',
-        },
-        headers: {
-          'x-forwarded-access-token': 'test-token',
         },
       });
 
@@ -267,9 +332,6 @@ describe('title route', () => {
         payload: {
           first_session_message: 'Analyze this CSV file',
         },
-        headers: {
-          'x-forwarded-access-token': 'test-token',
-        },
       });
 
       expect(response.statusCode).toBe(200);
@@ -295,9 +357,6 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Create a React component',
-        },
-        headers: {
-          'x-forwarded-access-token': 'test-token',
         },
       });
 
@@ -325,9 +384,6 @@ describe('title route', () => {
         payload: {
           first_session_message: 'Help me integrate an API',
         },
-        headers: {
-          'x-forwarded-access-token': 'test-token',
-        },
       });
 
       expect(response.statusCode).toBe(200);
@@ -354,9 +410,6 @@ describe('title route', () => {
         payload: {
           first_session_message: 'Analyze this CSV file',
         },
-        headers: {
-          'x-forwarded-access-token': 'test-token',
-        },
       });
 
       expect(response.statusCode).toBe(200);
@@ -382,9 +435,6 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Reactコンポーネントを作成してください',
-        },
-        headers: {
-          'x-forwarded-access-token': 'test-token',
         },
       });
 
@@ -423,9 +473,6 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Test message',
-        },
-        headers: {
-          'x-forwarded-access-token': 'test-token',
         },
       });
 
