@@ -295,7 +295,7 @@ export async function createSession(
         ],
         env: {
           PATH: fastify.config.PATH,
-          HOME: fastify.config.HOME,
+          HOME: userHome,
           CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
