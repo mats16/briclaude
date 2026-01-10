@@ -65,11 +65,10 @@ export default fp(
     // preHandler フックでトークンを取得
     fastify.addHook('preHandler', async request => {
       const userId = request.ctx?.user.id ?? '';
-      const userEmail = request.ctx?.user.email ?? '';
       const oboAccessToken = request.ctx?.user.oboAccessToken;
 
       // userHome を計算（USER_BASE_DIR + ユーザー名）
-      const userHome = path.join(fastify.config.USER_BASE_DIR, userEmail.split('@')[0]);
+      const userHome = path.join(fastify.config.USER_BASE_DIR, userId.split('@')[0]);
 
       // 各トークンを並列で取得
       const [pat, spAccessToken] = await Promise.all([
