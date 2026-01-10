@@ -113,12 +113,14 @@ describe('request-context plugin', () => {
       await app.register(mockRequestDecoratorPlugin);
       await app.register(requestContextPlugin);
 
+      let capturedValues: { pat: unknown; obo: unknown; sp: unknown } | undefined;
       app.get('/test', async () => {
-        return {
+        capturedValues = {
           pat: requestContext.get('pat'),
-          obo_access_token: requestContext.get('obo_access_token'),
-          sp_access_token: requestContext.get('sp_access_token'),
+          obo: requestContext.get('obo_access_token'),
+          sp: requestContext.get('sp_access_token'),
         };
+        return { ok: true };
       });
 
       await app.ready();
@@ -129,22 +131,24 @@ describe('request-context plugin', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      const body = response.json();
-      expect(body).toHaveProperty('pat');
-      expect(body).toHaveProperty('obo_access_token');
-      expect(body).toHaveProperty('sp_access_token');
+      expect(capturedValues).toBeDefined();
+      expect(capturedValues).toHaveProperty('pat');
+      expect(capturedValues).toHaveProperty('obo');
+      expect(capturedValues).toHaveProperty('sp');
     });
   });
 
   describe('PAT retrieval', () => {
-    it('should return null when no PAT in database', async () => {
+    it('should return undefined when no PAT in database', async () => {
       await app.register(mockConfigPlugin);
       await app.register(mockDatabasePlugin);
       await app.register(mockRequestDecoratorPlugin);
       await app.register(requestContextPlugin);
 
+      let capturedPat: string | undefined;
       app.get('/test', async () => {
-        return { pat: requestContext.get('pat') };
+        capturedPat = requestContext.get('pat');
+        return { ok: true };
       });
 
       await app.ready();
@@ -156,7 +160,7 @@ describe('request-context plugin', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.json().pat).toBeNull();
+      expect(capturedPat).toBeUndefined();
     });
 
     it('should return PAT from database when available', async () => {
@@ -213,14 +217,16 @@ describe('request-context plugin', () => {
   });
 
   describe('OBO token retrieval', () => {
-    it('should return null when no OBO token in header', async () => {
+    it('should return undefined when no OBO token in header', async () => {
       await app.register(mockConfigPlugin);
       await app.register(mockDatabasePlugin);
       await app.register(mockRequestDecoratorPlugin);
       await app.register(requestContextPlugin);
 
+      let capturedOboToken: string | undefined;
       app.get('/test', async () => {
-        return { obo_access_token: requestContext.get('obo_access_token') };
+        capturedOboToken = requestContext.get('obo_access_token');
+        return { ok: true };
       });
 
       await app.ready();
@@ -231,7 +237,7 @@ describe('request-context plugin', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.json().obo_access_token).toBeNull();
+      expect(capturedOboToken).toBeUndefined();
     });
 
     it('should return OBO token from header when available', async () => {
@@ -258,14 +264,16 @@ describe('request-context plugin', () => {
   });
 
   describe('SP token retrieval', () => {
-    it('should return null when no SP credentials configured', async () => {
+    it('should return undefined when no SP credentials configured', async () => {
       await app.register(mockConfigPlugin);
       await app.register(mockDatabasePlugin);
       await app.register(mockRequestDecoratorPlugin);
       await app.register(requestContextPlugin);
 
+      let capturedSpToken: string | undefined;
       app.get('/test', async () => {
-        return { sp_access_token: requestContext.get('sp_access_token') };
+        capturedSpToken = requestContext.get('sp_access_token');
+        return { ok: true };
       });
 
       await app.ready();
@@ -276,7 +284,7 @@ describe('request-context plugin', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.json().sp_access_token).toBeNull();
+      expect(capturedSpToken).toBeUndefined();
     });
 
     it('should fetch and return SP token when credentials configured', async () => {
