@@ -307,6 +307,10 @@ export async function createSession(
           // Databricks
           DATABRICKS_HOST: `https://${fastify.config.DATABRICKS_HOST}`,
         },
+        sandbox: {
+          enabled: true,
+          autoAllowBashIfSandboxed: true,
+        }
       },
     });
 
