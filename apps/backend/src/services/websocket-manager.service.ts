@@ -48,7 +48,7 @@ class WebSocketManager {
   /**
    * セッションの全接続にメッセージを送信
    */
-  broadcast(sessionId: string, message: WsServerMessage): void {
+  broadcast(sessionId: string, message: WsServerMessage | SDKMessage): void {
     const conns = this.connections.get(sessionId);
     if (!conns) return;
 
@@ -58,13 +58,6 @@ class WebSocketManager {
         conn.ws.send(payload);
       }
     }
-  }
-
-  /**
-   * セッションイベントをブロードキャスト（SDKMessage をそのまま送信）
-   */
-  broadcastEvent(sessionId: string, event: SDKMessage): void {
-    this.broadcast(sessionId, event);
   }
 
   /**

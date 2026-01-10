@@ -20,6 +20,18 @@ import { insertSessionEventInTx } from '../db/helpers.js';
 import { wsManager } from './websocket-manager.service.js';
 
 /**
+ * DB から取得するセッションカラムの選択定義
+ */
+const SESSION_SELECT_COLUMNS = {
+  id: sessions.id,
+  title: sessions.title,
+  status: sessions.status,
+  context: sessions.context,
+  createdAt: sessions.createdAt,
+  updatedAt: sessions.updatedAt,
+} as const;
+
+/**
  * SessionCreateEventData を SDKUserMessage 形式に変換
  */
 function convertToSDKUserMessage(
@@ -39,24 +51,6 @@ function convertToSDKUserMessage(
 }
 
 /**
- * セッションのステータスを更新するヘルパー関数
- */
-async function updateSessionStatus(
-  fastify: FastifyInstance,
-  userId: string,
-  sessionId: string,
-  status: SessionStatus
-): Promise<void> {
-  try {
-    await fastify.withUserContext(userId, async tx => {
-      await tx.update(sessions).set({ status }).where(eq(sessions.id, sessionId));
-    });
-  } catch (error) {
-    fastify.log.error({ sessionId, status, error }, 'Failed to update session status');
-  }
-}
-
-/**
  * イベントを WebSocket にブロードキャストし、DB に保存する（並列処理）
  * WebSocket 送信は即座に行い、DB 書き込みは待たない
  *
@@ -73,7 +67,7 @@ function saveAndBroadcastEvent(
   const eventSubtype = 'subtype' in message ? (message.subtype as string | undefined) : undefined;
 
   // WebSocket にブロードキャスト（SDKMessage をそのまま送信）
-  wsManager.broadcastEvent(sessionId, message);
+  wsManager.broadcast(sessionId, message);
 
   // DB に保存（skipDbSave が false の場合のみ）
   if (!options.skipDbSave) {
@@ -243,8 +237,6 @@ export async function createSession(
 
   // 5. タイムスタンプを設定（レスポンス用）
   const now = new Date();
-  const createdAt = now;
-  const updatedAt = now;
 
   // 6. sessions と user message を先に INSERT (status='init')
   const userMessage = convertToSDKUserMessage(userEvent.data, sessionId);
@@ -323,7 +315,9 @@ export async function createSession(
   } catch (error) {
     // SDK呼び出し失敗時: sessions status を 'error' に更新
     fastify.log.error({ sessionId, error }, 'SDK query failed');
-    await updateSessionStatus(fastify, userId, sessionId, 'error');
+    await fastify.withUserContext(userId, async tx => {
+      await tx.update(sessions).set({ status: 'error' }).where(eq(sessions.id, sessionId));
+    });
     throw error;
   }
 
@@ -332,8 +326,8 @@ export async function createSession(
     id: sessionId,
     session_status: 'running',
     title: title ?? null,
-    created_at: createdAt.toISOString(),
-    updated_at: updatedAt.toISOString(),
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
     session_context: sessionContext,
   };
 }
@@ -362,14 +356,7 @@ export async function listSessions(
 
     // limit + 1 で取得して has_more を判定
     const rows = await tx
-      .select({
-        id: sessions.id,
-        title: sessions.title,
-        status: sessions.status,
-        context: sessions.context,
-        createdAt: sessions.createdAt,
-        updatedAt: sessions.updatedAt,
-      })
+      .select(SESSION_SELECT_COLUMNS)
       .from(sessions)
       .where(whereClause)
       .orderBy(desc(sessions.updatedAt))
@@ -380,14 +367,7 @@ export async function listSessions(
     const resultRows = hasMore ? rows.slice(0, safeLimit) : rows;
 
     // SessionResponse 形式に変換
-    const data: SessionResponse[] = resultRows.map(row => ({
-      id: row.id,
-      title: row.title,
-      session_status: row.status as SessionStatus,
-      created_at: row.createdAt.toISOString(),
-      updated_at: row.updatedAt.toISOString(),
-      session_context: (row.context as SessionContextResponse) ?? null,
-    }));
+    const data: SessionResponse[] = resultRows.map(toSessionResponse);
 
     return {
       data,
@@ -396,6 +376,27 @@ export async function listSessions(
       has_more: hasMore,
     };
   });
+}
+
+/**
+ * DB行をSessionResponseに変換するヘルパー
+ */
+function toSessionResponse(row: {
+  id: string;
+  title: string | null;
+  status: string;
+  context: unknown;
+  createdAt: Date;
+  updatedAt: Date;
+}): SessionResponse {
+  return {
+    id: row.id,
+    title: row.title,
+    session_status: row.status as SessionStatus,
+    created_at: row.createdAt.toISOString(),
+    updated_at: row.updatedAt.toISOString(),
+    session_context: (row.context as SessionContextResponse) ?? null,
+  };
 }
 
 /**
@@ -413,29 +414,14 @@ export async function getSession(
 ): Promise<SessionResponse | null> {
   return fastify.withUserContext(userId, async tx => {
     const rows = await tx
-      .select({
-        id: sessions.id,
-        title: sessions.title,
-        status: sessions.status,
-        context: sessions.context,
-        createdAt: sessions.createdAt,
-        updatedAt: sessions.updatedAt,
-      })
+      .select(SESSION_SELECT_COLUMNS)
       .from(sessions)
       .where(eq(sessions.id, sessionId))
       .limit(1);
 
     if (rows.length === 0) return null;
 
-    const row = rows[0];
-    return {
-      id: row.id,
-      title: row.title,
-      session_status: row.status as SessionStatus,
-      created_at: row.createdAt.toISOString(),
-      updated_at: row.updatedAt.toISOString(),
-      session_context: (row.context as SessionContextResponse) ?? null,
-    };
+    return toSessionResponse(rows[0]);
   });
 }
 
@@ -457,53 +443,26 @@ export async function updateSession(
   const { title, session_status } = request;
 
   return fastify.withUserContext(userId, async tx => {
-    // セッションの存在確認
-    const existingRows = await tx
-      .select({ id: sessions.id })
-      .from(sessions)
-      .where(eq(sessions.id, sessionId))
-      .limit(1);
-
-    if (existingRows.length === 0) {
-      return null;
-    }
-
-    // 更新するフィールドを構築
-    const updateFields: { title?: string | null; status?: SessionStatus; updatedAt?: Date } = {};
+    // 更新を実行（RETURNING で更新後の値を取得）
+    const updateFields: { title?: string | null; status?: SessionStatus; updatedAt: Date } = {
+      updatedAt: new Date(),
+    };
     if (title !== undefined) {
       updateFields.title = title;
     }
     if (session_status !== undefined) {
       updateFields.status = session_status;
     }
-    updateFields.updatedAt = new Date();
 
-    // 更新を実行
-    await tx.update(sessions).set(updateFields).where(eq(sessions.id, sessionId));
-
-    // 更新後のセッションを取得して返却
     const rows = await tx
-      .select({
-        id: sessions.id,
-        title: sessions.title,
-        status: sessions.status,
-        context: sessions.context,
-        createdAt: sessions.createdAt,
-        updatedAt: sessions.updatedAt,
-      })
-      .from(sessions)
+      .update(sessions)
+      .set(updateFields)
       .where(eq(sessions.id, sessionId))
-      .limit(1);
+      .returning(SESSION_SELECT_COLUMNS);
 
-    const row = rows[0];
-    return {
-      id: row.id,
-      title: row.title,
-      session_status: row.status as SessionStatus,
-      created_at: row.createdAt.toISOString(),
-      updated_at: row.updatedAt.toISOString(),
-      session_context: (row.context as SessionContextResponse) ?? null,
-    };
+    if (rows.length === 0) return null;
+
+    return toSessionResponse(rows[0]);
   });
 }
 
@@ -521,45 +480,14 @@ export async function archiveSession(
   sessionId: string
 ): Promise<SessionResponse | null> {
   return fastify.withUserContext(userId, async tx => {
-    // セッションの存在確認
-    const existingRows = await tx
-      .select({ id: sessions.id })
-      .from(sessions)
-      .where(eq(sessions.id, sessionId))
-      .limit(1);
-
-    if (existingRows.length === 0) {
-      return null;
-    }
-
-    // ステータスを 'archived' に更新
-    await tx
+    const rows = await tx
       .update(sessions)
       .set({ status: 'archived', updatedAt: new Date() })
-      .where(eq(sessions.id, sessionId));
-
-    // 更新後のセッションを取得して返却
-    const updatedRows = await tx
-      .select({
-        id: sessions.id,
-        title: sessions.title,
-        status: sessions.status,
-        context: sessions.context,
-        createdAt: sessions.createdAt,
-        updatedAt: sessions.updatedAt,
-      })
-      .from(sessions)
       .where(eq(sessions.id, sessionId))
-      .limit(1);
+      .returning(SESSION_SELECT_COLUMNS);
 
-    const row = updatedRows[0];
-    return {
-      id: row.id,
-      title: row.title,
-      session_status: row.status as SessionStatus,
-      created_at: row.createdAt.toISOString(),
-      updated_at: row.updatedAt.toISOString(),
-      session_context: (row.context as SessionContextResponse) ?? null,
-    };
+    if (rows.length === 0) return null;
+
+    return toSessionResponse(rows[0]);
   });
 }

@@ -1,5 +1,6 @@
 // apps/backend/src/routes/session.ts
-import { FastifyPluginAsync } from 'fastify';
+import type { FastifyPluginAsync, FastifyReply } from 'fastify';
+import type { WebSocket } from 'ws';
 import type {
   SessionCreateRequest,
   SessionCreateResponse,
@@ -24,6 +25,32 @@ import {
 import { listSessionEvents, getSessionLastEventId } from '../services/session-events.service.js';
 import { wsManager } from '../services/websocket-manager.service.js';
 
+/**
+ * エラーレスポンスを生成するヘルパー
+ */
+function sendError(
+  reply: FastifyReply,
+  statusCode: 400 | 401 | 404 | 500,
+  error: string,
+  message: string
+): ReturnType<FastifyReply['send']> {
+  return reply.status(statusCode).send({ error, message, statusCode });
+}
+
+/**
+ * WebSocket エラーメッセージを生成して送信し、接続を閉じる
+ */
+function closeWebSocketWithError(
+  socket: WebSocket,
+  code: WsErrorMessage['code'],
+  message: string,
+  closeCode: number
+): void {
+  const errorMsg: WsErrorMessage = { type: 'error', code, message };
+  socket.send(JSON.stringify(errorMsg));
+  socket.close(closeCode, message);
+}
+
 const sessionRoute: FastifyPluginAsync = async fastify => {
   fastify.post<{
     Body: SessionCreateRequest;
@@ -32,21 +59,13 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     const { user } = request.ctx!;
 
     if (!user.id) {
-      return reply.status(401).send({
-        error: 'Unauthorized',
-        message: 'User ID not found in request context',
-        statusCode: 401,
-      });
+      return sendError(reply, 401, 'Unauthorized', 'User ID not found in request context');
     }
 
     const { events } = request.body;
 
     if (!events || events.length === 0) {
-      return reply.status(400).send({
-        error: 'BadRequest',
-        message: 'At least one event is required',
-        statusCode: 400,
-      });
+      return sendError(reply, 400, 'BadRequest', 'At least one event is required');
     }
 
     try {
@@ -54,11 +73,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
       return reply.status(201).send(result);
     } catch (error) {
       request.log.error(error, 'Failed to create session');
-      return reply.status(500).send({
-        error: 'InternalServerError',
-        message: 'Failed to create session',
-        statusCode: 500,
-      });
+      return sendError(reply, 500, 'InternalServerError', 'Failed to create session');
     }
   });
 
@@ -70,11 +85,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     const { user } = request.ctx!;
 
     if (!user.id) {
-      return reply.status(401).send({
-        error: 'Unauthorized',
-        message: 'User ID not found in request context',
-        statusCode: 401,
-      });
+      return sendError(reply, 401, 'Unauthorized', 'User ID not found in request context');
     }
 
     const { limit, status } = request.query;
@@ -87,11 +98,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
       return reply.send(result);
     } catch (error) {
       request.log.error(error, 'Failed to list sessions');
-      return reply.status(500).send({
-        error: 'InternalServerError',
-        message: 'Failed to get sessions',
-        statusCode: 500,
-      });
+      return sendError(reply, 500, 'InternalServerError', 'Failed to get sessions');
     }
   });
 
@@ -103,11 +110,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     const { user } = request.ctx!;
 
     if (!user.id) {
-      return reply.status(401).send({
-        error: 'Unauthorized',
-        message: 'User ID not found in request context',
-        statusCode: 401,
-      });
+      return sendError(reply, 401, 'Unauthorized', 'User ID not found in request context');
     }
 
     const { session_id } = request.params;
@@ -116,21 +119,13 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
       const session = await getSession(fastify, user.id, session_id);
 
       if (!session) {
-        return reply.status(404).send({
-          error: 'NotFound',
-          message: 'Session not found',
-          statusCode: 404,
-        });
+        return sendError(reply, 404, 'NotFound', 'Session not found');
       }
 
       return reply.send(session);
     } catch (error) {
       request.log.error(error, 'Failed to get session');
-      return reply.status(500).send({
-        error: 'InternalServerError',
-        message: 'Failed to get session',
-        statusCode: 500,
-      });
+      return sendError(reply, 500, 'InternalServerError', 'Failed to get session');
     }
   });
 
@@ -143,23 +138,19 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     const { user } = request.ctx!;
 
     if (!user.id) {
-      return reply.status(401).send({
-        error: 'Unauthorized',
-        message: 'User ID not found in request context',
-        statusCode: 401,
-      });
+      return sendError(reply, 401, 'Unauthorized', 'User ID not found in request context');
     }
 
     const { session_id } = request.params;
     const { title, session_status } = request.body;
 
-    // リクエストボディのバリデーション
     if (title === undefined && session_status === undefined) {
-      return reply.status(400).send({
-        error: 'BadRequest',
-        message: 'At least one field (title or session_status) is required',
-        statusCode: 400,
-      });
+      return sendError(
+        reply,
+        400,
+        'BadRequest',
+        'At least one field (title or session_status) is required'
+      );
     }
 
     try {
@@ -169,21 +160,13 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
       });
 
       if (!session) {
-        return reply.status(404).send({
-          error: 'NotFound',
-          message: 'Session not found',
-          statusCode: 404,
-        });
+        return sendError(reply, 404, 'NotFound', 'Session not found');
       }
 
       return reply.send(session);
     } catch (error) {
       request.log.error(error, 'Failed to update session');
-      return reply.status(500).send({
-        error: 'InternalServerError',
-        message: 'Failed to update session',
-        statusCode: 500,
-      });
+      return sendError(reply, 500, 'InternalServerError', 'Failed to update session');
     }
   });
 
@@ -195,11 +178,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     const { user } = request.ctx!;
 
     if (!user.id) {
-      return reply.status(401).send({
-        error: 'Unauthorized',
-        message: 'User ID not found in request context',
-        statusCode: 401,
-      });
+      return sendError(reply, 401, 'Unauthorized', 'User ID not found in request context');
     }
 
     const { session_id } = request.params;
@@ -208,21 +187,13 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
       const session = await archiveSession(fastify, user.id, session_id);
 
       if (!session) {
-        return reply.status(404).send({
-          error: 'NotFound',
-          message: 'Session not found',
-          statusCode: 404,
-        });
+        return sendError(reply, 404, 'NotFound', 'Session not found');
       }
 
       return reply.send(session);
     } catch (error) {
       request.log.error(error, 'Failed to archive session');
-      return reply.status(500).send({
-        error: 'InternalServerError',
-        message: 'Failed to archive session',
-        statusCode: 500,
-      });
+      return sendError(reply, 500, 'InternalServerError', 'Failed to archive session');
     }
   });
 
@@ -235,11 +206,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     const { user } = request.ctx!;
 
     if (!user.id) {
-      return reply.status(401).send({
-        error: 'Unauthorized',
-        message: 'User ID not found in request context',
-        statusCode: 401,
-      });
+      return sendError(reply, 401, 'Unauthorized', 'User ID not found in request context');
     }
 
     const { session_id } = request.params;
@@ -253,18 +220,10 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
       return reply.send(result);
     } catch (error) {
       if (error instanceof Error && error.message === 'Session not found') {
-        return reply.status(404).send({
-          error: 'NotFound',
-          message: 'Session not found',
-          statusCode: 404,
-        });
+        return sendError(reply, 404, 'NotFound', 'Session not found');
       }
       request.log.error(error, 'Failed to get session events');
-      return reply.status(500).send({
-        error: 'InternalServerError',
-        message: 'Failed to get session events',
-        statusCode: 500,
-      });
+      return sendError(reply, 500, 'InternalServerError', 'Failed to get session events');
     }
   });
 
@@ -276,13 +235,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     const { session_id } = request.params;
 
     if (!user.id) {
-      const errorMsg: WsErrorMessage = {
-        type: 'error',
-        code: 'UNAUTHORIZED',
-        message: 'User ID not found',
-      };
-      socket.send(JSON.stringify(errorMsg));
-      socket.close(4001, 'Unauthorized');
+      closeWebSocketWithError(socket, 'UNAUTHORIZED', 'User ID not found', 4001);
       return;
     }
 
@@ -321,23 +274,11 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
       request.log.error(error, 'WebSocket connection error');
 
       if (error instanceof Error && error.message === 'Session not found') {
-        const errorMsg: WsErrorMessage = {
-          type: 'error',
-          code: 'NOT_FOUND',
-          message: 'Session not found',
-        };
-        socket.send(JSON.stringify(errorMsg));
-        socket.close(4004, 'Session not found');
+        closeWebSocketWithError(socket, 'NOT_FOUND', 'Session not found', 4004);
         return;
       }
 
-      const errorMsg: WsErrorMessage = {
-        type: 'error',
-        code: 'CONNECTION_ERROR',
-        message: 'Failed to establish connection',
-      };
-      socket.send(JSON.stringify(errorMsg));
-      socket.close(4000, 'Connection error');
+      closeWebSocketWithError(socket, 'CONNECTION_ERROR', 'Failed to establish connection', 4000);
     }
   });
 };
