@@ -100,10 +100,7 @@ describe('session-events.service', () => {
     });
 
     it('should return events in response', async () => {
-      const events = [
-        createMockEvent('event-1', 'user'),
-        createMockEvent('event-2', 'assistant'),
-      ];
+      const events = [createMockEvent('event-1', 'user'), createMockEvent('event-2', 'assistant')];
 
       const mockTx = createChainableMock({
         sessionResult: [{ id: 'session-123' }],

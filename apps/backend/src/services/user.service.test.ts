@@ -12,11 +12,11 @@ describe('user.service', () => {
     const mockSelect = vi.fn().mockReturnThis();
     const mockFrom = vi.fn().mockReturnThis();
     const mockWhere = vi.fn().mockReturnThis();
-    const mockLimit = vi.fn().mockResolvedValue(
-      existingUser
-        ? [{ id: 'user-123', name: 'Test User', email: 'test@example.com' }]
-        : []
-    );
+    const mockLimit = vi
+      .fn()
+      .mockResolvedValue(
+        existingUser ? [{ id: 'user-123', name: 'Test User', email: 'test@example.com' }] : []
+      );
 
     const mockInsert = vi.fn().mockReturnThis();
     const mockValues = vi.fn().mockReturnThis();
@@ -24,25 +24,23 @@ describe('user.service', () => {
 
     const mockExecute = vi.fn().mockResolvedValue(undefined);
 
-    const mockTransaction = vi.fn(
-      async (callback: (tx: unknown) => Promise<unknown>) => {
-        const mockTx = {
-          execute: mockExecute,
-          insert: mockInsert,
-          values: mockValues,
+    const mockTransaction = vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => {
+      const mockTx = {
+        execute: mockExecute,
+        insert: mockInsert,
+        values: mockValues,
+        onConflictDoNothing: mockOnConflictDoNothing,
+      };
+
+      // Chain methods correctly
+      mockInsert.mockReturnValue({
+        values: vi.fn().mockReturnValue({
           onConflictDoNothing: mockOnConflictDoNothing,
-        };
+        }),
+      });
 
-        // Chain methods correctly
-        mockInsert.mockReturnValue({
-          values: vi.fn().mockReturnValue({
-            onConflictDoNothing: mockOnConflictDoNothing,
-          }),
-        });
-
-        return callback(mockTx);
-      }
-    );
+      return callback(mockTx);
+    });
 
     return {
       db: {
@@ -82,23 +80,21 @@ describe('user.service', () => {
       let executeCalled = false;
       let executeArg: unknown = null;
 
-      const mockTransaction = vi.fn(
-        async (callback: (tx: unknown) => Promise<unknown>) => {
-          const mockTx = {
-            execute: vi.fn((arg: unknown) => {
-              executeCalled = true;
-              executeArg = arg;
-              return Promise.resolve(undefined);
+      const mockTransaction = vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => {
+        const mockTx = {
+          execute: vi.fn((arg: unknown) => {
+            executeCalled = true;
+            executeArg = arg;
+            return Promise.resolve(undefined);
+          }),
+          insert: vi.fn().mockReturnValue({
+            values: vi.fn().mockReturnValue({
+              onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
             }),
-            insert: vi.fn().mockReturnValue({
-              values: vi.fn().mockReturnValue({
-                onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
-              }),
-            }),
-          };
-          return callback(mockTx);
-        }
-      );
+          }),
+        };
+        return callback(mockTx);
+      });
 
       const fastify = {
         db: {
@@ -122,22 +118,20 @@ describe('user.service', () => {
     it('should insert into users table', async () => {
       let insertCalled = false;
 
-      const mockTransaction = vi.fn(
-        async (callback: (tx: unknown) => Promise<unknown>) => {
-          const mockTx = {
-            execute: vi.fn().mockResolvedValue(undefined),
-            insert: vi.fn(() => {
-              insertCalled = true;
-              return {
-                values: vi.fn().mockReturnValue({
-                  onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
-                }),
-              };
-            }),
-          };
-          return callback(mockTx);
-        }
-      );
+      const mockTransaction = vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => {
+        const mockTx = {
+          execute: vi.fn().mockResolvedValue(undefined),
+          insert: vi.fn(() => {
+            insertCalled = true;
+            return {
+              values: vi.fn().mockReturnValue({
+                onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+              }),
+            };
+          }),
+        };
+        return callback(mockTx);
+      });
 
       const fastify = {
         db: {
@@ -161,22 +155,20 @@ describe('user.service', () => {
     it('should insert into user_settings table', async () => {
       let insertCount = 0;
 
-      const mockTransaction = vi.fn(
-        async (callback: (tx: unknown) => Promise<unknown>) => {
-          const mockTx = {
-            execute: vi.fn().mockResolvedValue(undefined),
-            insert: vi.fn(() => {
-              insertCount++;
-              return {
-                values: vi.fn().mockReturnValue({
-                  onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
-                }),
-              };
-            }),
-          };
-          return callback(mockTx);
-        }
-      );
+      const mockTransaction = vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => {
+        const mockTx = {
+          execute: vi.fn().mockResolvedValue(undefined),
+          insert: vi.fn(() => {
+            insertCount++;
+            return {
+              values: vi.fn().mockReturnValue({
+                onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+              }),
+            };
+          }),
+        };
+        return callback(mockTx);
+      });
 
       const fastify = {
         db: {
@@ -199,22 +191,20 @@ describe('user.service', () => {
     it('should use onConflictDoNothing for race condition handling', async () => {
       const onConflictCalls: number[] = [];
 
-      const mockTransaction = vi.fn(
-        async (callback: (tx: unknown) => Promise<unknown>) => {
-          const mockTx = {
-            execute: vi.fn().mockResolvedValue(undefined),
-            insert: vi.fn(() => ({
-              values: vi.fn().mockReturnValue({
-                onConflictDoNothing: vi.fn(() => {
-                  onConflictCalls.push(1);
-                  return Promise.resolve(undefined);
-                }),
+      const mockTransaction = vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => {
+        const mockTx = {
+          execute: vi.fn().mockResolvedValue(undefined),
+          insert: vi.fn(() => ({
+            values: vi.fn().mockReturnValue({
+              onConflictDoNothing: vi.fn(() => {
+                onConflictCalls.push(1);
+                return Promise.resolve(undefined);
               }),
-            })),
-          };
-          return callback(mockTx);
-        }
-      );
+            }),
+          })),
+        };
+        return callback(mockTx);
+      });
 
       const fastify = {
         db: {

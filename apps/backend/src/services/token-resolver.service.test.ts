@@ -1,10 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import {
-  getServicePrincipalToken,
-  getUserPAT,
-  clearTokenCache,
-} from './token-resolver.service.js';
+import { getServicePrincipalToken, getUserPAT, clearTokenCache } from './token-resolver.service.js';
 
 describe('token-resolver.service', () => {
   // Mock Fastify instance
