@@ -10,8 +10,6 @@ describe('user.service', () => {
   // Helper to create mock Fastify instance
   const createMockFastify = (existingUser: boolean = false): FastifyInstance => {
     const mockSelect = vi.fn().mockReturnThis();
-    const mockFrom = vi.fn().mockReturnThis();
-    const mockWhere = vi.fn().mockReturnThis();
     const mockLimit = vi
       .fn()
       .mockResolvedValue(

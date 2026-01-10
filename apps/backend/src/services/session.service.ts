@@ -17,6 +17,7 @@ import type {
 } from '@repo/types';
 import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
+import { ensureDirectory } from '../utils/directory.js';
 import { wsManager } from './websocket-manager.service.js';
 import path from 'node:path';
 
@@ -227,6 +228,8 @@ export async function createSession(
   /** Claude Code Working Directory  (e.g. /home/app/users/user1/session_123) */
   const cwd = path.join(userHome, sessionId);
 
+  await ensureDirectory(cwd);
+
   // 4. context オブジェクトの構築
   const sessionContext: SessionContextResponse = {
     allowed_tools: [],
@@ -293,7 +296,7 @@ export async function createSession(
         env: {
           PATH: fastify.config.PATH,
           HOME: fastify.config.HOME,
-          CLAUDE_CONFIG_DIR: `${userHome}/.claude`,
+          CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
           ANTHROPIC_AUTH_TOKEN: requestContext.get('pat'),
