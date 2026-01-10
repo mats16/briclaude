@@ -18,6 +18,7 @@ import type {
 import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 import { wsManager } from './websocket-manager.service.js';
+import path from 'node:path';
 
 /**
  * DB から取得するセッションカラムの選択定義
@@ -222,8 +223,9 @@ export async function createSession(
   const userContent = userEvent?.data.message.content ?? '';
 
   // 3. cwd の生成（userHome + sessionId）
-  const userHome = requestContext.get('user_home') || fastify.config.HOME;
-  const cwd = `${userHome}/${sessionId}`;
+  const userHome = requestContext.get('user_home') as string;
+  /** Claude Code Working Directory  (e.g. /home/app/users/user1/session_123) */
+  const cwd = path.join(userHome, sessionId);
 
   // 4. context オブジェクトの構築
   const sessionContext: SessionContextResponse = {
@@ -264,7 +266,7 @@ export async function createSession(
     const response = query({
       prompt: userContent,
       options: {
-        cwd: '.',
+        cwd: sessionContext.cwd,
         model: session_context.model,
         maxTurns: 100,
         settingSources: ['user', 'project', 'local'],
