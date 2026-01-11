@@ -1,7 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, desc } from 'drizzle-orm';
 import { typeid } from 'typeid-js';
-import { query, type SDKMessage, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
+import {
+  query,
+  type SDKMessage,
+  type SDKSystemMessage,
+  type SDKUserMessage,
+} from '@anthropic-ai/claude-agent-sdk';
 import { requestContext } from '@fastify/request-context';
 import type { UUID } from 'crypto';
 import type {
@@ -118,7 +123,7 @@ async function waitForInit(
 
     // init イベントを検出 (type: system, subtype: init)
     if (message.type === 'system' && message.subtype === 'init') {
-      const sdkSessionId = message.session_id;
+      const initMessage = message as SDKSystemMessage;
 
       // sessions テーブル UPDATE + init イベント INSERT を1トランザクションで実行
       await fastify.withUserContext(userId, async tx => {
@@ -127,23 +132,22 @@ async function waitForInit(
           .update(sessions)
           .set({
             status: 'running',
-            sdkSessionId: sdkSessionId || null,
+            sdkSessionId: initMessage.session_id || null,
           })
           .where(eq(sessions.id, sessionId));
 
         // init イベントを session_events テーブルに INSERT
-        const initEventUuid = 'uuid' in message ? (message.uuid as string) : crypto.randomUUID();
         await insertSessionEventInTx(tx, {
-          uuid: initEventUuid,
+          uuid: initMessage.uuid,
           sessionId,
-          type: message.type,
-          subtype: message.subtype ?? null,
-          message: message,
+          type: initMessage.type,
+          subtype: initMessage.subtype,
+          message: initMessage,
         });
       });
 
       return {
-        sdkSessionId,
+        sdkSessionId: initMessage.session_id,
         iterator,
       };
     }
