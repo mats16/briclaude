@@ -148,7 +148,7 @@ export function SessionGroup({
                 {onArchiveSession && !isArchived && (
                   <SidebarMenuAction
                     showOnHover
-                    className="top-1/2 -translate-y-1/2"
+                    className="!top-1/2 -translate-y-1/2"
                     onClick={e => {
                       e.stopPropagation();
                       onArchiveSession(session.id);
