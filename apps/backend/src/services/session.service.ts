@@ -6,7 +6,6 @@ import {
   type SDKSystemMessage,
   type SDKUserMessage,
 } from '@anthropic-ai/claude-agent-sdk';
-import { requestContext } from '@fastify/request-context';
 import type { UUID } from 'crypto';
 import type {
   SessionCreateRequest,
@@ -244,7 +243,7 @@ export async function createSession(
   const userContent = userEvent?.data.message.content ?? '';
 
   // 3. cwd の生成（userHome + sessionId）TypeID 形式で使用
-  const userHome = requestContext.get('user_home') as string;
+  const userHome = fastify.requestContext.get('user_home') as string;
   /** Claude Code Working Directory  (e.g. /home/app/users/user1/session_xxx) */
   const cwd = path.join(userHome, sessionId.toString());
 
@@ -319,7 +318,7 @@ export async function createSession(
           CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
-          ANTHROPIC_AUTH_TOKEN: requestContext.get('pat'),
+          ANTHROPIC_AUTH_TOKEN: fastify.requestContext.get('pat'),
           ANTHROPIC_CUSTOM_HEADERS: 'x-databricks-disable-beta-headers: true',
           ANTHROPIC_DEFAULT_OPUS_MODEL: fastify.config.ANTHROPIC_DEFAULT_OPUS_MODEL,
           ANTHROPIC_DEFAULT_SONNET_MODEL: fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL,
@@ -513,7 +512,7 @@ export async function archiveSession(
   sessionId: SessionId
 ): Promise<SessionResponse | null> {
   // user_home を取得（ベースディレクトリとして使用）
-  const userHome = requestContext.get('user_home') as string;
+  const userHome = fastify.requestContext.get('user_home') as string;
 
   return fastify.withUserContext(userId, async tx => {
     // 1. セッション情報を取得（cwd を取得するため）
