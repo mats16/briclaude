@@ -80,5 +80,27 @@
   "language": {
     "en": "英語",
     "ja": "日本語"
+  },
+  "welcome": {
+    "title": "Claude Code へようこそ",
+    "subtitle": "AI Agent で Databricks での開発を加速しましょう。\n下のクイックスタートか、メッセージを入力から始めてください。",
+    "comingSoon": "この機能は近日公開予定です",
+    "quickstarts": {
+      "lakeflow": {
+        "title": "Lakeflow Jobs のエラー調査",
+        "description": "ジョブの失敗原因を分析し、解決策を提案します",
+        "modalDescription": "Lakeflow Jobs で発生したエラーのログを解析し、根本原因の特定と修正方法を提案します。"
+      },
+      "unityCatalog": {
+        "title": "Unity Catalog の EDA",
+        "description": "データカタログを探索し、スキーマを理解します",
+        "modalDescription": "Unity Catalog 内のテーブルやビューに対して探索的データ分析を実行し、データの特徴を把握します。"
+      },
+      "databricksApps": {
+        "title": "Databricks Apps でのアプリ開発",
+        "description": "Databricks Apps 上でアプリを構築します",
+        "modalDescription": "Databricks Apps プラットフォームを活用したウェブアプリケーションの開発をサポートします。"
+      }
+    }
   }
 }

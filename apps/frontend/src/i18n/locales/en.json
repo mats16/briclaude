@@ -80,5 +80,27 @@
   "language": {
     "en": "English",
     "ja": "Japanese"
+  },
+  "welcome": {
+    "title": "Welcome to Claude Code",
+    "subtitle": "Accelerate your Databricks development with AI Agent.\nStart with a quickstart below or type a message.",
+    "comingSoon": "This feature is coming soon",
+    "quickstarts": {
+      "lakeflow": {
+        "title": "Investigate Lakeflow Jobs Errors",
+        "description": "Analyze job failures and suggest solutions",
+        "modalDescription": "Analyze error logs from Lakeflow Jobs to identify root causes and suggest fixes."
+      },
+      "unityCatalog": {
+        "title": "EDA on Unity Catalog",
+        "description": "Explore data catalog and understand schemas",
+        "modalDescription": "Perform exploratory data analysis on tables and views in Unity Catalog to understand data characteristics."
+      },
+      "databricksApps": {
+        "title": "App Development on Databricks Apps",
+        "description": "Build applications on Databricks Apps",
+        "modalDescription": "Support web application development using the Databricks Apps platform."
+      }
+    }
   }
 }
