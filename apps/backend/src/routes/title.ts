@@ -6,7 +6,7 @@ import { requestContext } from '@fastify/request-context';
 const titleRoute: FastifyPluginAsync = async fastify => {
   const titleService = new TitleService({
     databricksHost: fastify.config.DATABRICKS_HOST,
-    model: fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL,
+    model: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
   });
 
   fastify.post<{
