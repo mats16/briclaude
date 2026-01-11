@@ -14,6 +14,7 @@ export type SerializableMessage = SDKMessage;
  */
 export type InsertSessionEventInput = {
   uuid: string;
+  /** セッションID（UUID 形式） */
   sessionId: string;
   type: string;
   subtype: string | null;

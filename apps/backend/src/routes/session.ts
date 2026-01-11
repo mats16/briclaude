@@ -24,6 +24,7 @@ import {
 } from '../services/session.service.js';
 import { listSessionEvents, getSessionLastEventId } from '../services/session-events.service.js';
 import { wsManager } from '../services/websocket-manager.service.js';
+import { SessionId } from '../models/session.model.js';
 
 /**
  * エラーレスポンスを生成するヘルパー
@@ -114,9 +115,10 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     }
 
     const { session_id } = request.params;
+    const sessionId = SessionId.fromString(session_id);
 
     try {
-      const session = await getSession(fastify, user.id, session_id);
+      const session = await getSession(fastify, user.id, sessionId);
 
       if (!session) {
         return sendError(reply, 404, 'NotFound', 'Session not found');
@@ -142,6 +144,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     }
 
     const { session_id } = request.params;
+    const sessionId = SessionId.fromString(session_id);
     const { title, session_status } = request.body;
 
     if (title === undefined && session_status === undefined) {
@@ -154,7 +157,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     }
 
     try {
-      const session = await updateSession(fastify, user.id, session_id, {
+      const session = await updateSession(fastify, user.id, sessionId, {
         title,
         session_status,
       });
@@ -182,9 +185,10 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     }
 
     const { session_id } = request.params;
+    const sessionId = SessionId.fromString(session_id);
 
     try {
-      const session = await archiveSession(fastify, user.id, session_id);
+      const session = await archiveSession(fastify, user.id, sessionId);
 
       if (!session) {
         return sendError(reply, 404, 'NotFound', 'Session not found');
@@ -210,10 +214,11 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     }
 
     const { session_id } = request.params;
+    const sessionId = SessionId.fromString(session_id);
     const { after, limit } = request.query;
 
     try {
-      const result = await listSessionEvents(fastify, user.id, session_id, {
+      const result = await listSessionEvents(fastify, user.id, sessionId, {
         after: after ?? undefined,
         limit: limit ? Number(limit) : undefined,
       });
@@ -233,6 +238,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
   }>('/sessions/:session_id/subscribe', { websocket: true }, async (socket, request) => {
     const { user } = request.ctx!;
     const { session_id } = request.params;
+    const sessionId = SessionId.fromString(session_id);
 
     if (!user.id) {
       closeWebSocketWithError(socket, 'UNAUTHORIZED', 'User ID not found', 4001);
@@ -241,7 +247,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
 
     try {
       // 最新イベント ID を取得して接続成功メッセージを送信
-      const lastEventId = await getSessionLastEventId(fastify, user.id, session_id);
+      const lastEventId = await getSessionLastEventId(fastify, user.id, sessionId);
 
       // 接続を管理に追加
       wsManager.addConnection(session_id, user.id, socket);

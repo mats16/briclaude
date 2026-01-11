@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "3ea077d6-3546-419f-b5c7-e0c45937938c",
+  "id": "fa8d98b9-5978-4fcd-90fe-130fde4601ff",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -154,7 +154,7 @@
       "table": "session_events"
     },
     {
-      "type": "text",
+      "type": "uuid",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -219,7 +219,7 @@
       "table": "session_events"
     },
     {
-      "type": "text",
+      "type": "uuid",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
