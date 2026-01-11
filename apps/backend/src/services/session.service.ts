@@ -6,7 +6,6 @@ import {
   type SDKSystemMessage,
   type SDKUserMessage,
 } from '@anthropic-ai/claude-agent-sdk';
-import { requestContext } from '@fastify/request-context';
 import type { UUID } from 'crypto';
 import type {
   SessionCreateRequest,
@@ -21,7 +20,7 @@ import type {
 } from '@repo/types';
 import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
-import { ensureDirectory } from '../utils/directory.js';
+import { ensureDirectory, removeDirectory } from '../utils/directory.js';
 import { wsManager } from './websocket-manager.service.js';
 import { SessionId } from '../models/session.model.js';
 import path from 'node:path';
@@ -244,7 +243,7 @@ export async function createSession(
   const userContent = userEvent?.data.message.content ?? '';
 
   // 3. cwd の生成（userHome + sessionId）TypeID 形式で使用
-  const userHome = requestContext.get('user_home') as string;
+  const userHome = fastify.requestContext.get('user_home') as string;
   /** Claude Code Working Directory  (e.g. /home/app/users/user1/session_xxx) */
   const cwd = path.join(userHome, sessionId.toString());
 
@@ -319,7 +318,7 @@ export async function createSession(
           CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
-          ANTHROPIC_AUTH_TOKEN: requestContext.get('pat'),
+          ANTHROPIC_AUTH_TOKEN: fastify.requestContext.get('pat'),
           ANTHROPIC_CUSTOM_HEADERS: 'x-databricks-disable-beta-headers: true',
           ANTHROPIC_DEFAULT_OPUS_MODEL: fastify.config.ANTHROPIC_DEFAULT_OPUS_MODEL,
           ANTHROPIC_DEFAULT_SONNET_MODEL: fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL,
@@ -460,7 +459,8 @@ export async function getSession(
 }
 
 /**
- * セッションを更新する
+ * セッションを更新する（タイトルのみ）
+ * ステータス変更は archiveSession() を使用してください
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
@@ -474,18 +474,15 @@ export async function updateSession(
   sessionId: SessionId,
   request: SessionUpdateRequest
 ): Promise<SessionResponse | null> {
-  const { title, session_status } = request;
+  const { title } = request;
 
   return fastify.withUserContext(userId, async tx => {
     // 更新を実行（RETURNING で更新後の値を取得）
-    const updateFields: { title?: string | null; status?: SessionStatus; updatedAt: Date } = {
+    const updateFields: { title?: string | null; updatedAt: Date } = {
       updatedAt: new Date(),
     };
     if (title !== undefined) {
       updateFields.title = title;
-    }
-    if (session_status !== undefined) {
-      updateFields.status = session_status;
     }
 
     const rows = await tx
@@ -502,6 +499,7 @@ export async function updateSession(
 
 /**
  * セッションをアーカイブする
+ * ステータスを 'archived' に変更し、Working Directory を削除する
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
@@ -513,7 +511,23 @@ export async function archiveSession(
   userId: string,
   sessionId: SessionId
 ): Promise<SessionResponse | null> {
+  // user_home を取得（ベースディレクトリとして使用）
+  const userHome = fastify.requestContext.get('user_home') as string;
+
   return fastify.withUserContext(userId, async tx => {
+    // 1. セッション情報を取得（cwd を取得するため）
+    const sessionRows = await tx
+      .select({ context: sessions.context })
+      .from(sessions)
+      .where(eq(sessions.id, sessionId.toUUID()))
+      .limit(1);
+
+    if (sessionRows.length === 0) return null;
+
+    const context = sessionRows[0].context as SessionContextResponse | null;
+    const cwd = context?.cwd;
+
+    // 2. ステータスを archived に更新
     const rows = await tx
       .update(sessions)
       .set({ status: 'archived', updatedAt: new Date() })
@@ -521,6 +535,16 @@ export async function archiveSession(
       .returning(SESSION_SELECT_COLUMNS);
 
     if (rows.length === 0) return null;
+
+    // 3. Working Directory を削除（user_home 配下に制限、トランザクション外で非同期実行）
+    if (cwd && userHome) {
+      removeDirectory(cwd, userHome).catch(error => {
+        fastify.log.error(
+          { sessionId: sessionId.toString(), cwd, userHome, error },
+          'Failed to remove working directory'
+        );
+      });
+    }
 
     return toSessionResponse(rows[0]);
   });

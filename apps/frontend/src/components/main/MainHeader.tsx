@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GitBranch, ExternalLink, Copy, ChevronDown } from 'lucide-react';
+import { GitBranch, ExternalLink, Copy, ChevronDown, Pencil, Archive } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
@@ -92,11 +92,13 @@ export function MainHeader({
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
+            <DropdownMenuContent align="end" className="min-w-0">
               <DropdownMenuItem onClick={handleOpenRenameDialog}>
+                <Pencil className="h-4 w-4" />
                 {t('main.renameSession')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleArchive}>
+                <Archive className="h-4 w-4" />
                 {t('main.archiveSession')}
               </DropdownMenuItem>
             </DropdownMenuContent>

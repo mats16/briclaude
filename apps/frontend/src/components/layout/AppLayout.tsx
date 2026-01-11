@@ -21,9 +21,7 @@ export function AppLayout() {
 
   const handleArchiveSession = useCallback(
     async (targetSessionId: string) => {
-      await sessionService.updateSession(targetSessionId, {
-        session_status: 'archived',
-      });
+      await sessionService.archiveSession(targetSessionId);
       refetchSessions();
       if (sessionId === targetSessionId) {
         navigate('/');

@@ -31,8 +31,8 @@
     "send": "送信",
     "openInCli": "CLIで開く",
     "emptyChat": "会話を開始",
-    "renameSession": "セッション名を変更",
-    "archiveSession": "セッションをアーカイブ",
+    "renameSession": "名前を変更",
+    "archiveSession": "アーカイブ",
     "renameSessionDescription": "このセッションの新しい名前を入力してください。",
     "sessionTitlePlaceholder": "セッション名"
   },

@@ -125,12 +125,11 @@ export type SessionArchiveResponse = SessionResponse;
 
 /**
  * PATCH /api/sessions/:session_id のリクエストボディ
+ * ステータス変更は POST /api/sessions/:session_id/archive を使用してください
  */
 export interface SessionUpdateRequest {
   /** セッションタイトル */
   title?: string;
-  /** セッションステータス（アーカイブなど） */
-  session_status?: SessionStatus;
 }
 
 // =====================================================

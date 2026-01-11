@@ -6,6 +6,7 @@ import type {
   SessionListResponse,
   SessionListQuery,
   SessionResponse,
+  SessionArchiveResponse,
   SessionUpdateRequest,
   GenerateTitleRequest,
   GenerateTitleResponse,
@@ -70,6 +71,13 @@ export const sessionService = {
     return apiClient<SessionResponse>(`/api/sessions/${sessionId}`, {
       method: 'PATCH',
       body: JSON.stringify(request),
+    });
+  },
+
+  async archiveSession(sessionId: string): Promise<SessionArchiveResponse> {
+    return apiClient<SessionArchiveResponse>(`/api/sessions/${sessionId}/archive`, {
+      method: 'POST',
+      body: JSON.stringify({}),
     });
   },
 };

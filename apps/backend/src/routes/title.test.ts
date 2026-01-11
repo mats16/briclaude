@@ -19,13 +19,8 @@ vi.mock('openai', () => {
   return { default: MockOpenAI };
 });
 
-// Mock requestContext
+// Mock requestContext getter
 const mockRequestContextGet = vi.fn();
-vi.mock('@fastify/request-context', () => ({
-  requestContext: {
-    get: (key: string) => mockRequestContextGet(key),
-  },
-}));
 
 describe('title route', () => {
   let app: FastifyInstance;
@@ -68,6 +63,14 @@ describe('title route', () => {
   async function registerPlugins() {
     await app.register(configPlugin);
     await app.register(requestDecoratorPlugin);
+
+    // Mock fastify.requestContext
+    app.decorate('requestContext', {
+      get: mockRequestContextGet,
+      set: vi.fn(),
+      getStore: vi.fn(),
+    });
+
     await app.register(titleRoute, { prefix: '/api' });
   }
 
