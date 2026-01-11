@@ -148,7 +148,12 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     const sessionId = SessionId.fromString(session_id);
     const { title } = request.body;
 
-    // title 以外のフィールドがある場合はエラー
+    // 1. 必須フィールドのチェック
+    if (title === undefined) {
+      return sendError(reply, 400, 'BadRequest', 'title is required');
+    }
+
+    // 2. 無効なフィールドのチェック
     const allowedFields = ['title'];
     const receivedFields = Object.keys(request.body);
     const invalidFields = receivedFields.filter(f => !allowedFields.includes(f));
@@ -160,10 +165,6 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
         'BadRequest',
         `Invalid fields: ${invalidFields.join(', ')}. Only 'title' can be updated.`
       );
-    }
-
-    if (title === undefined) {
-      return sendError(reply, 400, 'BadRequest', 'title is required');
     }
 
     try {
