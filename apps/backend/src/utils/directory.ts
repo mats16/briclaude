@@ -1,5 +1,5 @@
 import { mkdir, rm } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { dirname, resolve, relative } from 'node:path';
 
 /**
  * 指定したパスのディレクトリを再帰的に作成します。
@@ -45,18 +45,40 @@ export async function ensureDirectoryForFile(filePath: string): Promise<void> {
 /**
  * 指定したパスのディレクトリを再帰的に削除します。
  * ディレクトリが存在しない場合はエラーを投げません。
+ * セキュリティのため、baseDir が指定された場合はその配下のみ削除可能です。
  *
- * @param path - 削除するディレクトリのパス
+ * @param targetPath - 削除するディレクトリのパス
+ * @param baseDir - 削除を許可するベースディレクトリ（指定時はこの配下のみ削除可能）
  * @returns Promise<void>
+ * @throws Error - targetPath が baseDir 配下でない場合
  *
  * @example
  * ```typescript
+ * // baseDir なし（任意のパスを削除可能 - 非推奨）
  * await removeDirectory('/path/to/directory');
+ *
+ * // baseDir あり（セキュア - 推奨）
+ * await removeDirectory('/home/user/session_xxx', '/home/user');
  * ```
  */
-export async function removeDirectory(path: string): Promise<void> {
+export async function removeDirectory(targetPath: string, baseDir?: string): Promise<void> {
+  // baseDir が指定されている場合、パストラバーサル攻撃を防ぐ
+  if (baseDir) {
+    const normalizedBase = resolve(baseDir);
+    const normalizedTarget = resolve(targetPath);
+    const relativePath = relative(normalizedBase, normalizedTarget);
+
+    // 相対パスが '..' で始まる場合、または絶対パスの場合はエラー
+    if (relativePath.startsWith('..') || resolve(relativePath) === relativePath) {
+      throw new Error(
+        `Security error: Cannot delete path outside of base directory. ` +
+          `Target: ${normalizedTarget}, Base: ${normalizedBase}`
+      );
+    }
+  }
+
   try {
-    await rm(path, { recursive: true, force: true });
+    await rm(targetPath, { recursive: true, force: true });
   } catch (error) {
     // ENOENT エラー以外は再スロー
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {

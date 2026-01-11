@@ -512,6 +512,9 @@ export async function archiveSession(
   userId: string,
   sessionId: SessionId
 ): Promise<SessionResponse | null> {
+  // user_home を取得（ベースディレクトリとして使用）
+  const userHome = requestContext.get('user_home') as string;
+
   return fastify.withUserContext(userId, async tx => {
     // 1. セッション情報を取得（cwd を取得するため）
     const sessionRows = await tx
@@ -534,11 +537,11 @@ export async function archiveSession(
 
     if (rows.length === 0) return null;
 
-    // 3. Working Directory を削除（トランザクション外で非同期実行）
-    if (cwd) {
-      removeDirectory(cwd).catch(error => {
+    // 3. Working Directory を削除（user_home 配下に制限、トランザクション外で非同期実行）
+    if (cwd && userHome) {
+      removeDirectory(cwd, userHome).catch(error => {
         fastify.log.error(
-          { sessionId: sessionId.toString(), cwd, error },
+          { sessionId: sessionId.toString(), cwd, userHome, error },
           'Failed to remove working directory'
         );
       });
