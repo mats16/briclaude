@@ -13,6 +13,7 @@
     "sessions": "セッション",
     "noSessions": "セッションがありません",
     "untitledSession": "無題のセッション",
+    "sessionCreateError": "セッションの作成に失敗しました。もう一度お試しください。",
     "filter": {
       "active": "アクティブ",
       "archived": "アーカイブ済み",

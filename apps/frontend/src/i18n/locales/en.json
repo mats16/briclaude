@@ -13,6 +13,7 @@
     "sessions": "Sessions",
     "noSessions": "No sessions yet",
     "untitledSession": "Untitled Session",
+    "sessionCreateError": "Failed to create session. Please try again.",
     "filter": {
       "active": "Active",
       "archived": "Archived",

@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import type { SessionResponse, SessionCreateRequest } from '@repo/types';
 import {
   Sidebar,
@@ -33,38 +35,47 @@ export function AppSidebar({
   collapsible = 'none',
 }: AppSidebarProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user, databricksHost, isLoading, error, refetch } = useUser();
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   const handleNewSession = async (content: string, modelId: string) => {
-    const title = await sessionService.generateTitle(content);
+    try {
+      setSessionError(null);
+      const title = await sessionService.generateTitle(content);
 
-    const request: SessionCreateRequest = {
-      title: title ?? undefined,
-      events: [
-        {
-          type: 'event',
-          data: {
-            uuid: crypto.randomUUID(),
-            session_id: '',
-            type: 'user',
-            parent_tool_use_id: null,
-            message: {
-              role: 'user',
-              content: content,
+      const request: SessionCreateRequest = {
+        title: title ?? undefined,
+        events: [
+          {
+            type: 'event',
+            data: {
+              uuid: crypto.randomUUID(),
+              session_id: '',
+              type: 'user',
+              parent_tool_use_id: null,
+              message: {
+                role: 'user',
+                content: content,
+              },
             },
           },
+        ],
+        session_context: {
+          model: modelId as 'opus' | 'sonnet' | 'haiku',
+          sources: [],
+          outcomes: [],
         },
-      ],
-      session_context: {
-        model: modelId as 'opus' | 'sonnet' | 'haiku',
-        sources: [],
-        outcomes: [],
-      },
-    };
+      };
 
-    const response = await sessionService.createSession(request);
-    onSessionCreated?.();
-    navigate(`/${response.id}`);
+      const response = await sessionService.createSession(request);
+      onSessionCreated?.();
+      navigate(`/${response.id}`);
+    } catch (err) {
+      console.error('Failed to create session:', err);
+      setSessionError(t('sidebar.sessionCreateError'));
+      throw err;
+    }
   };
 
   return (
@@ -72,6 +83,11 @@ export function AppSidebar({
       <SidebarHeader className="p-0">
         <AppSidebarHeader />
         <NewSessionInput onSubmit={handleNewSession} />
+        {sessionError && (
+          <div className="px-3 pb-2">
+            <p className="text-xs text-destructive">{sessionError}</p>
+          </div>
+        )}
       </SidebarHeader>
       <SidebarContent>
         <SessionGroup
