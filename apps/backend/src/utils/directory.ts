@@ -1,5 +1,5 @@
 import { mkdir, rm } from 'node:fs/promises';
-import { dirname, resolve, relative } from 'node:path';
+import { dirname, resolve, sep } from 'node:path';
 
 /**
  * 指定したパスのディレクトリを再帰的に作成します。
@@ -66,10 +66,13 @@ export async function removeDirectory(targetPath: string, baseDir?: string): Pro
   if (baseDir) {
     const normalizedBase = resolve(baseDir);
     const normalizedTarget = resolve(targetPath);
-    const relativePath = relative(normalizedBase, normalizedTarget);
 
-    // 相対パスが '..' で始まる場合、または絶対パスの場合はエラー
-    if (relativePath.startsWith('..') || resolve(relativePath) === relativePath) {
+    // normalizedTarget が normalizedBase 配下にあるかチェック
+    const isWithinBase =
+      normalizedTarget === normalizedBase ||
+      normalizedTarget.startsWith(normalizedBase + sep);
+
+    if (!isWithinBase) {
       throw new Error(
         `Security error: Cannot delete path outside of base directory. ` +
           `Target: ${normalizedTarget}, Base: ${normalizedBase}`
