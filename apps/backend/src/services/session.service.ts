@@ -1,6 +1,5 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, desc } from 'drizzle-orm';
-import { typeid } from 'typeid-js';
 import { query, type SDKMessage, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 import { requestContext } from '@fastify/request-context';
 import type { UUID } from 'crypto';
@@ -19,6 +18,7 @@ import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 import { ensureDirectory } from '../utils/directory.js';
 import { wsManager } from './websocket-manager.service.js';
+import { SessionId } from '../models/session.model.js';
 import path from 'node:path';
 
 /**
@@ -56,20 +56,21 @@ function convertToSDKUserMessage(
  * イベントを WebSocket にブロードキャストし、DB に保存する（並列処理）
  * WebSocket 送信は即座に行い、DB 書き込みは待たない
  *
+ * @param sessionId - SessionId オブジェクト
  * @param options.skipDbSave - true の場合、DB 保存をスキップ（init イベント前に使用）
  */
 function saveAndBroadcastEvent(
   fastify: FastifyInstance,
   userId: string,
-  sessionId: string,
+  sessionId: SessionId,
   message: SDKMessage,
   options: { skipDbSave?: boolean } = {}
 ): void {
   const eventUuid = 'uuid' in message ? (message.uuid as string) : crypto.randomUUID();
   const eventSubtype = 'subtype' in message ? (message.subtype as string | undefined) : undefined;
 
-  // WebSocket にブロードキャスト（SDKMessage をそのまま送信）
-  wsManager.broadcast(sessionId, message);
+  // WebSocket にブロードキャスト（TypeID 形式で送信）
+  wsManager.broadcast(sessionId.toString(), message);
 
   // DB に保存（skipDbSave が false の場合のみ）
   if (!options.skipDbSave) {
@@ -77,14 +78,17 @@ function saveAndBroadcastEvent(
       .withUserContext(userId, async tx => {
         return insertSessionEventInTx(tx, {
           uuid: eventUuid,
-          sessionId,
+          sessionId: sessionId.toUUID(),
           type: message.type,
           subtype: eventSubtype ?? null,
           message: message,
         });
       })
       .catch(error => {
-        fastify.log.error({ sessionId, eventUuid, error }, 'Failed to save event to DB');
+        fastify.log.error(
+          { sessionId: sessionId.toString(), eventUuid, error },
+          'Failed to save event to DB'
+        );
       });
   }
 }
@@ -102,7 +106,7 @@ async function waitForInit(
   response: AsyncIterable<SDKMessage>,
   fastify: FastifyInstance,
   userId: string,
-  sessionId: string
+  sessionId: SessionId
 ): Promise<WaitForInitResult> {
   const iterator = response[Symbol.asyncIterator]();
 
@@ -129,13 +133,13 @@ async function waitForInit(
             status: 'running',
             sdkSessionId: sdkSessionId || null,
           })
-          .where(eq(sessions.id, sessionId));
+          .where(eq(sessions.id, sessionId.toUUID()));
 
         // init イベントを session_events テーブルに INSERT
         const initEventUuid = 'uuid' in message ? (message.uuid as string) : crypto.randomUUID();
         await insertSessionEventInTx(tx, {
           uuid: initEventUuid,
-          sessionId,
+          sessionId: sessionId.toUUID(),
           type: message.type,
           subtype: message.subtype ?? null,
           message: message,
@@ -157,7 +161,7 @@ async function processRemainingEvents(
   iterator: AsyncIterator<SDKMessage, void>,
   fastify: FastifyInstance,
   userId: string,
-  sessionId: string
+  sessionId: SessionId
 ): Promise<void> {
   try {
     while (true) {
@@ -173,20 +177,32 @@ async function processRemainingEvents(
       // result イベント時にセッション状態を idle に更新
       if (message.type === 'result') {
         await fastify.withUserContext(userId, async tx => {
-          await tx.update(sessions).set({ status: 'idle' }).where(eq(sessions.id, sessionId));
+          await tx
+            .update(sessions)
+            .set({ status: 'idle' })
+            .where(eq(sessions.id, sessionId.toUUID()));
         });
       }
     }
   } catch (error) {
-    fastify.log.error({ sessionId, error }, 'Error processing remaining events');
+    fastify.log.error(
+      { sessionId: sessionId.toString(), error },
+      'Error processing remaining events'
+    );
 
     // セッション状態を error に更新
     try {
       await fastify.withUserContext(userId, async tx => {
-        await tx.update(sessions).set({ status: 'error' }).where(eq(sessions.id, sessionId));
+        await tx
+          .update(sessions)
+          .set({ status: 'error' })
+          .where(eq(sessions.id, sessionId.toUUID()));
       });
     } catch (updateError) {
-      fastify.log.error({ sessionId, updateError }, 'Failed to update session status to error');
+      fastify.log.error(
+        { sessionId: sessionId.toString(), updateError },
+        'Failed to update session status to error'
+      );
     }
 
     throw error;
@@ -216,17 +232,17 @@ export async function createSession(
 ): Promise<SessionCreateResponse> {
   const { events, session_context, title } = request;
 
-  // 1. TypeID で session_id 生成
-  const sessionId = typeid('session').toString();
+  // 1. SessionId を生成（UUIDv7 ベース）
+  const sessionId = new SessionId();
 
   // 2. ユーザーメッセージのテキストを抽出
   const userEvent = events[0];
   const userContent = userEvent?.data.message.content ?? '';
 
-  // 3. cwd の生成（userHome + sessionId）
+  // 3. cwd の生成（userHome + sessionId）TypeID 形式で使用
   const userHome = requestContext.get('user_home') as string;
-  /** Claude Code Working Directory  (e.g. /home/app/users/user1/session_123) */
-  const cwd = path.join(userHome, sessionId);
+  /** Claude Code Working Directory  (e.g. /home/app/users/user1/session_xxx) */
+  const cwd = path.join(userHome, sessionId.toString());
 
   await ensureDirectory(cwd);
 
@@ -244,10 +260,10 @@ export async function createSession(
   const now = new Date();
 
   // 6. sessions と user message を先に INSERT (status='init')
-  const userMessage = convertToSDKUserMessage(userEvent.data, sessionId);
+  const userMessage = convertToSDKUserMessage(userEvent.data, sessionId.toString());
   await fastify.withUserContext(userId, async tx => {
     await tx.insert(sessions).values({
-      id: sessionId,
+      id: sessionId.toUUID(),
       userId,
       title: title ?? null,
       status: 'init',
@@ -257,7 +273,7 @@ export async function createSession(
 
     await insertSessionEventInTx(tx, {
       uuid: userEvent.data.uuid,
-      sessionId,
+      sessionId: sessionId.toUUID(),
       type: 'user',
       subtype: null,
       message: userMessage,
@@ -310,7 +326,7 @@ export async function createSession(
         sandbox: {
           enabled: true,
           autoAllowBashIfSandboxed: true,
-        }
+        },
       },
     });
 
@@ -319,20 +335,23 @@ export async function createSession(
 
     // 9. バックグラウンド処理開始（await しない）
     processRemainingEvents(iterator, fastify, userId, sessionId).catch(error => {
-      fastify.log.error({ sessionId, error }, 'Background event processing failed');
+      fastify.log.error(
+        { sessionId: sessionId.toString(), error },
+        'Background event processing failed'
+      );
     });
   } catch (error) {
     // SDK呼び出し失敗時: sessions status を 'error' に更新
-    fastify.log.error({ sessionId, error }, 'SDK query failed');
+    fastify.log.error({ sessionId: sessionId.toString(), error }, 'SDK query failed');
     await fastify.withUserContext(userId, async tx => {
-      await tx.update(sessions).set({ status: 'error' }).where(eq(sessions.id, sessionId));
+      await tx.update(sessions).set({ status: 'error' }).where(eq(sessions.id, sessionId.toUUID()));
     });
     throw error;
   }
 
-  // 10. 即座にレスポンス返却
+  // 10. 即座にレスポンス返却（TypeID 形式）
   return {
-    id: sessionId,
+    id: sessionId.toString(),
     session_status: 'running',
     title: title ?? null,
     created_at: now.toISOString(),
@@ -389,6 +408,7 @@ export async function listSessions(
 
 /**
  * DB行をSessionResponseに変換するヘルパー
+ * DB の UUID を TypeID 形式に変換してレスポンスを返す
  */
 function toSessionResponse(row: {
   id: string;
@@ -399,7 +419,7 @@ function toSessionResponse(row: {
   updatedAt: Date;
 }): SessionResponse {
   return {
-    id: row.id,
+    id: SessionId.fromUUID(row.id).toString(),
     title: row.title,
     session_status: row.status as SessionStatus,
     created_at: row.createdAt.toISOString(),
@@ -413,7 +433,7 @@ function toSessionResponse(row: {
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
- * @param sessionId - セッションID
+ * @param sessionId - セッションID（TypeID 形式）
  * @returns セッション情報（見つからない場合は null）
  */
 export async function getSession(
@@ -421,11 +441,13 @@ export async function getSession(
   userId: string,
   sessionId: string
 ): Promise<SessionResponse | null> {
+  const sessionIdObj = SessionId.fromTypeId(sessionId);
+
   return fastify.withUserContext(userId, async tx => {
     const rows = await tx
       .select(SESSION_SELECT_COLUMNS)
       .from(sessions)
-      .where(eq(sessions.id, sessionId))
+      .where(eq(sessions.id, sessionIdObj.toUUID()))
       .limit(1);
 
     if (rows.length === 0) return null;
@@ -439,7 +461,7 @@ export async function getSession(
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
- * @param sessionId - セッションID
+ * @param sessionId - セッションID（TypeID 形式）
  * @param request - 更新リクエスト
  * @returns 更新後のセッション情報（見つからない場合は null）
  */
@@ -450,6 +472,7 @@ export async function updateSession(
   request: SessionUpdateRequest
 ): Promise<SessionResponse | null> {
   const { title, session_status } = request;
+  const sessionIdObj = SessionId.fromTypeId(sessionId);
 
   return fastify.withUserContext(userId, async tx => {
     // 更新を実行（RETURNING で更新後の値を取得）
@@ -466,7 +489,7 @@ export async function updateSession(
     const rows = await tx
       .update(sessions)
       .set(updateFields)
-      .where(eq(sessions.id, sessionId))
+      .where(eq(sessions.id, sessionIdObj.toUUID()))
       .returning(SESSION_SELECT_COLUMNS);
 
     if (rows.length === 0) return null;
@@ -480,7 +503,7 @@ export async function updateSession(
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
- * @param sessionId - セッションID
+ * @param sessionId - セッションID（TypeID 形式）
  * @returns アーカイブ後のセッション情報（見つからない場合は null）
  */
 export async function archiveSession(
@@ -488,11 +511,13 @@ export async function archiveSession(
   userId: string,
   sessionId: string
 ): Promise<SessionResponse | null> {
+  const sessionIdObj = SessionId.fromTypeId(sessionId);
+
   return fastify.withUserContext(userId, async tx => {
     const rows = await tx
       .update(sessions)
       .set({ status: 'archived', updatedAt: new Date() })
-      .where(eq(sessions.id, sessionId))
+      .where(eq(sessions.id, sessionIdObj.toUUID()))
       .returning(SESSION_SELECT_COLUMNS);
 
     if (rows.length === 0) return null;

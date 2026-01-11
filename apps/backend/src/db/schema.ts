@@ -164,7 +164,7 @@ export const oauthTokensPolicy = pgPolicy('oauth_tokens_user_isolation_policy', 
 export const sessions = pgTable(
   'sessions',
   {
-    id: text('id').primaryKey(),
+    id: uuid('id').primaryKey(),
     userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
     title: text('title'),
     status: text('status').notNull().default('init'), // 'init' | 'running' | 'idle' | 'error' | 'archived'
@@ -214,7 +214,7 @@ export const sessionEvents = pgTable(
   'session_events',
   {
     uuid: uuid('uuid').primaryKey(),
-    sessionId: text('session_id')
+    sessionId: uuid('session_id')
       .notNull()
       .references(() => sessions.id, { onDelete: 'cascade' }),
     type: text('type').notNull(),

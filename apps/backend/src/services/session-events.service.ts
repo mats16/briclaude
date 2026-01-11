@@ -2,13 +2,14 @@ import type { FastifyInstance } from 'fastify';
 import { eq, gt, and, asc, desc } from 'drizzle-orm';
 import type { SessionEventsResponse, SDKMessage } from '@repo/types';
 import { sessionEvents, sessions } from '../db/schema.js';
+import { SessionId } from '../models/session.model.js';
 
 /**
  * セッションのイベント一覧を取得
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID（RLS で使用）
- * @param sessionId - セッションID
+ * @param sessionId - セッションID（TypeID 形式）
  * @param options - 取得オプション
  * @returns セッションイベントレスポンス
  */
@@ -20,13 +21,15 @@ export async function listSessionEvents(
 ): Promise<SessionEventsResponse> {
   const { after, limit = 100 } = options;
   const safeLimit = Math.min(Math.max(1, limit), 1000);
+  const sessionIdObj = SessionId.fromTypeId(sessionId);
+  const sessionUuid = sessionIdObj.toUUID();
 
   return fastify.withUserContext(userId, async tx => {
     // セッションの存在確認（RLS でユーザー所有確認も兼ねる）
     const [session] = await tx
       .select({ id: sessions.id })
       .from(sessions)
-      .where(eq(sessions.id, sessionId));
+      .where(eq(sessions.id, sessionUuid));
 
     if (!session) {
       throw new Error('Session not found');
@@ -55,8 +58,11 @@ export async function listSessionEvents(
       .from(sessionEvents)
       .where(
         afterCreatedAt
-          ? and(eq(sessionEvents.sessionId, sessionId), gt(sessionEvents.createdAt, afterCreatedAt))
-          : eq(sessionEvents.sessionId, sessionId)
+          ? and(
+              eq(sessionEvents.sessionId, sessionUuid),
+              gt(sessionEvents.createdAt, afterCreatedAt)
+            )
+          : eq(sessionEvents.sessionId, sessionUuid)
       )
       .orderBy(asc(sessionEvents.createdAt))
       .limit(safeLimit + 1); // +1 で has_more 判定
@@ -81,7 +87,7 @@ export async function listSessionEvents(
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID（RLS で使用）
- * @param sessionId - セッションID
+ * @param sessionId - セッションID（TypeID 形式）
  * @returns 最新のイベント UUID（イベントがない場合は null）
  */
 export async function getSessionLastEventId(
@@ -89,12 +95,15 @@ export async function getSessionLastEventId(
   userId: string,
   sessionId: string
 ): Promise<string | null> {
+  const sessionIdObj = SessionId.fromTypeId(sessionId);
+  const sessionUuid = sessionIdObj.toUUID();
+
   return fastify.withUserContext(userId, async tx => {
     // セッションの存在確認（RLS でユーザー所有確認も兼ねる）
     const [session] = await tx
       .select({ id: sessions.id })
       .from(sessions)
-      .where(eq(sessions.id, sessionId));
+      .where(eq(sessions.id, sessionUuid));
 
     if (!session) {
       throw new Error('Session not found');
@@ -103,7 +112,7 @@ export async function getSessionLastEventId(
     const [result] = await tx
       .select({ uuid: sessionEvents.uuid })
       .from(sessionEvents)
-      .where(eq(sessionEvents.sessionId, sessionId))
+      .where(eq(sessionEvents.sessionId, sessionUuid))
       .orderBy(desc(sessionEvents.createdAt))
       .limit(1);
 

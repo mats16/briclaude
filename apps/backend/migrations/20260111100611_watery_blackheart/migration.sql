@@ -13,7 +13,7 @@ CREATE TABLE "oauth_tokens" (
 ALTER TABLE "oauth_tokens" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "session_events" (
 	"uuid" uuid PRIMARY KEY,
-	"session_id" text NOT NULL,
+	"session_id" uuid NOT NULL,
 	"type" text NOT NULL,
 	"subtype" text,
 	"message" jsonb NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE "session_events" (
 );
 --> statement-breakpoint
 CREATE TABLE "sessions" (
-	"id" text PRIMARY KEY,
+	"id" uuid PRIMARY KEY,
 	"user_id" text,
 	"title" text,
 	"status" text DEFAULT 'init' NOT NULL,
