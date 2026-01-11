@@ -4,6 +4,7 @@ import { MessageArea } from './MessageArea';
 import { InputArea } from './InputArea';
 import { useSessionEvents } from '@/hooks/useSessionEvents';
 import { useSession } from '@/hooks/useSession';
+import { sessionService } from '@/services/session.service';
 
 interface MainAreaProps {
   branchName?: string;
@@ -32,7 +33,8 @@ export function MainArea({ branchName, onSendMessage, onSessionArchived }: MainA
   };
 
   const handleArchive = async () => {
-    await updateSession({ session_status: 'archived' });
+    if (!sessionId) return;
+    await sessionService.archiveSession(sessionId);
     onSessionArchived?.();
   };
 

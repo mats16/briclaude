@@ -131,7 +131,8 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     }
   });
 
-  // PATCH /sessions/:session_id - セッション更新
+  // PATCH /sessions/:session_id - セッション更新（タイトルのみ）
+  // ステータス変更は POST /sessions/:session_id/archive を使用
   fastify.patch<{
     Params: { session_id: string };
     Body: SessionUpdateRequest;
@@ -145,22 +146,28 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
 
     const { session_id } = request.params;
     const sessionId = SessionId.fromString(session_id);
-    const { title, session_status } = request.body;
+    const { title } = request.body;
 
-    if (title === undefined && session_status === undefined) {
+    // title 以外のフィールドがある場合はエラー
+    const allowedFields = ['title'];
+    const receivedFields = Object.keys(request.body);
+    const invalidFields = receivedFields.filter(f => !allowedFields.includes(f));
+
+    if (invalidFields.length > 0) {
       return sendError(
         reply,
         400,
         'BadRequest',
-        'At least one field (title or session_status) is required'
+        `Invalid fields: ${invalidFields.join(', ')}. Only 'title' can be updated.`
       );
     }
 
+    if (title === undefined) {
+      return sendError(reply, 400, 'BadRequest', 'title is required');
+    }
+
     try {
-      const session = await updateSession(fastify, user.id, sessionId, {
-        title,
-        session_status,
-      });
+      const session = await updateSession(fastify, user.id, sessionId, { title });
 
       if (!session) {
         return sendError(reply, 404, 'NotFound', 'Session not found');

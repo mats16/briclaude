@@ -1,4 +1,4 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
 /**
@@ -40,4 +40,27 @@ export async function ensureDirectory(path: string): Promise<void> {
 export async function ensureDirectoryForFile(filePath: string): Promise<void> {
   const dir = dirname(filePath);
   await ensureDirectory(dir);
+}
+
+/**
+ * 指定したパスのディレクトリを再帰的に削除します。
+ * ディレクトリが存在しない場合はエラーを投げません。
+ *
+ * @param path - 削除するディレクトリのパス
+ * @returns Promise<void>
+ *
+ * @example
+ * ```typescript
+ * await removeDirectory('/path/to/directory');
+ * ```
+ */
+export async function removeDirectory(path: string): Promise<void> {
+  try {
+    await rm(path, { recursive: true, force: true });
+  } catch (error) {
+    // ENOENT エラー以外は再スロー
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+  }
 }

@@ -21,7 +21,7 @@ import type {
 } from '@repo/types';
 import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
-import { ensureDirectory } from '../utils/directory.js';
+import { ensureDirectory, removeDirectory } from '../utils/directory.js';
 import { wsManager } from './websocket-manager.service.js';
 import { SessionId } from '../models/session.model.js';
 import path from 'node:path';
@@ -460,7 +460,8 @@ export async function getSession(
 }
 
 /**
- * セッションを更新する
+ * セッションを更新する（タイトルのみ）
+ * ステータス変更は archiveSession() を使用してください
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
@@ -474,18 +475,15 @@ export async function updateSession(
   sessionId: SessionId,
   request: SessionUpdateRequest
 ): Promise<SessionResponse | null> {
-  const { title, session_status } = request;
+  const { title } = request;
 
   return fastify.withUserContext(userId, async tx => {
     // 更新を実行（RETURNING で更新後の値を取得）
-    const updateFields: { title?: string | null; status?: SessionStatus; updatedAt: Date } = {
+    const updateFields: { title?: string | null; updatedAt: Date } = {
       updatedAt: new Date(),
     };
     if (title !== undefined) {
       updateFields.title = title;
-    }
-    if (session_status !== undefined) {
-      updateFields.status = session_status;
     }
 
     const rows = await tx
@@ -502,6 +500,7 @@ export async function updateSession(
 
 /**
  * セッションをアーカイブする
+ * ステータスを 'archived' に変更し、Working Directory を削除する
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
@@ -514,6 +513,19 @@ export async function archiveSession(
   sessionId: SessionId
 ): Promise<SessionResponse | null> {
   return fastify.withUserContext(userId, async tx => {
+    // 1. セッション情報を取得（cwd を取得するため）
+    const sessionRows = await tx
+      .select({ context: sessions.context })
+      .from(sessions)
+      .where(eq(sessions.id, sessionId.toUUID()))
+      .limit(1);
+
+    if (sessionRows.length === 0) return null;
+
+    const context = sessionRows[0].context as SessionContextResponse | null;
+    const cwd = context?.cwd;
+
+    // 2. ステータスを archived に更新
     const rows = await tx
       .update(sessions)
       .set({ status: 'archived', updatedAt: new Date() })
@@ -521,6 +533,16 @@ export async function archiveSession(
       .returning(SESSION_SELECT_COLUMNS);
 
     if (rows.length === 0) return null;
+
+    // 3. Working Directory を削除（トランザクション外で非同期実行）
+    if (cwd) {
+      removeDirectory(cwd).catch(error => {
+        fastify.log.error(
+          { sessionId: sessionId.toString(), cwd, error },
+          'Failed to remove working directory'
+        );
+      });
+    }
 
     return toSessionResponse(rows[0]);
   });
