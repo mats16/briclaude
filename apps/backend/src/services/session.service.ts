@@ -2,7 +2,6 @@ import type { FastifyInstance } from 'fastify';
 import type { UUID } from 'node:crypto';
 import { eq, desc } from 'drizzle-orm';
 import { typeid } from 'typeid-js';
-import { v7 as uuidv7 } from 'uuid';
 import {
   query,
   type SDKMessage,
@@ -71,7 +70,7 @@ function saveAndBroadcastEvent(
   message: SDKMessage,
   options: { skipDbSave?: boolean } = {}
 ): void {
-  const eventUuid = 'uuid' in message ? (message.uuid as string) : uuidv7();
+  const eventUuid = 'uuid' in message ? (message.uuid as string) : crypto.randomUUID();
   const eventSubtype = 'subtype' in message ? (message.subtype as string | undefined) : undefined;
 
   // WebSocket にブロードキャスト（SDKMessage をそのまま送信）
