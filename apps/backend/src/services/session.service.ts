@@ -1,9 +1,15 @@
 import type { FastifyInstance } from 'fastify';
+import type { UUID } from 'node:crypto';
 import { eq, desc } from 'drizzle-orm';
 import { typeid } from 'typeid-js';
-import { query, type SDKMessage, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
+import { v7 as uuidv7 } from 'uuid';
+import {
+  query,
+  type SDKMessage,
+  type SDKUserMessage,
+  type SDKSystemMessage,
+} from '@anthropic-ai/claude-agent-sdk';
 import { requestContext } from '@fastify/request-context';
-import type { UUID } from 'crypto';
 import type {
   SessionCreateRequest,
   SessionCreateResponse,
@@ -65,7 +71,7 @@ function saveAndBroadcastEvent(
   message: SDKMessage,
   options: { skipDbSave?: boolean } = {}
 ): void {
-  const eventUuid = 'uuid' in message ? (message.uuid as string) : crypto.randomUUID();
+  const eventUuid = 'uuid' in message ? (message.uuid as string) : uuidv7();
   const eventSubtype = 'subtype' in message ? (message.subtype as string | undefined) : undefined;
 
   // WebSocket にブロードキャスト（SDKMessage をそのまま送信）
@@ -118,7 +124,9 @@ async function waitForInit(
 
     // init イベントを検出 (type: system, subtype: init)
     if (message.type === 'system' && message.subtype === 'init') {
-      const sdkSessionId = message.session_id;
+      // SDKSystemMessage として扱う（uuid は必須フィールド）
+      const initMessage = message as SDKSystemMessage;
+      const sdkSessionId = initMessage.session_id;
 
       // sessions テーブル UPDATE + init イベント INSERT を1トランザクションで実行
       await fastify.withUserContext(userId, async tx => {
@@ -132,13 +140,12 @@ async function waitForInit(
           .where(eq(sessions.id, sessionId));
 
         // init イベントを session_events テーブルに INSERT
-        const initEventUuid = 'uuid' in message ? (message.uuid as string) : crypto.randomUUID();
         await insertSessionEventInTx(tx, {
-          uuid: initEventUuid,
+          uuid: initMessage.uuid,
           sessionId,
-          type: message.type,
-          subtype: message.subtype ?? null,
-          message: message,
+          type: initMessage.type,
+          subtype: initMessage.subtype ?? null,
+          message: initMessage,
         });
       });
 
