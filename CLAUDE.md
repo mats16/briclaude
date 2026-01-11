@@ -26,6 +26,72 @@ claude-code-on-databricks/
 | Code Quality | ESLint 9 (Flat Config), Prettier |
 | Runtime | Node.js 22.16 (LTS) |
 
+## Environment & Authentication
+
+This application runs differently in production and development environments.
+
+### Production (Databricks Apps)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Databricks Apps                          │
+│  ┌─────────────┐         ┌─────────────────────────────┐   │
+│  │ Built-in    │ headers │ Fastify Backend             │   │
+│  │ Auth Proxy  │────────▶│ ├─ /api/* (API routes)      │   │
+│  │             │         │ └─ /*     (React frontend)  │   │
+│  └─────────────┘         └─────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+- **Authentication**: Handled by Databricks Apps' built-in proxy
+- **User identification**: Via forwarded headers (see below)
+- **Frontend serving**: Static files served from Fastify (`apps/backend/src/plugins/static.ts`)
+
+### Development (Local)
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│  ┌─────────────────────┐          ┌─────────────────────────┐ │
+│  │ Vite Dev Server     │ headers  │ Fastify Backend         │ │
+│  │ (port 3000)         │─────────▶│ (port 8000)             │ │
+│  │ ├─ React HMR        │ emulated │ └─ /api/* (API routes)  │ │
+│  │ └─ /api/* proxy     │          │                         │ │
+│  └─────────────────────┘          └─────────────────────────┘ │
+└────────────────────────────────────────────────────────────────┘
+```
+
+- **Vite acts as a proxy**: Forwards `/api/*` requests to backend
+- **Header emulation**: Vite injects Databricks-style headers from environment variables
+- **Frontend serving**: Vite serves React with HMR enabled
+
+### Authentication Headers
+
+The backend reads user information from these headers (set by Databricks Apps proxy or Vite dev proxy):
+
+| Header | Description |
+|--------|-------------|
+| `x-forwarded-user` | User ID from IdP |
+| `x-forwarded-preferred-username` | User's display name |
+| `x-forwarded-email` | User's email address |
+| `x-forwarded-access-token` | OAuth token (on-behalf-of-user) |
+| `x-forwarded-host` | Original request host |
+| `x-request-id` | Request tracing ID |
+| `x-real-ip` | Client's real IP address |
+
+### Development Environment Variables
+
+To emulate Databricks authentication locally, set these in `.env`:
+
+```bash
+# Required for local development authentication
+DATABRICKS_TOKEN=your-personal-access-token
+DATABRICKS_USER_NAME=your-name
+DATABRICKS_USER_ID=your-user-id
+DATABRICKS_USER_EMAIL=your-email@example.com
+```
+
+See `.env.example` for all available configuration options.
+
 ## Development Commands
 
 ```bash
