@@ -12,6 +12,8 @@
     "searchPlaceholder": "Search sessions...",
     "sessions": "Sessions",
     "noSessions": "No sessions yet",
+    "untitledSession": "Untitled Session",
+    "sessionCreateError": "Failed to create session. Please try again.",
     "filter": {
       "active": "Active",
       "archived": "Archived",
@@ -41,7 +43,8 @@
     "language": "Language",
     "theme": "Theme",
     "databricksConsole": "Databricks Console",
-    "loadError": "Failed to load user"
+    "loadError": "Failed to load user",
+    "defaultName": "User"
   },
   "common": {
     "loading": "Loading...",
