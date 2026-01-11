@@ -38,7 +38,7 @@ const SESSION_SELECT_COLUMNS = {
  */
 function convertToSDKUserMessage(
   eventData: SessionCreateEventData,
-  sessionId: string
+  sessionId: SessionId
 ): SDKUserMessage {
   return {
     type: 'user',
@@ -48,7 +48,7 @@ function convertToSDKUserMessage(
     },
     parent_tool_use_id: eventData.parent_tool_use_id,
     uuid: eventData.uuid as UUID,
-    session_id: sessionId,
+    session_id: sessionId.toString(),
   };
 }
 
@@ -260,7 +260,7 @@ export async function createSession(
   const now = new Date();
 
   // 6. sessions と user message を先に INSERT (status='init')
-  const userMessage = convertToSDKUserMessage(userEvent.data, sessionId.toString());
+  const userMessage = convertToSDKUserMessage(userEvent.data, sessionId);
   await fastify.withUserContext(userId, async tx => {
     await tx.insert(sessions).values({
       id: sessionId.toUUID(),
@@ -434,21 +434,19 @@ function toSessionResponse(row: {
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
- * @param sessionId - セッションID（TypeID 形式）
+ * @param sessionId - SessionId オブジェクト
  * @returns セッション情報（見つからない場合は null）
  */
 export async function getSession(
   fastify: FastifyInstance,
   userId: string,
-  sessionId: string
+  sessionId: SessionId
 ): Promise<SessionResponse | null> {
-  const sessionIdObj = SessionId.fromString(sessionId);
-
   return fastify.withUserContext(userId, async tx => {
     const rows = await tx
       .select(SESSION_SELECT_COLUMNS)
       .from(sessions)
-      .where(eq(sessions.id, sessionIdObj.toUUID()))
+      .where(eq(sessions.id, sessionId.toUUID()))
       .limit(1);
 
     if (rows.length === 0) return null;
@@ -462,18 +460,17 @@ export async function getSession(
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
- * @param sessionId - セッションID（TypeID 形式）
+ * @param sessionId - SessionId オブジェクト
  * @param request - 更新リクエスト
  * @returns 更新後のセッション情報（見つからない場合は null）
  */
 export async function updateSession(
   fastify: FastifyInstance,
   userId: string,
-  sessionId: string,
+  sessionId: SessionId,
   request: SessionUpdateRequest
 ): Promise<SessionResponse | null> {
   const { title, session_status } = request;
-  const sessionIdObj = SessionId.fromString(sessionId);
 
   return fastify.withUserContext(userId, async tx => {
     // 更新を実行（RETURNING で更新後の値を取得）
@@ -490,7 +487,7 @@ export async function updateSession(
     const rows = await tx
       .update(sessions)
       .set(updateFields)
-      .where(eq(sessions.id, sessionIdObj.toUUID()))
+      .where(eq(sessions.id, sessionId.toUUID()))
       .returning(SESSION_SELECT_COLUMNS);
 
     if (rows.length === 0) return null;
@@ -504,21 +501,19 @@ export async function updateSession(
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
- * @param sessionId - セッションID（TypeID 形式）
+ * @param sessionId - SessionId オブジェクト
  * @returns アーカイブ後のセッション情報（見つからない場合は null）
  */
 export async function archiveSession(
   fastify: FastifyInstance,
   userId: string,
-  sessionId: string
+  sessionId: SessionId
 ): Promise<SessionResponse | null> {
-  const sessionIdObj = SessionId.fromString(sessionId);
-
   return fastify.withUserContext(userId, async tx => {
     const rows = await tx
       .update(sessions)
       .set({ status: 'archived', updatedAt: new Date() })
-      .where(eq(sessions.id, sessionIdObj.toUUID()))
+      .where(eq(sessions.id, sessionId.toUUID()))
       .returning(SESSION_SELECT_COLUMNS);
 
     if (rows.length === 0) return null;

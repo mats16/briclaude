@@ -9,20 +9,19 @@ import { SessionId } from '../models/session.model.js';
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID（RLS で使用）
- * @param sessionId - セッションID（TypeID 形式）
+ * @param sessionId - SessionId オブジェクト
  * @param options - 取得オプション
  * @returns セッションイベントレスポンス
  */
 export async function listSessionEvents(
   fastify: FastifyInstance,
   userId: string,
-  sessionId: string,
+  sessionId: SessionId,
   options: { after?: string; limit?: number } = {}
 ): Promise<SessionEventsResponse> {
   const { after, limit = 100 } = options;
   const safeLimit = Math.min(Math.max(1, limit), 1000);
-  const sessionIdObj = SessionId.fromString(sessionId);
-  const sessionUuid = sessionIdObj.toUUID();
+  const sessionUuid = sessionId.toUUID();
 
   return fastify.withUserContext(userId, async tx => {
     // セッションの存在確認（RLS でユーザー所有確認も兼ねる）
@@ -87,16 +86,15 @@ export async function listSessionEvents(
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID（RLS で使用）
- * @param sessionId - セッションID（TypeID 形式）
+ * @param sessionId - SessionId オブジェクト
  * @returns 最新のイベント UUID（イベントがない場合は null）
  */
 export async function getSessionLastEventId(
   fastify: FastifyInstance,
   userId: string,
-  sessionId: string
+  sessionId: SessionId
 ): Promise<string | null> {
-  const sessionIdObj = SessionId.fromString(sessionId);
-  const sessionUuid = sessionIdObj.toUUID();
+  const sessionUuid = sessionId.toUUID();
 
   return fastify.withUserContext(userId, async tx => {
     // セッションの存在確認（RLS でユーザー所有確認も兼ねる）

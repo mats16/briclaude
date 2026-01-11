@@ -1,11 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { listSessionEvents, getSessionLastEventId } from './session-events.service.js';
+import { SessionId } from '../models/session.model.js';
 
 // テスト用の定数（TypeID 形式と対応する UUID）
 // TypeID session_01h455vb4pex5vsknk084sn02q の UUID
 const TEST_SESSION_TYPEID = 'session_01h455vb4pex5vsknk084sn02q';
 const TEST_SESSION_UUID = '0188a5eb-4b84-7095-bae8-084200ae0295';
+
+// テスト用の SessionId オブジェクト
+const testSessionId = SessionId.fromString(TEST_SESSION_TYPEID);
 
 describe('session-events.service', () => {
   beforeEach(() => {
@@ -73,7 +77,7 @@ describe('session-events.service', () => {
         withUserContext: mockWithUserContext,
       } as unknown as FastifyInstance;
 
-      await expect(listSessionEvents(fastify, 'user-123', TEST_SESSION_TYPEID)).rejects.toThrow(
+      await expect(listSessionEvents(fastify, 'user-123', testSessionId)).rejects.toThrow(
         'Session not found'
       );
     });
@@ -94,7 +98,7 @@ describe('session-events.service', () => {
         withUserContext: mockWithUserContext,
       } as unknown as FastifyInstance;
 
-      const result = await listSessionEvents(fastify, 'user-123', TEST_SESSION_TYPEID);
+      const result = await listSessionEvents(fastify, 'user-123', testSessionId);
 
       expect(result).toEqual({
         data: [],
@@ -122,7 +126,7 @@ describe('session-events.service', () => {
         withUserContext: mockWithUserContext,
       } as unknown as FastifyInstance;
 
-      const result = await listSessionEvents(fastify, 'user-123', TEST_SESSION_TYPEID);
+      const result = await listSessionEvents(fastify, 'user-123', testSessionId);
 
       expect(result.data).toHaveLength(2);
       expect(result.first_id).toBe('event-1');
@@ -159,7 +163,7 @@ describe('session-events.service', () => {
         withUserContext: mockWithUserContext,
       } as unknown as FastifyInstance;
 
-      await listSessionEvents(fastify, 'user-123', TEST_SESSION_TYPEID, { limit: 2 });
+      await listSessionEvents(fastify, 'user-123', testSessionId, { limit: 2 });
 
       // Limit should be 3 (2 + 1 for has_more check)
       expect(capturedLimit).toBe(3);
@@ -195,7 +199,7 @@ describe('session-events.service', () => {
         withUserContext: mockWithUserContext,
       } as unknown as FastifyInstance;
 
-      await listSessionEvents(fastify, 'user-123', TEST_SESSION_TYPEID, { limit: 2000 });
+      await listSessionEvents(fastify, 'user-123', testSessionId, { limit: 2000 });
 
       // Limit should be capped at 1001 (1000 + 1 for has_more check)
       expect(capturedLimit).toBe(1001);
@@ -224,7 +228,7 @@ describe('session-events.service', () => {
         withUserContext: mockWithUserContext,
       } as unknown as FastifyInstance;
 
-      const result = await listSessionEvents(fastify, 'user-123', TEST_SESSION_TYPEID, { limit: 2 });
+      const result = await listSessionEvents(fastify, 'user-123', testSessionId, { limit: 2 });
 
       expect(result.has_more).toBe(true);
       expect(result.data.length).toBe(2);
@@ -252,7 +256,7 @@ describe('session-events.service', () => {
         withUserContext: mockWithUserContext,
       } as unknown as FastifyInstance;
 
-      const result = await listSessionEvents(fastify, 'user-123', TEST_SESSION_TYPEID);
+      const result = await listSessionEvents(fastify, 'user-123', testSessionId);
 
       expect(result.first_id).toBe('first-event');
       expect(result.last_id).toBe('last-event');
@@ -275,7 +279,7 @@ describe('session-events.service', () => {
         withUserContext: mockWithUserContext,
       } as unknown as FastifyInstance;
 
-      const result = await listSessionEvents(fastify, 'user-123', TEST_SESSION_TYPEID, {
+      const result = await listSessionEvents(fastify, 'user-123', testSessionId, {
         after: 'event-before',
       });
 
@@ -312,7 +316,7 @@ describe('session-events.service', () => {
         withUserContext: mockWithUserContext,
       } as unknown as FastifyInstance;
 
-      await listSessionEvents(fastify, 'user-123', TEST_SESSION_TYPEID, { limit: 0 });
+      await listSessionEvents(fastify, 'user-123', testSessionId, { limit: 0 });
 
       // Limit should be at least 2 (1 + 1 for has_more)
       expect(capturedLimit).toBe(2);
@@ -336,7 +340,7 @@ describe('session-events.service', () => {
         withUserContext: mockWithUserContext,
       } as unknown as FastifyInstance;
 
-      await expect(getSessionLastEventId(fastify, 'user-123', TEST_SESSION_TYPEID)).rejects.toThrow(
+      await expect(getSessionLastEventId(fastify, 'user-123', testSessionId)).rejects.toThrow(
         'Session not found'
       );
     });
@@ -366,7 +370,7 @@ describe('session-events.service', () => {
         withUserContext: mockWithUserContext,
       } as unknown as FastifyInstance;
 
-      const result = await getSessionLastEventId(fastify, 'user-123', TEST_SESSION_TYPEID);
+      const result = await getSessionLastEventId(fastify, 'user-123', testSessionId);
 
       expect(result).toBeNull();
     });
@@ -396,7 +400,7 @@ describe('session-events.service', () => {
         withUserContext: mockWithUserContext,
       } as unknown as FastifyInstance;
 
-      const result = await getSessionLastEventId(fastify, 'user-123', TEST_SESSION_TYPEID);
+      const result = await getSessionLastEventId(fastify, 'user-123', testSessionId);
 
       expect(result).toBe('latest-event-uuid');
     });
@@ -431,7 +435,7 @@ describe('session-events.service', () => {
         withUserContext: mockWithUserContext,
       } as unknown as FastifyInstance;
 
-      await getSessionLastEventId(fastify, 'user-123', TEST_SESSION_TYPEID);
+      await getSessionLastEventId(fastify, 'user-123', testSessionId);
 
       expect(orderByCalled).toBe(true);
     });
