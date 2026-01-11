@@ -159,7 +159,7 @@ export function SessionGroup({
                 )}
               </SidebarMenuItem>
             );
-          }))
+          })
         )}
       </SidebarMenu>
     </SidebarGroup>
