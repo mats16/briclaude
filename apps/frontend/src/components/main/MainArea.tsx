@@ -2,6 +2,7 @@ import { useParams } from 'react-router-dom';
 import { MainHeader } from './MainHeader';
 import { MessageArea } from './MessageArea';
 import { InputArea } from './InputArea';
+import { WelcomeScreen } from './WelcomeScreen';
 import { useSessionEvents } from '@/hooks/useSessionEvents';
 import { useSession } from '@/hooks/useSession';
 
@@ -35,6 +36,15 @@ export function MainArea({ branchName, onSendMessage, onSessionArchived }: MainA
     await updateSession({ session_status: 'archived' });
     onSessionArchived?.();
   };
+
+  // セッション未選択時はウェルカムスクリーンを表示
+  if (!sessionId) {
+    return (
+      <div className="relative z-0 flex flex-col w-full h-full min-w-0 overflow-hidden bg-background">
+        <WelcomeScreen />
+      </div>
+    );
+  }
 
   return (
     <div className="relative z-0 flex flex-col w-full h-full min-w-0 overflow-hidden bg-background">
