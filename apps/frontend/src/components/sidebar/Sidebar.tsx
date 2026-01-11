@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { v7 as uuidv7 } from 'uuid';
 import type { SessionResponse, SessionCreateRequest } from '@repo/types';
 import { SidebarHeader } from './SidebarHeader';
 import { NewSessionInput } from './NewSessionInput';
@@ -38,7 +39,7 @@ export function Sidebar({
         {
           type: 'event',
           data: {
-            uuid: crypto.randomUUID(),
+            uuid: uuidv7(),
             session_id: '',
             type: 'user',
             parent_tool_use_id: null,
