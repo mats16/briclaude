@@ -31,8 +31,8 @@
     "send": "Send",
     "openInCli": "Open in CLI",
     "emptyChat": "Start a conversation",
-    "renameSession": "Rename session",
-    "archiveSession": "Archive session",
+    "renameSession": "Rename",
+    "archiveSession": "Archive",
     "renameSessionDescription": "Enter a new name for this session.",
     "sessionTitlePlaceholder": "Session title"
   },
