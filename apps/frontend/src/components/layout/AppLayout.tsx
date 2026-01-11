@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSessions } from '@/hooks/useSessions';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -81,14 +81,17 @@ export function AppLayout() {
     };
   }, [isDragging]);
 
-  const sidebarProps = {
-    sessions,
-    selectedSessionId: sessionId,
-    onSelectSession: handleSelectSession,
-    onArchiveSession: handleArchiveSession,
-    isSessionsLoading,
-    onSessionCreated: refetchSessions,
-  };
+  const sidebarProps = useMemo(
+    () => ({
+      sessions,
+      selectedSessionId: sessionId,
+      onSelectSession: handleSelectSession,
+      onArchiveSession: handleArchiveSession,
+      isSessionsLoading,
+      onSessionCreated: refetchSessions,
+    }),
+    [sessions, sessionId, handleSelectSession, handleArchiveSession, isSessionsLoading, refetchSessions]
+  );
 
   if (isMobile) {
     return (
