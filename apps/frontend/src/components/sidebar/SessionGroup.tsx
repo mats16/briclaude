@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Filter, Check, Archive } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { SessionResponse } from '@repo/types';
+import { cn } from '@/lib/utils';
 import {
   SidebarGroup,
   SidebarMenu,
@@ -89,7 +90,7 @@ export function SessionGroup({
             >
               {t('sidebar.filter.active')}
               <Check
-                className={`h-4 w-4 ${filter === 'active' ? 'opacity-100' : 'opacity-0'}`}
+                className={cn('h-4 w-4', filter === 'active' ? 'opacity-100' : 'opacity-0')}
               />
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -98,7 +99,7 @@ export function SessionGroup({
             >
               {t('sidebar.filter.archived')}
               <Check
-                className={`h-4 w-4 ${filter === 'archived' ? 'opacity-100' : 'opacity-0'}`}
+                className={cn('h-4 w-4', filter === 'archived' ? 'opacity-100' : 'opacity-0')}
               />
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -107,7 +108,7 @@ export function SessionGroup({
             >
               {t('sidebar.filter.all')}
               <Check
-                className={`h-4 w-4 ${filter === 'all' ? 'opacity-100' : 'opacity-0'}`}
+                className={cn('h-4 w-4', filter === 'all' ? 'opacity-100' : 'opacity-0')}
               />
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -135,7 +136,7 @@ export function SessionGroup({
               >
                 <div className="flex flex-col gap-0.5 min-w-0">
                   <span className="text-sm font-medium truncate">
-                    {session.title || 'Untitled Session'}
+                    {session.title || t('sidebar.untitledSession')}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {formatRelativeTime(session.updated_at)}

@@ -28,7 +28,7 @@ export function UserFooter({ userName, databricksHost, isLoading, error, onRetry
   const { t, i18n } = useTranslation();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const displayName = userName || 'User';
+  const displayName = userName || t('user.defaultName');
   const initials = displayName
     .split(' ')
     .map(n => n[0])
