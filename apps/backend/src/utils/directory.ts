@@ -69,8 +69,7 @@ export async function removeDirectory(targetPath: string, baseDir?: string): Pro
 
     // normalizedTarget が normalizedBase 配下にあるかチェック
     const isWithinBase =
-      normalizedTarget === normalizedBase ||
-      normalizedTarget.startsWith(normalizedBase + sep);
+      normalizedTarget === normalizedBase || normalizedTarget.startsWith(normalizedBase + sep);
 
     if (!isWithinBase) {
       throw new Error(
