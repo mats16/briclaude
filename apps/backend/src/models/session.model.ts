@@ -1,4 +1,47 @@
 // apps/backend/src/models/session.model.ts
+/**
+ * @fileoverview セッション関連のドメインモデル
+ *
+ * ## 設計意図
+ *
+ * ### なぜ SessionId Value Object を導入したか
+ *
+ * 1. **ID 形式の分離**: データベースでは UUID を使用し、API やファイルシステムでは
+ *    TypeID（session_xxx 形式）を使用する。この変換ロジックを一箇所にカプセル化。
+ *
+ * 2. **型安全性**: TypeID 文字列と UUID 文字列を型レベルで区別し、
+ *    誤った形式の ID を渡すバグを防止。
+ *
+ * 3. **UUIDv7 の活用**: TypeID は内部で UUIDv7 を使用しており、
+ *    時系列ソートが可能でインデックス効率が良い。
+ *
+ * ### ID 形式の使い分け
+ *
+ * | 用途 | 形式 | 例 |
+ * |------|------|-----|
+ * | API リクエスト/レスポンス | TypeID | session_01h455vb4pex5vsknk084sn02q |
+ * | ファイルシステム（cwd） | TypeID | /home/user/session_01h455vb... |
+ * | データベース | UUID | 0188a5eb-4b84-7095-bae8-084200ae0295 |
+ * | WebSocket ルーム ID | TypeID | session_01h455vb4pex5vsknk084sn02q |
+ *
+ * ### 使用例
+ *
+ * ```typescript
+ * // 新規セッション作成時
+ * const sessionId = new SessionId();
+ * await db.insert(sessions).values({ id: sessionId.toUUID() });
+ * return { id: sessionId.toString() }; // API レスポンス
+ *
+ * // API から受け取った TypeID を処理
+ * const sessionId = SessionId.fromTypeId(request.params.session_id);
+ * await db.select().from(sessions).where(eq(sessions.id, sessionId.toUUID()));
+ *
+ * // DB から取得した UUID を API レスポンスに変換
+ * const sessionId = SessionId.fromUUID(row.id);
+ * return { id: sessionId.toString() };
+ * ```
+ */
+
 import { typeid, TypeID } from 'typeid-js';
 
 const SESSION_PREFIX = 'session';
