@@ -1,9 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSessions } from '@/hooks/useSessions';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { sessionService } from '@/services';
-import { Sidebar } from '@/components/sidebar/Sidebar';
+import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { MainArea } from '@/components/main/MainArea';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_DEFAULT_WIDTH } from '@/constants';
 
@@ -11,6 +13,7 @@ export function AppLayout() {
   const { sessionId } = useParams<{ sessionId?: string }>();
   const navigate = useNavigate();
   const { sessions, isLoading: isSessionsLoading, refetch: refetchSessions } = useSessions();
+  const isMobile = useIsMobile();
 
   const handleSelectSession = useCallback(
     (selectedSessionId: string) => {
@@ -44,7 +47,6 @@ export function AppLayout() {
   const containerRef = useRef<HTMLDivElement>(null);
   const sidebarWidthRef = useRef(sidebarWidth);
 
-  // Keep ref in sync with state
   useEffect(() => {
     sidebarWidthRef.current = sidebarWidth;
   }, [sidebarWidth]);
@@ -79,37 +81,65 @@ export function AppLayout() {
     };
   }, [isDragging]);
 
+  const sidebarProps = {
+    sessions,
+    selectedSessionId: sessionId,
+    onSelectSession: handleSelectSession,
+    onArchiveSession: handleArchiveSession,
+    isSessionsLoading,
+    onSessionCreated: refetchSessions,
+  };
+
+  if (isMobile) {
+    return (
+      <SidebarProvider defaultOpen={false}>
+        <div className="flex h-screen w-screen overflow-hidden bg-background">
+          <AppSidebar {...sidebarProps} collapsible="offcanvas" />
+          <div className="flex-1 h-full min-w-0 flex flex-col">
+            <div className="flex items-center gap-2 p-2 border-b border-border shrink-0">
+              <SidebarTrigger />
+            </div>
+            <div className="flex-1 min-h-0">
+              <MainArea onSessionArchived={refetchSessions} />
+            </div>
+          </div>
+        </div>
+      </SidebarProvider>
+    );
+  }
+
   return (
-    <div ref={containerRef} className="flex h-screen w-screen overflow-hidden bg-background">
-      {/* Sidebar */}
-      <div style={{ width: sidebarWidth }} className="h-full shrink-0">
-        <Sidebar
-          sessions={sessions}
-          selectedSessionId={sessionId}
-          onSelectSession={handleSelectSession}
-          onArchiveSession={handleArchiveSession}
-          isSessionsLoading={isSessionsLoading}
-          onSessionCreated={refetchSessions}
-        />
-      </div>
-
-      {/* Resize Handle */}
+    <SidebarProvider
+      defaultOpen={true}
+      style={
+        {
+          '--sidebar-width': `${sidebarWidth}px`,
+        } as React.CSSProperties
+      }
+    >
       <div
-        onMouseDown={handleMouseDown}
-        className={cn(
-          'w-1 h-full shrink-0 cursor-col-resize transition-colors',
-          'bg-border hover:bg-primary/30',
-          isDragging && 'bg-primary/50'
-        )}
-      />
+        ref={containerRef}
+        className="flex h-screen w-screen overflow-hidden bg-background"
+      >
+        <div style={{ width: sidebarWidth }} className="h-full shrink-0">
+          <AppSidebar {...sidebarProps} />
+        </div>
 
-      {/* Main Area */}
-      <div className="flex-1 h-full min-w-0">
-        <MainArea onSessionArchived={refetchSessions} />
+        <div
+          onMouseDown={handleMouseDown}
+          className={cn(
+            'w-1 h-full shrink-0 cursor-col-resize transition-colors',
+            'bg-border hover:bg-primary/30',
+            isDragging && 'bg-primary/50'
+          )}
+        />
+
+        <div className="flex-1 h-full min-w-0">
+          <MainArea onSessionArchived={refetchSessions} />
+        </div>
+
+        {isDragging && <div className="fixed inset-0 z-50 cursor-col-resize" />}
       </div>
-
-      {/* Overlay during drag to prevent text selection */}
-      {isDragging && <div className="fixed inset-0 z-50 cursor-col-resize" />}
-    </div>
+    </SidebarProvider>
   );
 }

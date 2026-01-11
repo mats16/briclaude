@@ -1,35 +1,41 @@
 import { useNavigate } from 'react-router-dom';
 import type { SessionResponse, SessionCreateRequest } from '@repo/types';
-import { SidebarHeader } from './SidebarHeader';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+} from '@/components/ui/sidebar';
+import { AppSidebarHeader } from './AppSidebarHeader';
 import { NewSessionInput } from './NewSessionInput';
-import { ModelSelector } from './ModelSelector';
-import { SessionList } from './SessionList';
-import { UserMenu } from './UserMenu';
+import { SessionGroup } from './SessionGroup';
+import { UserFooter } from './UserFooter';
 import { useUser } from '@/hooks/useUser';
 import { sessionService } from '@/services';
 
-interface SidebarProps {
+interface AppSidebarProps {
   sessions?: SessionResponse[];
   selectedSessionId?: string | null;
   onSelectSession?: (sessionId: string) => void;
   onArchiveSession?: (sessionId: string) => void;
   isSessionsLoading?: boolean;
   onSessionCreated?: () => void;
+  collapsible?: 'offcanvas' | 'icon' | 'none';
 }
 
-export function Sidebar({
+export function AppSidebar({
   sessions = [],
   selectedSessionId,
   onSelectSession,
   onArchiveSession,
   isSessionsLoading = false,
   onSessionCreated,
-}: SidebarProps) {
+  collapsible = 'none',
+}: AppSidebarProps) {
   const navigate = useNavigate();
   const { user, databricksHost, isLoading, error, refetch } = useUser();
 
   const handleNewSession = async (content: string, modelId: string) => {
-    // タイトルを生成（失敗時は null）
     const title = await sessionService.generateTitle(content);
 
     const request: SessionCreateRequest = {
@@ -62,24 +68,29 @@ export function Sidebar({
   };
 
   return (
-    <div className="relative z-10 flex flex-col w-full h-full min-w-0 overflow-hidden bg-card border-r border-border">
-      <SidebarHeader />
-      <NewSessionInput onSubmit={handleNewSession} />
-      <ModelSelector />
-      <SessionList
-        sessions={sessions}
-        selectedSessionId={selectedSessionId}
-        onSelectSession={onSelectSession}
-        onArchiveSession={onArchiveSession}
-        isLoading={isSessionsLoading}
-      />
-      <UserMenu
-        userName={user?.name}
-        databricksHost={databricksHost}
-        isLoading={isLoading}
-        error={error}
-        onRetry={refetch}
-      />
-    </div>
+    <Sidebar collapsible={collapsible} className="border-r">
+      <SidebarHeader className="p-0">
+        <AppSidebarHeader />
+        <NewSessionInput onSubmit={handleNewSession} />
+      </SidebarHeader>
+      <SidebarContent>
+        <SessionGroup
+          sessions={sessions}
+          selectedSessionId={selectedSessionId}
+          onSelectSession={onSelectSession}
+          onArchiveSession={onArchiveSession}
+          isLoading={isSessionsLoading}
+        />
+      </SidebarContent>
+      <SidebarFooter className="p-0">
+        <UserFooter
+          userName={user?.name}
+          databricksHost={databricksHost}
+          isLoading={isLoading}
+          error={error}
+          onRetry={refetch}
+        />
+      </SidebarFooter>
+    </Sidebar>
   );
 }
