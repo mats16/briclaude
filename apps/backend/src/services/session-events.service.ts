@@ -1,8 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, gt, and, asc, desc } from 'drizzle-orm';
+import { TypeID } from 'typeid-js';
 import type { SessionEventsResponse, SDKMessage } from '@repo/types';
 import { sessionEvents, sessions } from '../db/schema.js';
-import { SessionId } from '../models/session.model.js';
+import type { SessionId } from '../models/session.model.js';
 
 /**
  * セッションのイベント一覧を取得
@@ -21,7 +22,7 @@ export async function listSessionEvents(
 ): Promise<SessionEventsResponse> {
   const { after, limit = 100 } = options;
   const safeLimit = Math.min(Math.max(1, limit), 1000);
-  const sessionIdObj = SessionId.fromTypeId(sessionId);
+  const sessionIdObj: SessionId = TypeID.fromString(sessionId, 'session');
   const sessionUuid = sessionIdObj.toUUID();
 
   return fastify.withUserContext(userId, async tx => {
@@ -95,7 +96,7 @@ export async function getSessionLastEventId(
   userId: string,
   sessionId: string
 ): Promise<string | null> {
-  const sessionIdObj = SessionId.fromTypeId(sessionId);
+  const sessionIdObj: SessionId = TypeID.fromString(sessionId, 'session');
   const sessionUuid = sessionIdObj.toUUID();
 
   return fastify.withUserContext(userId, async tx => {
