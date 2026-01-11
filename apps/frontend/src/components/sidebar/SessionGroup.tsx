@@ -127,35 +127,39 @@ export function SessionGroup({
             <p className="text-sm text-muted-foreground">{t('sidebar.noSessions')}</p>
           </div>
         ) : (
-          filteredSessions.map(session => (
-            <SidebarMenuItem key={session.id}>
-              <SidebarMenuButton
-                isActive={session.id === selectedSessionId}
-                onClick={() => onSelectSession?.(session.id)}
-                className="h-auto py-2"
-              >
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  <span className="text-sm font-medium truncate">
-                    {session.title || t('sidebar.untitledSession')}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatRelativeTime(session.updated_at)}
-                  </span>
-                </div>
-              </SidebarMenuButton>
-              {onArchiveSession && (
-                <SidebarMenuAction
-                  showOnHover
-                  onClick={e => {
-                    e.stopPropagation();
-                    onArchiveSession(session.id);
-                  }}
+          filteredSessions.map(session => {
+            const isArchived = session.session_status === 'archived';
+            return (
+              <SidebarMenuItem key={session.id}>
+                <SidebarMenuButton
+                  isActive={session.id === selectedSessionId}
+                  onClick={() => onSelectSession?.(session.id)}
+                  className="h-auto py-2"
                 >
-                  <Archive className="size-4" />
-                </SidebarMenuAction>
-              )}
-            </SidebarMenuItem>
-          ))
+                  <div className={cn('flex flex-col gap-0.5 min-w-0', isArchived && 'opacity-50')}>
+                    <span className="text-sm font-medium truncate">
+                      {session.title || t('sidebar.untitledSession')}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatRelativeTime(session.updated_at)}
+                    </span>
+                  </div>
+                </SidebarMenuButton>
+                {onArchiveSession && !isArchived && (
+                  <SidebarMenuAction
+                    showOnHover
+                    className="top-1/2 -translate-y-1/2"
+                    onClick={e => {
+                      e.stopPropagation();
+                      onArchiveSession(session.id);
+                    }}
+                  >
+                    <Archive className="size-4" />
+                  </SidebarMenuAction>
+                )}
+              </SidebarMenuItem>
+            );
+          }))
         )}
       </SidebarMenu>
     </SidebarGroup>
