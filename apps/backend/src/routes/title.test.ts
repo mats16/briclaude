@@ -67,6 +67,8 @@ describe('title route', () => {
     // Mock fastify.requestContext
     app.decorate('requestContext', {
       get: mockRequestContextGet,
+      set: vi.fn(),
+      getStore: vi.fn(),
     });
 
     await app.register(titleRoute, { prefix: '/api' });
