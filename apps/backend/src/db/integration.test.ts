@@ -22,8 +22,9 @@ config({ path: path.join(__dirname, '../../../../.env') });
 // テスト用のユーザーID
 const TEST_USER_1 = 'test-user-1';
 const TEST_USER_2 = 'test-user-2';
-const TEST_SESSION_1 = 'test-session-1';
-const TEST_SESSION_2 = 'test-session-2';
+// sessions.id は uuid 型なので有効な UUID を使用
+const TEST_SESSION_1 = '11111111-1111-1111-1111-111111111111';
+const TEST_SESSION_2 = '22222222-2222-2222-2222-222222222222';
 
 describe('Database Integration Tests', () => {
   let client: ReturnType<typeof postgres>;
