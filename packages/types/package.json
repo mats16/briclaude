@@ -15,5 +15,8 @@
   "devDependencies": {
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.2"
   }
 }

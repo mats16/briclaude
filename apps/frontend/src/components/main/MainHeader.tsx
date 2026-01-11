@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { GitBranch, ExternalLink, Copy, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -7,72 +8,169 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
 interface MainHeaderProps {
+  sessionId?: string;
   title?: string;
   branchName?: string;
+  isConnected?: boolean;
+  onTitleUpdate?: (newTitle: string) => Promise<void>;
+  onArchive?: () => Promise<void>;
 }
 
 export function MainHeader({
-  title = 'Summarize context content clearly',
-  branchName = 'claude/summarize-context-f7NYV',
+  sessionId,
+  title = 'New Session',
+  branchName,
+  isConnected = false,
+  onTitleUpdate,
+  onArchive,
 }: MainHeaderProps) {
   const { t } = useTranslation();
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState(title);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleOpenRenameDialog = () => {
+    setNewTitle(title);
+    setIsRenameDialogOpen(true);
+  };
+
+  const handleRename = async () => {
+    if (!onTitleUpdate || newTitle.trim() === '') return;
+
+    setIsSubmitting(true);
+    try {
+      await onTitleUpdate(newTitle.trim());
+      setIsRenameDialogOpen(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleArchive = async () => {
+    if (!onArchive) return;
+    await onArchive();
+  };
+
+  const handleCopySessionId = () => {
+    if (sessionId) {
+      navigator.clipboard.writeText(sessionId);
+    }
+  };
 
   return (
-    <div className="flex items-center justify-between h-[50px] px-4 border-b border-border">
-      <div className="flex items-center gap-2 min-w-0">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-1 font-medium text-foreground">
-              <span className="truncate max-w-[300px]">{title}</span>
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem>Rename session</DropdownMenuItem>
-            <DropdownMenuItem>Archive session</DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">Delete session</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <div className="flex items-center gap-2">
-        {branchName && (
+    <>
+      <div className="flex items-center justify-between h-[50px] px-4 border-b border-border">
+        <div className="flex items-center gap-2 min-w-0">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-                  <GitBranch className="h-3.5 w-3.5" />
-                  <span className="text-xs truncate max-w-[150px]">{branchName}</span>
-                </Button>
+                <div
+                  className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-muted-foreground'}`}
+                />
               </TooltipTrigger>
               <TooltipContent>
-                <p>{branchName}</p>
+                <p>{isConnected ? 'Connected' : 'Disconnected'}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        )}
-
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Copy className="h-4 w-4" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="gap-1 font-medium text-foreground">
+                <span className="truncate max-w-[300px]">{title}</span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Copy session ID</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={handleOpenRenameDialog}>
+                {t('main.renameSession')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleArchive}>
+                {t('main.archiveSession')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
-        <Button variant="outline" size="sm" className="gap-1.5">
-          {t('main.openInCli')}
-          <ExternalLink className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {branchName && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+                    <GitBranch className="h-3.5 w-3.5" />
+                    <span className="text-xs truncate max-w-[150px]">{branchName}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{branchName}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={handleCopySessionId}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Copy session ID</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <Button variant="outline" size="sm" className="gap-1.5">
+            {t('main.openInCli')}
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
-    </div>
+
+      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('main.renameSession')}</DialogTitle>
+            <DialogDescription>{t('main.renameSessionDescription')}</DialogDescription>
+          </DialogHeader>
+          <Input
+            value={newTitle}
+            onChange={e => setNewTitle(e.target.value)}
+            placeholder={t('main.sessionTitlePlaceholder')}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !isSubmitting) {
+                handleRename();
+              }
+            }}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRenameDialogOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleRename} disabled={isSubmitting || newTitle.trim() === ''}>
+              {t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

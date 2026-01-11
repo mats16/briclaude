@@ -1,23 +1,208 @@
 import type { FastifyInstance } from 'fastify';
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { typeid } from 'typeid-js';
-import { query } from '@anthropic-ai/claude-agent-sdk';
+import { query, type SDKMessage, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
+import { requestContext } from '@fastify/request-context';
+import type { UUID } from 'crypto';
 import type {
   SessionCreateRequest,
   SessionCreateResponse,
   SessionContextResponse,
+  SessionListQuery,
+  SessionListResponse,
+  SessionResponse,
+  SessionStatus,
+  SessionCreateEventData,
+  SessionUpdateRequest,
 } from '@repo/types';
 import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
+import { ensureDirectory } from '../utils/directory.js';
+import { wsManager } from './websocket-manager.service.js';
+import path from 'node:path';
+
+/**
+ * DB から取得するセッションカラムの選択定義
+ */
+const SESSION_SELECT_COLUMNS = {
+  id: sessions.id,
+  title: sessions.title,
+  status: sessions.status,
+  context: sessions.context,
+  createdAt: sessions.createdAt,
+  updatedAt: sessions.updatedAt,
+} as const;
+
+/**
+ * SessionCreateEventData を SDKUserMessage 形式に変換
+ */
+function convertToSDKUserMessage(
+  eventData: SessionCreateEventData,
+  sessionId: string
+): SDKUserMessage {
+  return {
+    type: 'user',
+    message: {
+      role: 'user',
+      content: eventData.message.content,
+    },
+    parent_tool_use_id: eventData.parent_tool_use_id,
+    uuid: eventData.uuid as UUID,
+    session_id: sessionId,
+  };
+}
+
+/**
+ * イベントを WebSocket にブロードキャストし、DB に保存する（並列処理）
+ * WebSocket 送信は即座に行い、DB 書き込みは待たない
+ *
+ * @param options.skipDbSave - true の場合、DB 保存をスキップ（init イベント前に使用）
+ */
+function saveAndBroadcastEvent(
+  fastify: FastifyInstance,
+  userId: string,
+  sessionId: string,
+  message: SDKMessage,
+  options: { skipDbSave?: boolean } = {}
+): void {
+  const eventUuid = 'uuid' in message ? (message.uuid as string) : crypto.randomUUID();
+  const eventSubtype = 'subtype' in message ? (message.subtype as string | undefined) : undefined;
+
+  // WebSocket にブロードキャスト（SDKMessage をそのまま送信）
+  wsManager.broadcast(sessionId, message);
+
+  // DB に保存（skipDbSave が false の場合のみ）
+  if (!options.skipDbSave) {
+    fastify
+      .withUserContext(userId, async tx => {
+        return insertSessionEventInTx(tx, {
+          uuid: eventUuid,
+          sessionId,
+          type: message.type,
+          subtype: eventSubtype ?? null,
+          message: message,
+        });
+      })
+      .catch(error => {
+        fastify.log.error({ sessionId, eventUuid, error }, 'Failed to save event to DB');
+      });
+  }
+}
+
+/**
+ * init イベントを待機する
+ * セッションは既に作成済みなので、init 受信時に UPDATE + init イベント INSERT を行う
+ */
+interface WaitForInitResult {
+  sdkSessionId: string;
+  iterator: AsyncIterator<SDKMessage, void>;
+}
+
+async function waitForInit(
+  response: AsyncIterable<SDKMessage>,
+  fastify: FastifyInstance,
+  userId: string,
+  sessionId: string
+): Promise<WaitForInitResult> {
+  const iterator = response[Symbol.asyncIterator]();
+
+  while (true) {
+    const { value: message, done } = await iterator.next();
+
+    if (done || !message) {
+      throw new Error('Stream ended before init event');
+    }
+
+    // init イベント前: WebSocket 送信のみ（DB 保存しない）
+    saveAndBroadcastEvent(fastify, userId, sessionId, message, { skipDbSave: true });
+
+    // init イベントを検出 (type: system, subtype: init)
+    if (message.type === 'system' && message.subtype === 'init') {
+      const sdkSessionId = message.session_id;
+
+      // sessions テーブル UPDATE + init イベント INSERT を1トランザクションで実行
+      await fastify.withUserContext(userId, async tx => {
+        // sessions テーブルを UPDATE（status を running に、sdkSessionId を設定）
+        await tx
+          .update(sessions)
+          .set({
+            status: 'running',
+            sdkSessionId: sdkSessionId || null,
+          })
+          .where(eq(sessions.id, sessionId));
+
+        // init イベントを session_events テーブルに INSERT
+        const initEventUuid = 'uuid' in message ? (message.uuid as string) : crypto.randomUUID();
+        await insertSessionEventInTx(tx, {
+          uuid: initEventUuid,
+          sessionId,
+          type: message.type,
+          subtype: message.subtype ?? null,
+          message: message,
+        });
+      });
+
+      return {
+        sdkSessionId,
+        iterator,
+      };
+    }
+  }
+}
+
+/**
+ * init 以降のイベントをバックグラウンドで処理する
+ */
+async function processRemainingEvents(
+  iterator: AsyncIterator<SDKMessage, void>,
+  fastify: FastifyInstance,
+  userId: string,
+  sessionId: string
+): Promise<void> {
+  try {
+    while (true) {
+      const { value: message, done } = await iterator.next();
+
+      if (done || !message) {
+        break;
+      }
+
+      // WebSocket 送信 & DB 保存（並列）
+      saveAndBroadcastEvent(fastify, userId, sessionId, message);
+
+      // result イベント時にセッション状態を idle に更新
+      if (message.type === 'result') {
+        await fastify.withUserContext(userId, async tx => {
+          await tx.update(sessions).set({ status: 'idle' }).where(eq(sessions.id, sessionId));
+        });
+      }
+    }
+  } catch (error) {
+    fastify.log.error({ sessionId, error }, 'Error processing remaining events');
+
+    // セッション状態を error に更新
+    try {
+      await fastify.withUserContext(userId, async tx => {
+        await tx.update(sessions).set({ status: 'error' }).where(eq(sessions.id, sessionId));
+      });
+    } catch (updateError) {
+      fastify.log.error({ sessionId, updateError }, 'Failed to update session status to error');
+    }
+
+    throw error;
+  }
+}
 
 /**
  * 新規セッションを作成する
  *
  * 処理フロー:
  * 1. TypeID で session_id 生成
- * 2. sessions テーブルに status='init' でレコード挿入
+ * 2. sessions INSERT (status='init') + user message INSERT
  * 3. claude-agent-sdk で query() 実行
- * 4. init イベント受信時に status を 'running' に更新し、sdk_session_id を設定
+ * 4. init イベント受信時に sessions UPDATE (status='running') + init イベント INSERT
+ * 5. 即座にレスポンスを返し、残りのイベントはバックグラウンドで処理
+ * 6. query() 失敗時は sessions status を 'error' に更新
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
@@ -34,105 +219,284 @@ export async function createSession(
   // 1. TypeID で session_id 生成
   const sessionId = typeid('session').toString();
 
-  // 2. モデル名のマッピング
-  const modelMap: Record<string, string> = {
-    opus: fastify.config.ANTHROPIC_DEFAULT_OPUS_MODEL,
-    sonnet: fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL,
-    haiku: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
-  };
-  const modelName =
-    modelMap[session_context.model] || fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL;
+  // 2. ユーザーメッセージのテキストを抽出
+  const userEvent = events[0];
+  const userContent = userEvent?.data.message.content ?? '';
 
-  // 3. ユーザーメッセージのテキストを抽出（新形式）
-  const userContent = events[0]?.data.message.content ?? '';
+  // 3. cwd の生成（userHome + sessionId）
+  const userHome = requestContext.get('user_home') as string;
+  /** Claude Code Working Directory  (e.g. /home/app/users/user1/session_123) */
+  const cwd = path.join(userHome, sessionId);
 
-  // 4. cwd の生成（SESSION_BASE_DIR + sessionId の末尾部分）
-  const sessionIdSuffix = sessionId.replace('session_', '');
-  const cwd = `${fastify.config.SESSION_BASE_DIR}/${sessionIdSuffix}`;
+  await ensureDirectory(cwd);
 
-  // 5. context オブジェクトの構築
+  // 4. context オブジェクトの構築
   const sessionContext: SessionContextResponse = {
     allowed_tools: [],
     disallowed_tools: [],
     cwd,
-    model: modelName,
+    model: session_context.model,
     sources: session_context.sources,
     outcomes: session_context.outcomes,
   };
 
-  // 6. sessions テーブルに status='init' でレコード挿入（SDK呼び出し前）
-  let createdAt: Date = new Date();
-  let updatedAt: Date = new Date();
+  // 5. タイムスタンプを設定（レスポンス用）
+  const now = new Date();
 
+  // 6. sessions と user message を先に INSERT (status='init')
+  const userMessage = convertToSDKUserMessage(userEvent.data, sessionId);
   await fastify.withUserContext(userId, async tx => {
-    const now = new Date();
-    createdAt = now;
-    updatedAt = now;
-
     await tx.insert(sessions).values({
       id: sessionId,
       userId,
       title: title ?? null,
-      status: 'init', // SDK呼び出し前なので init
-      sdkSessionId: null, // SDK呼び出し前なので null
+      status: 'init',
+      sdkSessionId: null,
       context: sessionContext,
+    });
+
+    await insertSessionEventInTx(tx, {
+      uuid: userEvent.data.uuid,
+      sessionId,
+      type: 'user',
+      subtype: null,
+      message: userMessage,
     });
   });
 
   // 7. claude-agent-sdk で query 実行
-  let sdkSessionId = '';
-
   try {
     const response = query({
       prompt: userContent,
       options: {
-        model: modelName,
+        cwd: sessionContext.cwd,
+        model: session_context.model,
+        maxTurns: 100,
+        settingSources: ['user', 'project', 'local'],
+        permissionMode: 'bypassPermissions',
+        systemPrompt: {
+          type: 'preset',
+          preset: 'claude_code',
+        },
+        tools: {
+          type: 'preset',
+          preset: 'claude_code',
+        },
+        allowedTools: [
+          'Skill',
+          'Bash',
+          'Read',
+          'Write',
+          'Edit',
+          'Glob',
+          'Grep',
+          'WebSearch',
+          'WebFetch',
+        ],
+        env: {
+          PATH: fastify.config.PATH,
+          HOME: userHome,
+          CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
+          // Claude Code
+          ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
+          ANTHROPIC_AUTH_TOKEN: requestContext.get('pat'),
+          ANTHROPIC_CUSTOM_HEADERS: 'x-databricks-disable-beta-headers: true',
+          ANTHROPIC_DEFAULT_OPUS_MODEL: fastify.config.ANTHROPIC_DEFAULT_OPUS_MODEL,
+          ANTHROPIC_DEFAULT_SONNET_MODEL: fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL,
+          ANTHROPIC_DEFAULT_HAIKU_MODEL: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
+          // Databricks
+          DATABRICKS_HOST: `https://${fastify.config.DATABRICKS_HOST}`,
+        },
+        sandbox: {
+          enabled: true,
+          autoAllowBashIfSandboxed: true,
+        }
       },
     });
 
-    for await (const message of response) {
-      if (message.type === 'system' && message.subtype === 'init') {
-        sdkSessionId = message.session_id;
+    // 8. init イベントまで待機（status を 'running' に UPDATE）
+    const { iterator } = await waitForInit(response, fastify, userId, sessionId);
 
-        // 8. init イベント受信時に status を 'running' に更新 + イベント挿入
-        await fastify.withUserContext(userId, async tx => {
-          // sessions の status と sdk_session_id を更新
-          await tx
-            .update(sessions)
-            .set({
-              status: 'running',
-              sdkSessionId: sdkSessionId || null,
-            })
-            .where(eq(sessions.id, sessionId));
-
-          // イベントを session_events テーブルに保存
-          for (const event of events) {
-            await insertSessionEventInTx(tx, {
-              uuid: event.data.uuid,
-              sessionId,
-              type: event.data.type,
-              subtype: null,
-              message: event.data.message,
-            });
-          }
-        });
-
-        break;
-      }
-    }
+    // 9. バックグラウンド処理開始（await しない）
+    processRemainingEvents(iterator, fastify, userId, sessionId).catch(error => {
+      fastify.log.error({ sessionId, error }, 'Background event processing failed');
+    });
   } catch (error) {
-    // SDK呼び出し失敗時: status は 'init' のまま残る
-    // 後でクリーンアップジョブで処理可能
+    // SDK呼び出し失敗時: sessions status を 'error' に更新
     fastify.log.error({ sessionId, error }, 'SDK query failed');
+    await fastify.withUserContext(userId, async tx => {
+      await tx.update(sessions).set({ status: 'error' }).where(eq(sessions.id, sessionId));
+    });
     throw error;
   }
 
+  // 10. 即座にレスポンス返却
   return {
     id: sessionId,
     session_status: 'running',
     title: title ?? null,
-    created_at: createdAt.toISOString(),
-    updated_at: updatedAt.toISOString(),
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
     session_context: sessionContext,
   };
+}
+
+/**
+ * ユーザーのセッション一覧を取得する
+ *
+ * @param fastify - Fastify インスタンス
+ * @param userId - ユーザーID
+ * @param options - クエリオプション（limit, status）
+ * @returns セッション一覧レスポンス
+ */
+export async function listSessions(
+  fastify: FastifyInstance,
+  userId: string,
+  options: SessionListQuery = {}
+): Promise<SessionListResponse> {
+  const { limit = 20, status } = options;
+
+  // limit のバリデーション（1-100）
+  const safeLimit = Math.min(Math.max(1, limit), 100);
+
+  return fastify.withUserContext(userId, async tx => {
+    // フィルタ条件を構築
+    const whereClause = status ? eq(sessions.status, status) : undefined;
+
+    // limit + 1 で取得して has_more を判定
+    const rows = await tx
+      .select(SESSION_SELECT_COLUMNS)
+      .from(sessions)
+      .where(whereClause)
+      .orderBy(desc(sessions.updatedAt))
+      .limit(safeLimit + 1);
+
+    // has_more 判定
+    const hasMore = rows.length > safeLimit;
+    const resultRows = hasMore ? rows.slice(0, safeLimit) : rows;
+
+    // SessionResponse 形式に変換
+    const data: SessionResponse[] = resultRows.map(toSessionResponse);
+
+    return {
+      data,
+      first_id: data.length > 0 ? data[0].id : '',
+      last_id: data.length > 0 ? data[data.length - 1].id : '',
+      has_more: hasMore,
+    };
+  });
+}
+
+/**
+ * DB行をSessionResponseに変換するヘルパー
+ */
+function toSessionResponse(row: {
+  id: string;
+  title: string | null;
+  status: string;
+  context: unknown;
+  createdAt: Date;
+  updatedAt: Date;
+}): SessionResponse {
+  return {
+    id: row.id,
+    title: row.title,
+    session_status: row.status as SessionStatus,
+    created_at: row.createdAt.toISOString(),
+    updated_at: row.updatedAt.toISOString(),
+    session_context: (row.context as SessionContextResponse) ?? null,
+  };
+}
+
+/**
+ * 指定されたセッションを取得する
+ *
+ * @param fastify - Fastify インスタンス
+ * @param userId - ユーザーID
+ * @param sessionId - セッションID
+ * @returns セッション情報（見つからない場合は null）
+ */
+export async function getSession(
+  fastify: FastifyInstance,
+  userId: string,
+  sessionId: string
+): Promise<SessionResponse | null> {
+  return fastify.withUserContext(userId, async tx => {
+    const rows = await tx
+      .select(SESSION_SELECT_COLUMNS)
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .limit(1);
+
+    if (rows.length === 0) return null;
+
+    return toSessionResponse(rows[0]);
+  });
+}
+
+/**
+ * セッションを更新する
+ *
+ * @param fastify - Fastify インスタンス
+ * @param userId - ユーザーID
+ * @param sessionId - セッションID
+ * @param request - 更新リクエスト
+ * @returns 更新後のセッション情報（見つからない場合は null）
+ */
+export async function updateSession(
+  fastify: FastifyInstance,
+  userId: string,
+  sessionId: string,
+  request: SessionUpdateRequest
+): Promise<SessionResponse | null> {
+  const { title, session_status } = request;
+
+  return fastify.withUserContext(userId, async tx => {
+    // 更新を実行（RETURNING で更新後の値を取得）
+    const updateFields: { title?: string | null; status?: SessionStatus; updatedAt: Date } = {
+      updatedAt: new Date(),
+    };
+    if (title !== undefined) {
+      updateFields.title = title;
+    }
+    if (session_status !== undefined) {
+      updateFields.status = session_status;
+    }
+
+    const rows = await tx
+      .update(sessions)
+      .set(updateFields)
+      .where(eq(sessions.id, sessionId))
+      .returning(SESSION_SELECT_COLUMNS);
+
+    if (rows.length === 0) return null;
+
+    return toSessionResponse(rows[0]);
+  });
+}
+
+/**
+ * セッションをアーカイブする
+ *
+ * @param fastify - Fastify インスタンス
+ * @param userId - ユーザーID
+ * @param sessionId - セッションID
+ * @returns アーカイブ後のセッション情報（見つからない場合は null）
+ */
+export async function archiveSession(
+  fastify: FastifyInstance,
+  userId: string,
+  sessionId: string
+): Promise<SessionResponse | null> {
+  return fastify.withUserContext(userId, async tx => {
+    const rows = await tx
+      .update(sessions)
+      .set({ status: 'archived', updatedAt: new Date() })
+      .where(eq(sessions.id, sessionId))
+      .returning(SESSION_SELECT_COLUMNS);
+
+    if (rows.length === 0) return null;
+
+    return toSessionResponse(rows[0]);
+  });
 }

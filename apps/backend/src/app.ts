@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import compress from '@fastify/compress';
 import configPlugin from './plugins/config.js';
 import databasePlugin from './plugins/database.js';
+import websocketPlugin from './plugins/websocket.js';
 import requestDecoratorPlugin from './plugins/request-decorator.js';
 import requestContextPlugin from './plugins/request-context.js';
 import staticPlugin from './plugins/static.js';
@@ -21,6 +22,9 @@ export async function build() {
 
   // データベースプラグイン（configの後、他のプラグインの前）
   await app.register(databasePlugin);
+
+  // WebSocket プラグイン
+  await app.register(websocketPlugin);
 
   // リクエストデコレータプラグイン
   await app.register(requestDecoratorPlugin);

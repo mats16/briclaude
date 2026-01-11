@@ -23,7 +23,7 @@ async function fetchServicePrincipalToken(
   clientId: string,
   clientSecret: string
 ): Promise<string> {
-  const response = await fetch(`https://${databricksHost}/api/2.0/oauth2/token`, {
+  const response = await fetch(`https://${databricksHost}/oidc/v1/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -32,6 +32,7 @@ async function fetchServicePrincipalToken(
       grant_type: 'client_credentials',
       client_id: clientId,
       client_secret: clientSecret,
+      scope: 'all-apis',
     }),
   });
 
@@ -57,12 +58,14 @@ async function fetchServicePrincipalToken(
  * キャッシュされたService Principalトークンを取得
  * 有効期限が切れている場合は再取得
  */
-export async function getServicePrincipalToken(fastify: FastifyInstance): Promise<string | null> {
+export async function getServicePrincipalToken(
+  fastify: FastifyInstance
+): Promise<string | undefined> {
   const { DATABRICKS_HOST, DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET } = fastify.config;
 
-  // 認証情報がない場合はnull
+  // 認証情報がない場合はundefined
   if (!DATABRICKS_CLIENT_ID || !DATABRICKS_CLIENT_SECRET) {
-    return null;
+    return undefined;
   }
 
   // キャッシュが有効な場合はキャッシュから返す
@@ -79,15 +82,18 @@ export async function getServicePrincipalToken(fastify: FastifyInstance): Promis
     );
   } catch (error) {
     fastify.log.error(error, 'Failed to get Service Principal token');
-    return null;
+    return undefined;
   }
 }
 
 /**
  * DBからユーザーのPATを取得
  */
-export async function getUserPAT(fastify: FastifyInstance, userId: string): Promise<string | null> {
-  if (!userId) return null;
+export async function getUserPAT(
+  fastify: FastifyInstance,
+  userId: string
+): Promise<string | undefined> {
+  if (!userId) return undefined;
 
   try {
     const tokens = await fastify.withUserContext(userId, async tx => {
@@ -104,12 +110,12 @@ export async function getUserPAT(fastify: FastifyInstance, userId: string): Prom
         .limit(1);
     });
 
-    return tokens[0]?.accessToken ?? null;
+    return tokens[0]?.accessToken ?? undefined;
   } catch (error) {
     fastify.log.warn({ userId, error }, 'Failed to fetch PAT from database');
   }
 
-  return null;
+  return undefined;
 }
 
 /**

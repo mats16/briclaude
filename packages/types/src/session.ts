@@ -2,7 +2,7 @@
 // Session Status Types
 // =====================================================
 
-export type SessionStatus = 'init' | 'running' | 'idle' | 'archived';
+export type SessionStatus = 'init' | 'running' | 'idle' | 'error' | 'archived';
 
 // =====================================================
 // Source/Outcome Types
@@ -81,25 +81,85 @@ export interface SessionCreateResponse {
 }
 
 // =====================================================
-// Session Summary/Detail Types
+// Session Response Types
 // =====================================================
 
-export interface SessionSummary {
+export interface SessionResponse {
   id: string;
   title: string | null;
   session_status: SessionStatus;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface SessionDetail extends SessionSummary {
-  sdkSessionId: string | null;
-  sessionContext: SessionContextResponse | null;
+  created_at: string;
+  updated_at: string;
+  session_context: SessionContextResponse | null;
 }
 
 export interface SessionListResponse {
-  sessions: SessionSummary[];
-  total: number;
+  data: SessionResponse[];
+  first_id: string;
+  last_id: string;
+  has_more: boolean;
+}
+
+/**
+ * GET /api/sessions のクエリパラメータ
+ */
+export interface SessionListQuery {
+  /** 取得件数上限（デフォルト: 20、最大: 100） */
+  limit?: number;
+  /** ステータスでフィルタリング */
+  status?: SessionStatus;
+}
+
+// =====================================================
+// Session Archive Types (POST /api/sessions/:id/archive)
+// =====================================================
+
+/**
+ * POST /api/sessions/:session_id/archive のレスポンス
+ */
+export type SessionArchiveResponse = SessionResponse;
+
+// =====================================================
+// Session Update Types (PATCH /api/sessions/:session_id)
+// =====================================================
+
+/**
+ * PATCH /api/sessions/:session_id のリクエストボディ
+ */
+export interface SessionUpdateRequest {
+  /** セッションタイトル */
+  title?: string;
+  /** セッションステータス（アーカイブなど） */
+  session_status?: SessionStatus;
+}
+
+// =====================================================
+// Session Events Types (GET /api/sessions/:id/events)
+// =====================================================
+
+import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+
+// SDK Message 型を re-export
+export type { SDKMessage };
+
+/**
+ * GET /api/sessions/:session_id/events のクエリパラメータ
+ */
+export interface SessionEventsQuery {
+  /** 取得開始位置（この uuid より後のイベントを取得） */
+  after?: string;
+  /** 取得件数上限（デフォルト: 100） */
+  limit?: number;
+}
+
+/**
+ * GET /api/sessions/:session_id/events のレスポンス
+ */
+export interface SessionEventsResponse {
+  data: SDKMessage[];
+  first_id: string;
+  last_id: string;
+  has_more: boolean;
 }
 
 // =====================================================
@@ -175,5 +235,5 @@ export interface CreateSessionRequest {
  * @deprecated Use SessionCreateResponse instead
  */
 export interface CreateSessionResponse {
-  session: SessionDetail;
+  session: SessionResponse;
 }

@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useSessions } from '@/hooks/useSessions';
+import { sessionService } from '@/services';
 import { Sidebar } from '@/components/sidebar/Sidebar';
 import { MainArea } from '@/components/main/MainArea';
 import { cn } from '@/lib/utils';
@@ -7,6 +9,29 @@ import { SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_DEFAULT_WIDTH } from '@/c
 
 export function AppLayout() {
   const { sessionId } = useParams<{ sessionId?: string }>();
+  const navigate = useNavigate();
+  const { sessions, isLoading: isSessionsLoading, refetch: refetchSessions } = useSessions();
+
+  const handleSelectSession = useCallback(
+    (selectedSessionId: string) => {
+      navigate(`/${selectedSessionId}`);
+    },
+    [navigate]
+  );
+
+  const handleArchiveSession = useCallback(
+    async (targetSessionId: string) => {
+      await sessionService.updateSession(targetSessionId, {
+        session_status: 'archived',
+      });
+      refetchSessions();
+      if (sessionId === targetSessionId) {
+        navigate('/');
+      }
+    },
+    [refetchSessions, sessionId, navigate]
+  );
+
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem('sidebar-width');
     if (saved) {
@@ -60,7 +85,14 @@ export function AppLayout() {
     <div ref={containerRef} className="flex h-screen w-screen overflow-hidden bg-background">
       {/* Sidebar */}
       <div style={{ width: sidebarWidth }} className="h-full shrink-0">
-        <Sidebar selectedSessionId={sessionId} />
+        <Sidebar
+          sessions={sessions}
+          selectedSessionId={sessionId}
+          onSelectSession={handleSelectSession}
+          onArchiveSession={handleArchiveSession}
+          isSessionsLoading={isSessionsLoading}
+          onSessionCreated={refetchSessions}
+        />
       </div>
 
       {/* Resize Handle */}
@@ -75,7 +107,7 @@ export function AppLayout() {
 
       {/* Main Area */}
       <div className="flex-1 h-full min-w-0">
-        <MainArea />
+        <MainArea onSessionArchived={refetchSessions} />
       </div>
 
       {/* Overlay during drag to prevent text selection */}

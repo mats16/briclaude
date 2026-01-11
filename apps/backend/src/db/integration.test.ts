@@ -13,7 +13,6 @@ import postgres from 'postgres';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import * as schema from './schema.js';
-import { insertSessionEvent } from './helpers.js';
 
 // .env をロード（ローカル開発用）
 const __filename = fileURLToPath(import.meta.url);
@@ -82,7 +81,7 @@ describe('Database Integration Tests', () => {
     await client`TRUNCATE TABLE session_events, sessions, oauth_tokens, user_settings, users CASCADE`;
   });
 
-  describe('insertSessionEvent', () => {
+  describe('sessionEvents table', () => {
     beforeEach(async () => {
       // テスト用ユーザーを作成（users テーブルは RLS なし）
       await db.insert(schema.users).values({ id: TEST_USER_1 });
@@ -96,71 +95,28 @@ describe('Database Integration Tests', () => {
       });
     });
 
-    it('should auto-increment seq starting from 1', async () => {
-      const event1 = await insertSessionEvent(db, {
-        uuid: '11111111-1111-1111-1111-111111111111',
+    it('should insert events with uuid as primary key', async () => {
+      const uuid1 = '11111111-1111-1111-1111-111111111111';
+      const uuid2 = '22222222-2222-2222-2222-222222222222';
+
+      await db.insert(schema.sessionEvents).values({
+        uuid: uuid1,
         sessionId: TEST_SESSION_1,
         type: 'message',
         message: { content: 'First message' },
       });
 
-      expect(event1.seq).toBe(1);
-
-      const event2 = await insertSessionEvent(db, {
-        uuid: '22222222-2222-2222-2222-222222222222',
+      await db.insert(schema.sessionEvents).values({
+        uuid: uuid2,
         sessionId: TEST_SESSION_1,
         type: 'message',
         message: { content: 'Second message' },
       });
 
-      expect(event2.seq).toBe(2);
+      const events = await db.select().from(schema.sessionEvents);
+      expect(events).toHaveLength(2);
+      expect(events.map(e => e.uuid).sort()).toEqual([uuid1, uuid2].sort());
     });
-
-    it('should maintain separate seq counters per session', async () => {
-      // 2つ目のセッションを作成（RLS 保護テーブル）
-      await withTestUserContext(TEST_USER_1, async tx => {
-        await tx.insert(schema.sessions).values({
-          id: TEST_SESSION_2,
-          userId: TEST_USER_1,
-          title: 'Test Session 2',
-        });
-      });
-
-      const event1Session1 = await insertSessionEvent(db, {
-        uuid: '44444444-4444-4444-4444-444444444444',
-        sessionId: TEST_SESSION_1,
-        type: 'message',
-        message: { content: 'Session 1 - Event 1' },
-      });
-
-      const event1Session2 = await insertSessionEvent(db, {
-        uuid: '55555555-5555-5555-5555-555555555555',
-        sessionId: TEST_SESSION_2,
-        type: 'message',
-        message: { content: 'Session 2 - Event 1' },
-      });
-
-      expect(event1Session1.seq).toBe(1);
-      expect(event1Session2.seq).toBe(1); // 独立したカウンター
-    });
-
-    it('should handle concurrent inserts correctly', async () => {
-      // 同時に複数のイベントを挿入
-      const promises = Array.from({ length: 10 }, (_, i) =>
-        insertSessionEvent(db, {
-          uuid: `6666666${i}-6666-6666-6666-666666666666`,
-          sessionId: TEST_SESSION_1,
-          type: 'message',
-          message: { content: `Concurrent message ${i}` },
-        })
-      );
-
-      const results = await Promise.all(promises);
-      const seqs = results.map(r => r.seq).sort((a, b) => a - b);
-
-      // 1から10までの連番であることを確認
-      expect(seqs).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    }, 30000); // 30秒タイムアウト
 
     it('should store jsonb message correctly', async () => {
       const complexMessage = {
@@ -172,8 +128,9 @@ describe('Database Integration Tests', () => {
         },
       };
 
-      const event = await insertSessionEvent(db, {
-        uuid: '77777777-7777-7777-7777-777777777777',
+      const uuid = '77777777-7777-7777-7777-777777777777';
+      await db.insert(schema.sessionEvents).values({
+        uuid,
         sessionId: TEST_SESSION_1,
         type: 'message',
         message: complexMessage,
@@ -183,9 +140,29 @@ describe('Database Integration Tests', () => {
       const [retrieved] = await db
         .select()
         .from(schema.sessionEvents)
-        .where(eq(schema.sessionEvents.uuid, event.uuid));
+        .where(eq(schema.sessionEvents.uuid, uuid));
 
       expect(retrieved.message).toEqual(complexMessage);
+    });
+
+    it('should reject duplicate uuid', async () => {
+      const uuid = '88888888-8888-8888-8888-888888888888';
+
+      await db.insert(schema.sessionEvents).values({
+        uuid,
+        sessionId: TEST_SESSION_1,
+        type: 'message',
+        message: { content: 'First' },
+      });
+
+      await expect(
+        db.insert(schema.sessionEvents).values({
+          uuid, // 同じ uuid
+          sessionId: TEST_SESSION_1,
+          type: 'message',
+          message: { content: 'Second' },
+        })
+      ).rejects.toThrow();
     });
   });
 

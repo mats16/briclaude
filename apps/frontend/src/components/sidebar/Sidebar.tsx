@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import type { SessionSummary, SessionCreateRequest } from '@repo/types';
+import type { SessionResponse, SessionCreateRequest } from '@repo/types';
 import { SidebarHeader } from './SidebarHeader';
 import { NewSessionInput } from './NewSessionInput';
 import { ModelSelector } from './ModelSelector';
@@ -8,41 +8,22 @@ import { UserMenu } from './UserMenu';
 import { useUser } from '@/hooks/useUser';
 import { sessionService } from '@/services';
 
-// Mock data for development
-const MOCK_SESSIONS: SessionSummary[] = [
-  {
-    id: '1',
-    title: 'Summarize context content clearly',
-    session_status: 'idle',
-    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-  },
-  {
-    id: '2',
-    title: 'Debug authentication flow',
-    session_status: 'idle',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-  },
-  {
-    id: '3',
-    title: 'Implement user dashboard',
-    session_status: 'archived',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-  },
-];
-
 interface SidebarProps {
-  sessions?: SessionSummary[];
+  sessions?: SessionResponse[];
   selectedSessionId?: string | null;
   onSelectSession?: (sessionId: string) => void;
+  onArchiveSession?: (sessionId: string) => void;
+  isSessionsLoading?: boolean;
+  onSessionCreated?: () => void;
 }
 
 export function Sidebar({
-  sessions = MOCK_SESSIONS,
-  selectedSessionId = '1',
+  sessions = [],
+  selectedSessionId,
   onSelectSession,
+  onArchiveSession,
+  isSessionsLoading = false,
+  onSessionCreated,
 }: SidebarProps) {
   const navigate = useNavigate();
   const { user, databricksHost, isLoading, error, refetch } = useUser();
@@ -76,6 +57,7 @@ export function Sidebar({
     };
 
     const response = await sessionService.createSession(request);
+    onSessionCreated?.();
     navigate(`/${response.id}`);
   };
 
@@ -88,6 +70,8 @@ export function Sidebar({
         sessions={sessions}
         selectedSessionId={selectedSessionId}
         onSelectSession={onSelectSession}
+        onArchiveSession={onArchiveSession}
+        isLoading={isSessionsLoading}
       />
       <UserMenu
         userName={user?.name}

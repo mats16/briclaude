@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "683e50de-6ad5-44e7-9d81-a53120c59fcc",
+  "id": "3ea077d6-3546-419f-b5c7-e0c45937938c",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -141,32 +141,6 @@
       "table": "oauth_tokens"
     },
     {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "session_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "session_events"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "seq",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "session_events"
-    },
-    {
       "type": "uuid",
       "typeSchema": null,
       "notNull": true,
@@ -175,6 +149,19 @@
       "generated": null,
       "identity": null,
       "name": "uuid",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "session_events"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "session_id",
       "entityType": "columns",
       "schema": "public",
       "table": "session_events"
@@ -227,19 +214,6 @@
       "generated": null,
       "identity": null,
       "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "session_events"
-    },
-    {
-      "type": "timestamp",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
       "entityType": "columns",
       "schema": "public",
       "table": "session_events"
@@ -464,19 +438,26 @@
       "nameExplicit": true,
       "columns": [
         {
-          "value": "uuid",
+          "value": "session_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "created_at",
           "isExpression": false,
           "asc": true,
           "nullsFirst": false,
           "opclass": null
         }
       ],
-      "isUnique": true,
+      "isUnique": false,
       "where": null,
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "session_events_uuid_unique",
+      "name": "session_events_session_created_at_idx",
       "entityType": "indexes",
       "schema": "public",
       "table": "session_events"
@@ -654,14 +635,13 @@
     },
     {
       "columns": [
-        "session_id",
-        "seq"
+        "uuid"
       ],
       "nameExplicit": false,
       "name": "session_events_pkey",
-      "entityType": "pks",
       "schema": "public",
-      "table": "session_events"
+      "table": "session_events",
+      "entityType": "pks"
     },
     {
       "columns": [

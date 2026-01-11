@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Image, ChevronDown, Check } from 'lucide-react';
+import useLocalStorageState from 'use-local-storage-state';
+import { Send, Image, ChevronDown, Check, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,9 @@ interface NewSessionInputProps {
 
 export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
   const { t } = useTranslation();
-  const [content, setContent] = useState('');
+  const [content, setContent] = useLocalStorageState('chat-draft-new-session', {
+    defaultValue: '',
+  });
   const [selectedModel, setSelectedModel] = useState(DEFAULT_SESSION_MODEL);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -121,7 +124,11 @@ export function NewSessionInput({ onSubmit, disabled }: NewSessionInputProps) {
                     onClick={handleSubmit}
                     disabled={!content.trim() || disabled || isSubmitting}
                   >
-                    <Send className="h-3.5 w-3.5" />
+                    {isSubmitting ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Send className="h-3.5 w-3.5" />
+                    )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>

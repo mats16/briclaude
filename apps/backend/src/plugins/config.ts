@@ -44,7 +44,7 @@ const schema = {
     // User and session directories (optional)
     USER_BASE_DIR: {
       type: 'string',
-      default: './tmp/users',
+      default: path.join(__dirname, '../../../../tmp/users'), // -> project root tmp/users
       description: 'The base directory for user directories (default: ./tmp/users).',
     },
     SESSION_BASE_DIR: {

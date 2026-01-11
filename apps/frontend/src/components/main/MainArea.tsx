@@ -1,89 +1,53 @@
-import { useState } from 'react';
-import type { ChatMessage } from '@repo/types';
+import { useParams } from 'react-router-dom';
 import { MainHeader } from './MainHeader';
 import { MessageArea } from './MessageArea';
 import { InputArea } from './InputArea';
-
-// Mock data for development
-const MOCK_MESSAGES: ChatMessage[] = [
-  {
-    id: '1',
-    role: 'user',
-    content: 'コードベース内の小さなTODOを見つけて実行する',
-    timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-  },
-  {
-    id: '2',
-    role: 'assistant',
-    content: `コードベースを分析して、TODOコメントを探します。
-
-## 環境情報
-- Working directory: /home/user/claude-code-on-databricks
-- Platform: linux
-- Today's date: 2026-01-08
-
-## タスク指示（ここにブランチ指示がある）
-
-### Git Development Branch Requirements
-- 作業ブランチ: claude/summarize-context-f7NYV
-- 開発・コミット・プッシュのルール
-
-### Git Operations
-- push/fetch/pullの方法
-- リトライ戦略
-
-## gitStatus（セッション開始時のスナップショット）
-- Current branch: claude/summarize-context-f7NYV
-- Status: clean
-- Recent commits
-
-## CLAUDE.md の内容（<system-reminder>タグ内）`,
-    timestamp: new Date(Date.now() - 1000 * 60 * 4).toISOString(),
-  },
-];
+import { useSessionEvents } from '@/hooks/useSessionEvents';
+import { useSession } from '@/hooks/useSession';
 
 interface MainAreaProps {
-  sessionTitle?: string;
   branchName?: string;
-  messages?: ChatMessage[];
   onSendMessage?: (content: string) => void;
+  onSessionArchived?: () => void;
 }
 
-export function MainArea({
-  sessionTitle = 'Summarize context content clearly',
-  branchName = 'claude/summarize-context-f7NYV',
-  messages = MOCK_MESSAGES,
-  onSendMessage,
-}: MainAreaProps) {
-  const [localMessages, setLocalMessages] = useState<ChatMessage[]>(messages);
+export function MainArea({ branchName, onSendMessage, onSessionArchived }: MainAreaProps) {
+  const { sessionId } = useParams<{ sessionId?: string }>();
+
+  const { session, updateSession } = useSession({
+    sessionId: sessionId ?? null,
+  });
+
+  const { events, isLoading, isConnected, error } = useSessionEvents({
+    sessionId: sessionId ?? null,
+  });
 
   const handleSend = (content: string) => {
-    const newMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content,
-      timestamp: new Date().toISOString(),
-    };
-    setLocalMessages(prev => [...prev, newMessage]);
     onSendMessage?.(content);
+    // TODO: 実行中のセッションにメッセージ送信機能（Phase 2）
+  };
 
-    // Mock assistant response
-    setTimeout(() => {
-      const assistantMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: 'メッセージを受け取りました。処理中です...',
-        timestamp: new Date().toISOString(),
-      };
-      setLocalMessages(prev => [...prev, assistantMessage]);
-    }, 1000);
+  const handleTitleUpdate = async (newTitle: string) => {
+    await updateSession({ title: newTitle });
+  };
+
+  const handleArchive = async () => {
+    await updateSession({ session_status: 'archived' });
+    onSessionArchived?.();
   };
 
   return (
     <div className="relative z-0 flex flex-col w-full h-full min-w-0 overflow-hidden bg-background">
-      <MainHeader title={sessionTitle} branchName={branchName} />
-      <MessageArea messages={localMessages} />
-      <InputArea onSend={handleSend} />
+      <MainHeader
+        sessionId={sessionId}
+        title={session?.title ?? 'New Session'}
+        branchName={branchName}
+        isConnected={isConnected}
+        onTitleUpdate={handleTitleUpdate}
+        onArchive={handleArchive}
+      />
+      <MessageArea events={events} isLoading={isLoading} error={error} />
+      <InputArea sessionId={sessionId} onSend={handleSend} />
     </div>
   );
 }
