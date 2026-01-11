@@ -4,15 +4,16 @@
  *
  * ## 設計意図
  *
- * ### なぜ SessionId を TypeID<'session'> として定義したか
+ * ### なぜ SessionId クラスを TypeID<'session'> を継承して実装したか
  *
- * 1. **TypeID の再利用**: typeid-js ライブラリの TypeID クラスをそのまま活用。
+ * 1. **TypeID の再利用**: typeid-js ライブラリの TypeID クラスを継承し、
+ *    全メソッドをそのまま利用可能。
  *
- * 2. **ID 形式の分離**: データベースでは UUID を使用し、API やファイルシステムでは
- *    TypeID（session_xxx 形式）を使用する。この変換は TypeID のメソッドで対応。
+ * 2. **プレフィックスの省略**: ファクトリメソッドでプレフィックス指定を省略し、
+ *    タイポのリスクを削減。
  *
- * 3. **型安全性**: `TypeID<'session'>` により、他のプレフィックスを持つ TypeID と
- *    型レベルで区別可能。
+ * 3. **型安全性**: `SessionId extends TypeID<'session'>` により、
+ *    他のプレフィックスを持つ TypeID と型レベルで区別可能。
  *
  * 4. **UUIDv7 の活用**: TypeID は内部で UUIDv7 を使用しており、
  *    時系列ソートが可能でインデックス効率が良い。
@@ -29,42 +30,65 @@
  * ### 使用例
  *
  * ```typescript
- * import { typeid, TypeID } from 'typeid-js';
- * import type { SessionId } from './models/session.model.js';
+ * import { SessionId } from './models/session.model.js';
  *
  * // 新規セッション作成時
- * const sessionId: SessionId = typeid('session');
+ * const sessionId = new SessionId();
  * await db.insert(sessions).values({ id: sessionId.toUUID() });
  * return { id: sessionId.toString() }; // API レスポンス
  *
  * // API から受け取った TypeID を処理
- * const sessionId: SessionId = TypeID.fromString(request.params.session_id, 'session');
+ * const sessionId = SessionId.fromString(request.params.session_id);
  * await db.select().from(sessions).where(eq(sessions.id, sessionId.toUUID()));
  *
  * // DB から取得した UUID を API レスポンスに変換
- * const sessionId: SessionId = TypeID.fromUUID('session', row.id);
+ * const sessionId = SessionId.fromUUID(row.id);
  * return { id: sessionId.toString() };
  * ```
- *
- * ### SessionId が持つメソッド（TypeID から継承）
- *
- * - `toString()`: TypeID 文字列を取得（例: "session_01h455vb..."）
- * - `toUUID()`: UUID 文字列を取得（例: "0188a5eb-4b84-..."）
- * - `getType()`: プレフィックスを取得（"session"）
- * - `getSuffix()`: サフィックス（base32 部分）を取得
- * - `toUUIDBytes()`: UUID のバイト配列を取得
  */
 
-import type { TypeID } from 'typeid-js';
+import { TypeID } from 'typeid-js';
+
+const SESSION_PREFIX = 'session' as const;
 
 /**
- * セッション ID の型（TypeID<'session'> のエイリアス）
+ * セッション ID クラス（TypeID<'session'> を継承）
  *
  * TypeID の全メソッドが利用可能:
- * - toString(): TypeID 文字列
- * - toUUID(): UUID 文字列
- * - getType(): プレフィックス
- * - getSuffix(): サフィックス
+ * - toString(): TypeID 文字列（例: "session_01h455vb..."）
+ * - toUUID(): UUID 文字列（例: "0188a5eb-4b84-..."）
+ * - getType(): プレフィックス（"session"）
+ * - getSuffix(): サフィックス（base32 部分）
  * - toUUIDBytes(): UUID バイト配列
+ *
+ * プレフィックス省略ファクトリメソッド:
+ * - SessionId.fromUUID(uuid)
+ * - SessionId.fromString(typeIdStr)
+ * - SessionId.fromUUIDBytes(bytes)
  */
-export type SessionId = TypeID<'session'>;
+// @ts-expect-error - SessionId の静的メソッドは固定プレフィックス 'session' を使用するため、
+// TypeID のジェネリック静的メソッドと厳密な互換性がないが、実行時には問題ない
+export class SessionId extends TypeID<typeof SESSION_PREFIX> {
+  /** 新しい SessionId を生成（UUIDv7 ベース） */
+  constructor() {
+    super(SESSION_PREFIX);
+  }
+
+  /** UUID 文字列から SessionId を作成 */
+  static fromUUID(uuid: string): SessionId {
+    const tid = TypeID.fromUUID(SESSION_PREFIX, uuid);
+    return Object.assign(Object.create(SessionId.prototype), tid) as SessionId;
+  }
+
+  /** TypeID 文字列（session_xxx）から SessionId を作成 */
+  static fromString(str: string): SessionId {
+    const tid = TypeID.fromString(str, SESSION_PREFIX);
+    return Object.assign(Object.create(SessionId.prototype), tid) as SessionId;
+  }
+
+  /** UUID バイト配列から SessionId を作成 */
+  static fromUUIDBytes(bytes: Uint8Array): SessionId {
+    const tid = TypeID.fromUUIDBytes(SESSION_PREFIX, bytes);
+    return Object.assign(Object.create(SessionId.prototype), tid) as SessionId;
+  }
+}

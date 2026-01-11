@@ -14,12 +14,11 @@ import type {
   SessionCreateEventData,
   SessionUpdateRequest,
 } from '@repo/types';
-import { typeid, TypeID } from 'typeid-js';
 import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 import { ensureDirectory } from '../utils/directory.js';
 import { wsManager } from './websocket-manager.service.js';
-import type { SessionId } from '../models/session.model.js';
+import { SessionId } from '../models/session.model.js';
 import path from 'node:path';
 
 /**
@@ -234,7 +233,7 @@ export async function createSession(
   const { events, session_context, title } = request;
 
   // 1. SessionId を生成（UUIDv7 ベース）
-  const sessionId: SessionId = typeid('session');
+  const sessionId = new SessionId();
 
   // 2. ユーザーメッセージのテキストを抽出
   const userEvent = events[0];
@@ -419,7 +418,7 @@ function toSessionResponse(row: {
   createdAt: Date;
   updatedAt: Date;
 }): SessionResponse {
-  const sessionId: SessionId = TypeID.fromUUID('session', row.id);
+  const sessionId = SessionId.fromUUID(row.id);
   return {
     id: sessionId.toString(),
     title: row.title,
@@ -443,7 +442,7 @@ export async function getSession(
   userId: string,
   sessionId: string
 ): Promise<SessionResponse | null> {
-  const sessionIdObj: SessionId = TypeID.fromString(sessionId, 'session');
+  const sessionIdObj = SessionId.fromString(sessionId);
 
   return fastify.withUserContext(userId, async tx => {
     const rows = await tx
@@ -474,7 +473,7 @@ export async function updateSession(
   request: SessionUpdateRequest
 ): Promise<SessionResponse | null> {
   const { title, session_status } = request;
-  const sessionIdObj: SessionId = TypeID.fromString(sessionId, 'session');
+  const sessionIdObj = SessionId.fromString(sessionId);
 
   return fastify.withUserContext(userId, async tx => {
     // 更新を実行（RETURNING で更新後の値を取得）
@@ -513,7 +512,7 @@ export async function archiveSession(
   userId: string,
   sessionId: string
 ): Promise<SessionResponse | null> {
-  const sessionIdObj: SessionId = TypeID.fromString(sessionId, 'session');
+  const sessionIdObj = SessionId.fromString(sessionId);
 
   return fastify.withUserContext(userId, async tx => {
     const rows = await tx

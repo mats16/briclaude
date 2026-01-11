@@ -1,12 +1,12 @@
 // apps/backend/src/models/session.model.test.ts
 import { describe, it, expect } from 'vitest';
-import { typeid, TypeID } from 'typeid-js';
-import type { SessionId } from './session.model.js';
+import { TypeID } from 'typeid-js';
+import { SessionId } from './session.model.js';
 
-describe('SessionId (TypeID<"session">)', () => {
-  describe('typeid("session")', () => {
+describe('SessionId', () => {
+  describe('constructor', () => {
     it('should generate a new SessionId with UUIDv7', () => {
-      const sessionId: SessionId = typeid('session');
+      const sessionId = new SessionId();
 
       expect(sessionId.toString()).toMatch(/^session_[a-z0-9]{26}$/);
       expect(sessionId.toUUID()).toMatch(
@@ -15,70 +15,105 @@ describe('SessionId (TypeID<"session">)', () => {
     });
 
     it('should generate unique IDs', () => {
-      const id1: SessionId = typeid('session');
-      const id2: SessionId = typeid('session');
+      const id1 = new SessionId();
+      const id2 = new SessionId();
 
       expect(id1.toString()).not.toBe(id2.toString());
       expect(id1.toUUID()).not.toBe(id2.toUUID());
     });
 
-    it('should return TypeID<"session"> type', () => {
-      const sessionId: SessionId = typeid('session');
+    it('should return "session" prefix', () => {
+      const sessionId = new SessionId();
 
       expect(sessionId.getType()).toBe('session');
     });
   });
 
-  describe('TypeID.fromUUID("session", uuid)', () => {
+  describe('fromUUID', () => {
     it('should create SessionId from valid UUIDv7', () => {
-      const original: SessionId = typeid('session');
+      const original = new SessionId();
       const uuid = original.toUUID();
-      const sessionId: SessionId = TypeID.fromUUID('session', uuid);
+      const sessionId = SessionId.fromUUID(uuid);
 
       expect(sessionId.toUUID()).toBe(uuid);
       expect(sessionId.toString()).toMatch(/^session_/);
     });
 
     it('should roundtrip UUID correctly', () => {
-      const original: SessionId = typeid('session');
+      const original = new SessionId();
       const uuid = original.toUUID();
-      const restored: SessionId = TypeID.fromUUID('session', uuid);
+      const restored = SessionId.fromUUID(uuid);
 
       expect(restored.toUUID()).toBe(uuid);
       expect(restored.toString()).toBe(original.toString());
     });
+
+    it('should return SessionId instance', () => {
+      const uuid = new SessionId().toUUID();
+      const sessionId = SessionId.fromUUID(uuid);
+
+      expect(sessionId).toBeInstanceOf(SessionId);
+      expect(sessionId).toBeInstanceOf(TypeID);
+    });
   });
 
-  describe('TypeID.fromString(typeIdStr, "session")', () => {
+  describe('fromString', () => {
     it('should create SessionId from valid TypeID string', () => {
-      const original: SessionId = typeid('session');
+      const original = new SessionId();
       const typeIdStr = original.toString();
-      const sessionId: SessionId = TypeID.fromString(typeIdStr, 'session');
+      const sessionId = SessionId.fromString(typeIdStr);
 
       expect(sessionId.toString()).toBe(typeIdStr);
     });
 
     it('should throw error for invalid TypeID prefix', () => {
-      expect(() => TypeID.fromString('user_01h455vb4pex5vsknk084sn02q', 'session')).toThrow();
+      expect(() => SessionId.fromString('user_01h455vb4pex5vsknk084sn02q')).toThrow();
     });
 
     it('should throw error for invalid TypeID format', () => {
-      expect(() => TypeID.fromString('invalid', 'session')).toThrow();
+      expect(() => SessionId.fromString('invalid')).toThrow();
     });
 
     it('should roundtrip TypeID correctly', () => {
-      const original: SessionId = typeid('session');
+      const original = new SessionId();
       const typeIdStr = original.toString();
-      const restored: SessionId = TypeID.fromString(typeIdStr, 'session');
+      const restored = SessionId.fromString(typeIdStr);
 
       expect(restored.toString()).toBe(typeIdStr);
       expect(restored.toUUID()).toBe(original.toUUID());
     });
+
+    it('should return SessionId instance', () => {
+      const typeIdStr = new SessionId().toString();
+      const sessionId = SessionId.fromString(typeIdStr);
+
+      expect(sessionId).toBeInstanceOf(SessionId);
+      expect(sessionId).toBeInstanceOf(TypeID);
+    });
   });
 
-  describe('SessionId methods (inherited from TypeID)', () => {
+  describe('fromUUIDBytes', () => {
+    it('should create SessionId from UUID bytes', () => {
+      const original = new SessionId();
+      const bytes = original.toUUIDBytes();
+      const sessionId = SessionId.fromUUIDBytes(bytes);
+
+      expect(sessionId.toUUID()).toBe(original.toUUID());
+      expect(sessionId.toString()).toBe(original.toString());
+    });
+
+    it('should return SessionId instance', () => {
+      const bytes = new SessionId().toUUIDBytes();
+      const sessionId = SessionId.fromUUIDBytes(bytes);
+
+      expect(sessionId).toBeInstanceOf(SessionId);
+      expect(sessionId).toBeInstanceOf(TypeID);
+    });
+  });
+
+  describe('inherited TypeID methods', () => {
     it('toUUID should return valid UUIDv7 format', () => {
-      const sessionId: SessionId = typeid('session');
+      const sessionId = new SessionId();
       const uuid = sessionId.toUUID();
 
       // UUID v7 format validation (version 7 in the 13th character)
@@ -86,20 +121,20 @@ describe('SessionId (TypeID<"session">)', () => {
     });
 
     it('toString should return TypeID format with session prefix', () => {
-      const sessionId: SessionId = typeid('session');
+      const sessionId = new SessionId();
       const str = sessionId.toString();
 
       expect(str).toMatch(/^session_[a-z0-9]{26}$/);
     });
 
     it('getType should return "session" prefix', () => {
-      const sessionId: SessionId = typeid('session');
+      const sessionId = new SessionId();
 
       expect(sessionId.getType()).toBe('session');
     });
 
     it('getSuffix should return base32 encoded suffix', () => {
-      const sessionId: SessionId = typeid('session');
+      const sessionId = new SessionId();
       const suffix = sessionId.getSuffix();
 
       expect(suffix).toMatch(/^[a-z0-9]{26}$/);
@@ -107,7 +142,7 @@ describe('SessionId (TypeID<"session">)', () => {
     });
 
     it('toUUIDBytes should return Uint8Array of 16 bytes', () => {
-      const sessionId: SessionId = typeid('session');
+      const sessionId = new SessionId();
       const bytes = sessionId.toUUIDBytes();
 
       expect(bytes).toBeInstanceOf(Uint8Array);
@@ -115,7 +150,7 @@ describe('SessionId (TypeID<"session">)', () => {
     });
 
     it('toUUIDBytes should be consistent with toUUID', () => {
-      const sessionId: SessionId = typeid('session');
+      const sessionId = new SessionId();
       const uuid = sessionId.toUUID();
       const bytes = sessionId.toUUIDBytes();
 
@@ -131,12 +166,12 @@ describe('SessionId (TypeID<"session">)', () => {
 
   describe('TypeID to UUID conversion consistency', () => {
     it('should maintain consistency between TypeID and UUID representations', () => {
-      const original: SessionId = typeid('session');
+      const original = new SessionId();
       const typeIdStr = original.toString();
       const uuid = original.toUUID();
 
-      const fromTypeId: SessionId = TypeID.fromString(typeIdStr, 'session');
-      const fromUuid: SessionId = TypeID.fromUUID('session', uuid);
+      const fromTypeId = SessionId.fromString(typeIdStr);
+      const fromUuid = SessionId.fromUUID(uuid);
 
       expect(fromTypeId.toUUID()).toBe(uuid);
       expect(fromTypeId.toString()).toBe(typeIdStr);
@@ -145,12 +180,18 @@ describe('SessionId (TypeID<"session">)', () => {
     });
   });
 
-  describe('Type safety', () => {
+  describe('Type compatibility', () => {
     it('SessionId should be assignable to TypeID<"session">', () => {
-      const sessionId: SessionId = typeid('session');
+      const sessionId = new SessionId();
+      const typeId: TypeID<'session'> = sessionId;
 
-      // This should compile and work
-      expect(sessionId.getType()).toBe('session');
+      expect(typeId.getType()).toBe('session');
+    });
+
+    it('SessionId extends TypeID', () => {
+      const sessionId = new SessionId();
+
+      expect(sessionId).toBeInstanceOf(TypeID);
     });
   });
 });
