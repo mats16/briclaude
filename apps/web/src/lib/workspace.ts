@@ -13,7 +13,7 @@ export const BREADCRUMB_SEGMENT_MAX_WIDTH = 120;
 export const BREADCRUMB_LAST_SEGMENT_MAX_WIDTH = 200;
 
 /** 最近使用した Workspace の最大保存件数 */
-export const MAX_RECENT_WORKSPACES = 3;
+export const MAX_RECENT_WORKSPACES = 4;
 
 /** 許可されるベースパスのプレフィックス */
 const ALLOWED_PATH_PREFIXES = ['/Workspace', '/Repos'] as const;
