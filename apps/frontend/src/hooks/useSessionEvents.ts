@@ -12,6 +12,7 @@ interface UseSessionEventsReturn {
   isLoading: boolean;
   isConnected: boolean;
   error: Error | null;
+  sendMessage: (content: string) => void;
 }
 
 export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSessionEventsReturn {
@@ -59,7 +60,7 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
   }, []);
 
   // WebSocket 接続
-  const { isConnected, error: wsError } = useSessionWebSocket({
+  const { isConnected, error: wsError, sendMessage } = useSessionWebSocket({
     sessionId,
     onEvent: handleEvent,
     onConnected: handleConnected,
@@ -79,5 +80,6 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
     isLoading,
     isConnected,
     error: error || wsError,
+    sendMessage,
   };
 }

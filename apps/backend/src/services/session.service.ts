@@ -17,12 +17,14 @@ import type {
   SessionStatus,
   SessionCreateEventData,
   SessionUpdateRequest,
+  CodedError,
 } from '@repo/types';
 import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 import { ensureDirectory, removeDirectory } from '../utils/directory.js';
 import { wsManager } from './websocket-manager.service.js';
 import { SessionId } from '../models/session.model.js';
+import type { UserContext } from '../lib/user-context.js';
 import path from 'node:path';
 
 /**
@@ -226,12 +228,14 @@ async function processRemainingEvents(
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
  * @param request - セッション作成リクエスト
+ * @param ctx - ユーザーコンテキスト
  * @returns セッション作成レスポンス
  */
 export async function createSession(
   fastify: FastifyInstance,
   userId: string,
-  request: SessionCreateRequest
+  request: SessionCreateRequest,
+  ctx: UserContext
 ): Promise<SessionCreateResponse> {
   const { events, session_context, title } = request;
 
@@ -243,7 +247,7 @@ export async function createSession(
   const userContent = userEvent?.data.message.content ?? '';
 
   // 3. cwd の生成（userHome + sessionId）TypeID 形式で使用
-  const userHome = fastify.requestContext.get('user_home') as string;
+  const { userHome } = ctx;
   /** Claude Code Working Directory  (e.g. /home/app/users/user1/session_xxx) */
   const cwd = path.join(userHome, sessionId.toString());
 
@@ -283,7 +287,31 @@ export async function createSession(
     });
   });
 
-  // 7. claude-agent-sdk で query 実行
+  // 7. アクセストークンを取得（PAT → SP フォールバック）
+  let accessToken: string | undefined;
+  try {
+    accessToken = await ctx.getAccessToken();
+  } catch (tokenError) {
+    fastify.log.error(
+      { sessionId: sessionId.toString(), userId, error: tokenError },
+      'Failed to retrieve access token'
+    );
+    const error = new Error(
+      'アクセストークンの取得中にエラーが発生しました。しばらく待ってから再試行してください。'
+    ) as CodedError;
+    error.code = 'TOKEN_RETRIEVAL_ERROR';
+    throw error;
+  }
+
+  if (!accessToken) {
+    const error = new Error(
+      'アクセストークンが取得できません。PATを登録するか、管理者に連絡してください。'
+    ) as CodedError;
+    error.code = 'NO_ACCESS_TOKEN';
+    throw error;
+  }
+
+  // 8. claude-agent-sdk で query 実行
   try {
     const response = query({
       prompt: userContent,
@@ -318,7 +346,7 @@ export async function createSession(
           CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
-          ANTHROPIC_AUTH_TOKEN: fastify.requestContext.get('pat'),
+          ANTHROPIC_AUTH_TOKEN: accessToken,
           ANTHROPIC_CUSTOM_HEADERS: 'x-databricks-disable-beta-headers: true',
           ANTHROPIC_DEFAULT_OPUS_MODEL: fastify.config.ANTHROPIC_DEFAULT_OPUS_MODEL,
           ANTHROPIC_DEFAULT_SONNET_MODEL: fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL,
@@ -498,21 +526,195 @@ export async function updateSession(
 }
 
 /**
+ * 既存セッションにメッセージを送信する
+ *
+ * 処理フロー:
+ * 1. セッション取得（sdkSessionId, status, context を取得）
+ * 2. archived → エラー throw
+ * 3. sdkSessionId が null → エラー throw（init 中）
+ * 4. その他 → 即時処理を開始
+ *    - user message を session_events に INSERT
+ *    - sessions.status を 'running' に UPDATE
+ *    - query({ resume: sdkSessionId, prompt }) で SDK 呼び出し
+ *    - バックグラウンドでイベント処理
+ *
+ * @param fastify - Fastify インスタンス
+ * @param userId - ユーザーID
+ * @param sessionId - SessionId オブジェクト
+ * @param userMessage - ユーザーメッセージ（SDKUserMessage）
+ * @param ctx - ユーザーコンテキスト
+ */
+export async function sendMessageToSession(
+  fastify: FastifyInstance,
+  userId: string,
+  sessionId: SessionId,
+  userMessage: SDKUserMessage,
+  ctx: UserContext
+): Promise<void> {
+  // 1. セッション情報を取得
+  const sessionRow = await fastify.withUserContext(userId, async tx => {
+    const rows = await tx
+      .select({
+        sdkSessionId: sessions.sdkSessionId,
+        status: sessions.status,
+        context: sessions.context,
+      })
+      .from(sessions)
+      .where(eq(sessions.id, sessionId.toUUID()))
+      .limit(1);
+    return rows[0] ?? null;
+  });
+
+  if (!sessionRow) {
+    throw new Error('Session not found');
+  }
+
+  // 2. archived の場合はエラー
+  if (sessionRow.status === 'archived') {
+    throw new Error('Session is archived');
+  }
+
+  // 3. sdkSessionId が null の場合はエラー（init 中）
+  if (!sessionRow.sdkSessionId) {
+    throw new Error('Session is not ready (still initializing)');
+  }
+
+  const sessionContext = sessionRow.context as SessionContextResponse;
+
+  // 4. user message を DB に保存し、status を running に更新
+  const eventUuid = userMessage.uuid ?? crypto.randomUUID();
+  await fastify.withUserContext(userId, async tx => {
+    // user message を session_events に INSERT
+    await insertSessionEventInTx(tx, {
+      uuid: eventUuid,
+      sessionId: sessionId.toUUID(),
+      type: 'user',
+      subtype: null,
+      message: userMessage,
+    });
+
+    // sessions.status を running に UPDATE
+    await tx
+      .update(sessions)
+      .set({ status: 'running', updatedAt: new Date() })
+      .where(eq(sessions.id, sessionId.toUUID()));
+  });
+
+  // WebSocket でユーザーメッセージをブロードキャスト
+  wsManager.broadcast(sessionId.toString(), userMessage);
+
+  // 5. アクセストークンを取得（PAT → SP フォールバック）
+  let accessToken: string | undefined;
+  try {
+    accessToken = await ctx.getAccessToken();
+  } catch (tokenError) {
+    fastify.log.error(
+      { sessionId: sessionId.toString(), userId, error: tokenError },
+      'Failed to retrieve access token'
+    );
+    const error = new Error(
+      'アクセストークンの取得中にエラーが発生しました。しばらく待ってから再試行してください。'
+    ) as CodedError;
+    error.code = 'TOKEN_RETRIEVAL_ERROR';
+    throw error;
+  }
+
+  if (!accessToken) {
+    const error = new Error(
+      'アクセストークンが取得できません。PATを登録するか、管理者に連絡してください。'
+    ) as CodedError;
+    error.code = 'NO_ACCESS_TOKEN';
+    throw error;
+  }
+  const { userHome } = ctx;
+
+  // 6. claude-agent-sdk で query 実行（resume オプション使用）
+  try {
+    const response = query({
+      prompt: userMessage.message.content,
+      options: {
+        resume: sessionRow.sdkSessionId,
+        cwd: sessionContext.cwd,
+        model: sessionContext.model as 'opus' | 'sonnet' | 'haiku',
+        maxTurns: 100,
+        settingSources: ['user', 'project', 'local'],
+        permissionMode: 'bypassPermissions',
+        systemPrompt: {
+          type: 'preset',
+          preset: 'claude_code',
+        },
+        tools: {
+          type: 'preset',
+          preset: 'claude_code',
+        },
+        allowedTools: [
+          'Skill',
+          'Bash',
+          'Read',
+          'Write',
+          'Edit',
+          'Glob',
+          'Grep',
+          'WebSearch',
+          'WebFetch',
+        ],
+        env: {
+          PATH: fastify.config.PATH,
+          HOME: userHome,
+          CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
+          // Claude Code
+          ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
+          ANTHROPIC_AUTH_TOKEN: accessToken,
+          ANTHROPIC_CUSTOM_HEADERS: 'x-databricks-disable-beta-headers: true',
+          ANTHROPIC_DEFAULT_OPUS_MODEL: fastify.config.ANTHROPIC_DEFAULT_OPUS_MODEL,
+          ANTHROPIC_DEFAULT_SONNET_MODEL: fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL,
+          ANTHROPIC_DEFAULT_HAIKU_MODEL: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
+          // Databricks
+          DATABRICKS_HOST: `https://${fastify.config.DATABRICKS_HOST}`,
+        },
+        sandbox: {
+          enabled: true,
+          autoAllowBashIfSandboxed: true,
+        },
+      },
+    });
+
+    // イベント処理（resume の場合は init イベントがないので直接処理）
+    const iterator = response[Symbol.asyncIterator]();
+    processRemainingEvents(iterator, fastify, userId, sessionId).catch(error => {
+      fastify.log.error(
+        { sessionId: sessionId.toString(), error },
+        'Background event processing failed'
+      );
+    });
+  } catch (error) {
+    // SDK呼び出し失敗時: sessions status を 'error' に更新
+    fastify.log.error({ sessionId: sessionId.toString(), error }, 'SDK resume query failed');
+    await fastify.withUserContext(userId, async tx => {
+      await tx.update(sessions).set({ status: 'error' }).where(eq(sessions.id, sessionId.toUUID()));
+    });
+    throw error;
+  }
+}
+
+/**
  * セッションをアーカイブする
  * ステータスを 'archived' に変更し、Working Directory を削除する
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
  * @param sessionId - SessionId オブジェクト
+ * @param ctx - ユーザーコンテキスト
  * @returns アーカイブ後のセッション情報（見つからない場合は null）
  */
 export async function archiveSession(
   fastify: FastifyInstance,
   userId: string,
-  sessionId: SessionId
+  sessionId: SessionId,
+  ctx: UserContext
 ): Promise<SessionResponse | null> {
   // user_home を取得（ベースディレクトリとして使用）
-  const userHome = fastify.requestContext.get('user_home') as string;
+  const { userHome } = ctx;
 
   return fastify.withUserContext(userId, async tx => {
     // 1. セッション情報を取得（cwd を取得するため）

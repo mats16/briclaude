@@ -2,10 +2,10 @@
  * WebSocket 関連の型定義
  */
 
-import type { SDKMessage } from './session.js';
+import type { SDKMessage, SDKUserMessage, SDKAuthStatusMessage } from './session.js';
 
-// SDKMessage を re-export（WebSocket でも使用）
-export type { SDKMessage };
+// SDKMessage, SDKUserMessage, SDKAuthStatusMessage を re-export（WebSocket でも使用）
+export type { SDKMessage, SDKUserMessage, SDKAuthStatusMessage };
 
 /**
  * WebSocket 接続時のサーバーからの初期メッセージ
@@ -35,11 +35,21 @@ export interface WsPongMessage {
 /**
  * WebSocket サーバー -> クライアントメッセージ
  */
-export type WsServerMessage = WsConnectedMessage | SDKMessage | WsErrorMessage | WsPongMessage;
+export type WsServerMessage =
+  | WsConnectedMessage
+  | SDKMessage
+  | SDKAuthStatusMessage
+  | WsErrorMessage
+  | WsPongMessage;
+
+/**
+ * WebSocket Ping メッセージ（クライアント -> サーバー）
+ */
+export interface WsPingMessage {
+  type: 'ping';
+}
 
 /**
  * WebSocket クライアント -> サーバーメッセージ
  */
-export interface WsClientMessage {
-  type: 'ping';
-}
+export type WsClientMessage = WsPingMessage | SDKUserMessage;
