@@ -17,7 +17,7 @@ async function getApiPort(maxRetries = 10, retryDelay = 500): Promise<number> {
         console.log(`✓ API server port detected: ${port}`);
         return port;
       }
-    } catch (err) {
+    } catch {
       // ファイルがまだ存在しない場合は待機
       if (i < maxRetries - 1) {
         await new Promise(resolve => setTimeout(resolve, retryDelay));

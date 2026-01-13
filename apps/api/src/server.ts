@@ -29,7 +29,7 @@ const start = async () => {
         try {
           await fs.unlink(PORT_FILE_PATH);
           app.log.info('API port file cleaned up');
-        } catch (err) {
+        } catch {
           // ファイルが存在しない場合は無視
         }
       };
