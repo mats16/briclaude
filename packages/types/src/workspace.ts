@@ -40,17 +40,15 @@ export interface WorkspaceGetStatusQuerystring {
 }
 
 /** GET /api/workspace/get-status response */
-export interface WorkspaceGetStatusResponse extends WorkspaceObjectInfo {}
+export type WorkspaceGetStatusResponse = WorkspaceObjectInfo;
 
 /** POST /api/workspace/mkdirs request body */
 export interface WorkspaceMkdirsRequest {
   path: string;
 }
 
-/** POST /api/workspace/mkdirs response */
-export interface WorkspaceMkdirsResponse {
-  // Empty object on success
-}
+/** POST /api/workspace/mkdirs response - Empty object on success */
+export type WorkspaceMkdirsResponse = Record<string, never>;
 
 // =====================================================
 // Workspace Selection Types (Frontend)
