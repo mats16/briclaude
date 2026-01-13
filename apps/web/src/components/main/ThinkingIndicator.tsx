@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { ToyBrick } from 'lucide-react';
 
+const THINKING_TEXT = 'Thinking...';
+
 export function ThinkingIndicator() {
-  const text = 'Thinking...';
   const [displayedText, setDisplayedText] = useState('');
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    if (index < text.length) {
+    if (index < THINKING_TEXT.length) {
       const timer = setTimeout(() => {
-        setDisplayedText(text.slice(0, index + 1));
+        setDisplayedText(THINKING_TEXT.slice(0, index + 1));
         setIndex(index + 1);
       }, 100);
       return () => clearTimeout(timer);

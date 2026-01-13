@@ -4,6 +4,28 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { cn } from '@/lib/utils';
 
+/**
+ * 安全なURLかどうかを検証
+ * javascript:, data:, vbscript: などの危険なプロトコルをブロック
+ */
+function isSafeUrl(url: string | undefined): boolean {
+  if (!url) return false;
+
+  // 相対URLは安全
+  if (url.startsWith('/') || url.startsWith('#') || url.startsWith('.')) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(url, window.location.origin);
+    const allowedProtocols = ['http:', 'https:', 'mailto:'];
+    return allowedProtocols.includes(parsed.protocol);
+  } catch {
+    // 不正なURLはブロック
+    return false;
+  }
+}
+
 interface MarkdownContentProps {
   content: string;
   className?: string;
@@ -72,17 +94,23 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
           li: ({ children }) => <li className="ml-2">{children}</li>,
           // 段落
           p: ({ children }) => <p className="my-1">{children}</p>,
-          // リンク
-          a: ({ href, children }) => (
-            <a
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary underline hover:no-underline"
-            >
-              {children}
-            </a>
-          ),
+          // リンク（安全なURLのみ許可）
+          a: ({ href, children }) => {
+            if (!isSafeUrl(href)) {
+              // 危険なURLはリンクとして表示しない
+              return <span className="text-muted-foreground">{children}</span>;
+            }
+            return (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline hover:no-underline"
+              >
+                {children}
+              </a>
+            );
+          },
           // 引用
           blockquote: ({ children }) => (
             <blockquote className="border-l-4 border-muted-foreground/30 pl-4 my-2 italic text-muted-foreground">
