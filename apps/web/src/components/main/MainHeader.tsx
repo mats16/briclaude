@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GitBranch, ExternalLink, Copy, ChevronDown, Pencil, Archive } from 'lucide-react';
+import { GitBranch, ExternalLink, Copy, ChevronDown, Pencil, Archive, PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,6 +26,8 @@ interface MainHeaderProps {
   isConnected?: boolean;
   onTitleUpdate?: (newTitle: string) => Promise<void>;
   onArchive?: () => Promise<void>;
+  isSidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
 }
 
 export function MainHeader({
@@ -35,6 +37,8 @@ export function MainHeader({
   isConnected = false,
   onTitleUpdate,
   onArchive,
+  isSidebarOpen = true,
+  onToggleSidebar,
 }: MainHeaderProps) {
   const { t } = useTranslation();
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
@@ -73,6 +77,20 @@ export function MainHeader({
     <>
       <div className="flex items-center justify-between h-[50px] px-4 border-b border-border">
         <div className="flex items-center gap-2 min-w-0">
+          {onToggleSidebar && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleSidebar}
+              className="h-8 w-8 shrink-0"
+            >
+              {isSidebarOpen ? (
+                <PanelLeftClose className="h-4 w-4" />
+              ) : (
+                <PanelLeft className="h-4 w-4" />
+              )}
+            </Button>
+          )}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>

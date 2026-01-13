@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { PanelLeft, PanelLeftClose } from 'lucide-react';
 import type { SessionCreateRequest } from '@repo/types';
 import { MainHeader } from './MainHeader';
 import { MessageArea } from './MessageArea';
@@ -9,12 +10,15 @@ import { WelcomeScreen } from './WelcomeScreen';
 import { useSessionEvents } from '@/hooks/useSessionEvents';
 import { useSession } from '@/hooks/useSession';
 import { sessionService } from '@/services/session.service';
+import { Button } from '@/components/ui/button';
 
 interface MainAreaProps {
   branchName?: string;
   onSendMessage?: (content: string) => void;
   onSessionArchived?: () => void;
   onSessionCreated?: () => void;
+  isSidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
 }
 
 export function MainArea({
@@ -22,6 +26,8 @@ export function MainArea({
   onSendMessage,
   onSessionArchived,
   onSessionCreated,
+  isSidebarOpen = true,
+  onToggleSidebar,
 }: MainAreaProps) {
   const { sessionId } = useParams<{ sessionId?: string }>();
   const navigate = useNavigate();
@@ -94,7 +100,27 @@ export function MainArea({
   if (!sessionId) {
     return (
       <div className="relative z-0 flex flex-col w-full h-full min-w-0 overflow-hidden bg-background">
-        <WelcomeScreen onNewSession={handleNewSession} sessionError={sessionError} />
+        {/* Simple header with toggle button only */}
+        <div className="flex items-center h-[50px] px-4 border-b border-border shrink-0">
+          {onToggleSidebar && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleSidebar}
+              className="h-8 w-8 shrink-0"
+            >
+              {isSidebarOpen ? (
+                <PanelLeftClose className="h-4 w-4" />
+              ) : (
+                <PanelLeft className="h-4 w-4" />
+              )}
+            </Button>
+          )}
+        </div>
+        <WelcomeScreen
+          onNewSession={handleNewSession}
+          sessionError={sessionError}
+        />
       </div>
     );
   }
@@ -108,6 +134,8 @@ export function MainArea({
         isConnected={isConnected}
         onTitleUpdate={handleTitleUpdate}
         onArchive={handleArchive}
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={onToggleSidebar}
       />
       <MessageArea events={events} isLoading={isLoading} error={error} />
       <InputArea
