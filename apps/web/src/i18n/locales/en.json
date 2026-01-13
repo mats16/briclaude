@@ -38,7 +38,10 @@
     "renameSession": "Rename",
     "archiveSession": "Archive",
     "renameSessionDescription": "Enter a new name for this session.",
-    "sessionTitlePlaceholder": "Session title"
+    "sessionTitlePlaceholder": "Session title",
+    "sessionNotFound": "Session not found",
+    "sessionNotFoundDescription": "This session may have been deleted or does not exist.",
+    "goHome": "Go to Home"
   },
   "image": {
     "unsupportedFormat": "{{fileName}} is not a supported image format",

@@ -38,7 +38,10 @@
     "renameSession": "名前を変更",
     "archiveSession": "アーカイブ",
     "renameSessionDescription": "このセッションの新しい名前を入力してください。",
-    "sessionTitlePlaceholder": "セッション名"
+    "sessionTitlePlaceholder": "セッション名",
+    "sessionNotFound": "セッションが見つかりませんでした",
+    "sessionNotFoundDescription": "このセッションは削除されたか、存在しない可能性があります。",
+    "goHome": "ホームに戻る"
   },
   "image": {
     "unsupportedFormat": "{{fileName}} はサポートされていない画像形式です",

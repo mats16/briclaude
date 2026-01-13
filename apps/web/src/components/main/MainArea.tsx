@@ -6,6 +6,7 @@ import { MainHeader } from './MainHeader';
 import { MessageArea } from './MessageArea';
 import { InputArea } from './InputArea';
 import { WelcomeScreen } from './WelcomeScreen';
+import { SessionNotFound } from './SessionNotFound';
 import { useSessionEvents } from '@/hooks/useSessionEvents';
 import { useSession } from '@/hooks/useSession';
 import { sessionService } from '@/services/session.service';
@@ -32,9 +33,14 @@ export function MainArea({
   const { sessionId } = useParams<{ sessionId?: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [createSessionError, setCreateSessionError] = useState<string | null>(null);
 
-  const { session, updateSession } = useSession({
+  const {
+    session,
+    updateSession,
+    isLoading: isSessionLoading,
+    error: sessionLoadError,
+  } = useSession({
     sessionId: sessionId ?? null,
   });
 
@@ -66,7 +72,7 @@ export function MainArea({
 
   const handleNewSession = async (content: UserMessageContentBlock[], modelId: string) => {
     try {
-      setSessionError(null);
+      setCreateSessionError(null);
       // タイトル生成用にテキストを抽出
       const textContent = extractTextFromContent(content);
       const title = await sessionService.generateTitle(textContent);
@@ -100,7 +106,7 @@ export function MainArea({
       navigate(`/${response.id}`);
     } catch (err) {
       console.error('Failed to create session:', err);
-      setSessionError(t('sidebar.sessionCreateError'));
+      setCreateSessionError(t('sidebar.sessionCreateError'));
     }
   };
 
@@ -114,8 +120,19 @@ export function MainArea({
             <SidebarToggleButton isOpen={isSidebarOpen} onToggle={onToggleSidebar} />
           )}
         </div>
-        <WelcomeScreen onNewSession={handleNewSession} sessionError={sessionError} />
+        <WelcomeScreen onNewSession={handleNewSession} sessionError={createSessionError} />
       </div>
+    );
+  }
+
+  // セッションが見つからない場合
+  if (!isSessionLoading && sessionLoadError) {
+    return (
+      <SessionNotFound
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={onToggleSidebar}
+        onGoHome={() => navigate('/')}
+      />
     );
   }
 
