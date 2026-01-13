@@ -1,5 +1,5 @@
 // apps/api/src/routes/session.ts
-import type { FastifyPluginAsync, FastifyReply } from 'fastify';
+import type { FastifyPluginAsync, FastifyReply, FastifyBaseLogger } from 'fastify';
 import type { WebSocket } from 'ws';
 import type {
   SessionCreateRequest,
@@ -60,10 +60,11 @@ function closeWebSocketWithError(
  * セッションIDをパースするヘルパー
  * 無効な TypeID 形式の場合は null を返す
  */
-function parseSessionId(sessionIdStr: string): SessionId | null {
+function parseSessionId(sessionIdStr: string, logger?: FastifyBaseLogger): SessionId | null {
   try {
     return SessionId.fromString(sessionIdStr);
-  } catch {
+  } catch (error) {
+    logger?.debug({ sessionIdStr, error }, 'Invalid session ID format');
     return null;
   }
 }
@@ -132,7 +133,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     }
 
     const { session_id } = request.params;
-    const sessionId = parseSessionId(session_id);
+    const sessionId = parseSessionId(session_id, request.log);
 
     if (!sessionId) {
       return sendError(reply, 404, 'NotFound', 'Session not found');
@@ -166,7 +167,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     }
 
     const { session_id } = request.params;
-    const sessionId = parseSessionId(session_id);
+    const sessionId = parseSessionId(session_id, request.log);
     const { title } = request.body;
 
     if (!sessionId) {
@@ -218,7 +219,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     }
 
     const { session_id } = request.params;
-    const sessionId = parseSessionId(session_id);
+    const sessionId = parseSessionId(session_id, request.log);
 
     if (!sessionId) {
       return sendError(reply, 404, 'NotFound', 'Session not found');
@@ -252,7 +253,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     }
 
     const { session_id } = request.params;
-    const sessionId = parseSessionId(session_id);
+    const sessionId = parseSessionId(session_id, request.log);
 
     if (!sessionId) {
       return sendError(reply, 404, 'NotFound', 'Session not found');
@@ -281,7 +282,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
   }>('/sessions/:session_id/subscribe', { websocket: true }, async (socket, request) => {
     const { user } = request.ctx!;
     const { session_id } = request.params;
-    const sessionId = parseSessionId(session_id);
+    const sessionId = parseSessionId(session_id, request.log);
 
     if (!sessionId) {
       closeWebSocketWithError(socket, 'NOT_FOUND', 'Session not found', 4004);
