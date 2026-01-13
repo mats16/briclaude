@@ -31,9 +31,7 @@ import path from 'node:path';
  * 単一の SDKUserMessage を AsyncIterable として返す
  * query() 関数に構造化コンテンツを渡すために使用
  */
-async function* singleMessageIterable(
-  msg: SDKUserMessage
-): AsyncIterable<SDKUserMessage> {
+async function* singleMessageIterable(msg: SDKUserMessage): AsyncIterable<SDKUserMessage> {
   yield msg;
 }
 

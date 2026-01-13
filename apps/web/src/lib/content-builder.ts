@@ -49,9 +49,7 @@ export function buildMessageContent(
  * 構造化コンテンツからテキストを抽出
  * - プレビュー表示用
  */
-export function extractTextFromContent(
-  content: string | UserMessageContentBlock[]
-): string {
+export function extractTextFromContent(content: string | UserMessageContentBlock[]): string {
   if (typeof content === 'string') return content;
 
   return content
@@ -63,9 +61,7 @@ export function extractTextFromContent(
 /**
  * コンテンツに画像が含まれているかチェック
  */
-export function hasImageContent(
-  content: string | UserMessageContentBlock[]
-): boolean {
+export function hasImageContent(content: string | UserMessageContentBlock[]): boolean {
   if (typeof content === 'string') return false;
 
   return content.some(block => block.type === 'image');
@@ -79,7 +75,5 @@ export function extractImageBlocks(
 ): ImageContentBlock[] {
   if (typeof content === 'string') return [];
 
-  return content.filter(
-    (block): block is ImageContentBlock => block.type === 'image'
-  );
+  return content.filter((block): block is ImageContentBlock => block.type === 'image');
 }

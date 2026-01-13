@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import useLocalStorageState from 'use-local-storage-state';
 import { useTranslation } from 'react-i18next';
 import { Send, Image, ChevronDown, Check, Loader2, Bug, FileSearch, Rocket } from 'lucide-react';
@@ -13,10 +13,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { QuickstartCard } from './QuickstartCard';
 import { QuickstartModal, QuickstartType } from './QuickstartModal';
+import { ImagePreview } from './ImagePreview';
+import { DropZoneOverlay } from './DropZoneOverlay';
+import { useImageAttachment } from '@/hooks/useImageAttachment';
+import { useDragDrop } from '@/hooks/useDragDrop';
+import { buildMessageContent } from '@/lib/content-builder';
 import { SESSION_MODELS, DEFAULT_SESSION_MODEL, TEXTAREA_MAX_HEIGHT_MAIN } from '@/constants';
+import type { UserMessageContentBlock } from '@repo/types';
 
 interface WelcomeScreenProps {
-  onNewSession?: (content: string, modelId: string) => Promise<void> | void;
+  onNewSession?: (content: UserMessageContentBlock[], modelId: string) => Promise<void> | void;
   sessionError?: string | null;
 }
 
@@ -29,6 +35,23 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
   const [selectedModel, setSelectedModel] = useState(DEFAULT_SESSION_MODEL);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // 画像添付フック
+  const { images, isProcessing, addImages, removeImage, clearImages, hasImages } =
+    useImageAttachment({
+      onError: message => {
+        // TODO: トーストで表示
+        console.error(message);
+      },
+    });
+
+  // ドラッグ&ドロップフック
+  const { isDragging } = useDragDrop(containerRef, {
+    onDrop: addImages,
+    disabled: isSubmitting,
+  });
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -38,16 +61,37 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
   }, [content]);
 
   const handleSubmit = async () => {
-    if (content.trim() && !isSubmitting) {
-      setIsSubmitting(true);
-      try {
-        await onNewSession?.(content.trim(), selectedModel.id);
-        setContent('');
-      } finally {
-        setIsSubmitting(false);
-      }
+    const hasContent = content.trim() || hasImages;
+    if (!hasContent || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const messageContent = buildMessageContent(content.trim(), images);
+      await onNewSession?.(messageContent, selectedModel.id);
+      setContent('');
+      clearImages();
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  const handleImageButtonClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (files && files.length > 0) {
+        addImages(files);
+      }
+      // 同じファイルを再選択できるようにリセット
+      e.target.value = '';
+    },
+    [addImages]
+  );
+
+  const canSubmit = (content.trim() || hasImages) && !isSubmitting;
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -80,8 +124,12 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8">
       {/* Chat Input Area */}
-      <div className="w-full max-w-3xl mb-6">
-        <div className="flex flex-col rounded-xl border border-border bg-background p-3 shadow-sm">
+      <div ref={containerRef} className="relative w-full max-w-3xl mb-6">
+        <DropZoneOverlay isVisible={isDragging} />
+        <div className="relative flex flex-col rounded-xl border border-border bg-background p-3 shadow-sm">
+          {/* 画像プレビュー */}
+          <ImagePreview images={images} onRemove={removeImage} disabled={isSubmitting} />
+
           <Textarea
             ref={textareaRef}
             value={content}
@@ -95,8 +143,18 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                    <Image className="h-4 w-4 text-muted-foreground" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={handleImageButtonClick}
+                    disabled={isSubmitting || isProcessing}
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Image className="h-4 w-4 text-muted-foreground" />
+                    )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -147,7 +205,7 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
                       size="icon"
                       className="h-8 w-8 shrink-0"
                       onClick={handleSubmit}
-                      disabled={!content.trim() || isSubmitting}
+                      disabled={!canSubmit}
                     >
                       {isSubmitting ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -169,6 +227,16 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
             <p className="text-sm text-destructive">{sessionError}</p>
           </div>
         )}
+
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          multiple
+          className="hidden"
+          onChange={handleFileChange}
+        />
       </div>
 
       {/* Quickstart Cards - Horizontal Layout */}

@@ -4,12 +4,7 @@ import { Send, Image, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-  TooltipProvider,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { TEXTAREA_MAX_HEIGHT_MAIN } from '@/constants';
 import { useImageAttachment } from '@/hooks/useImageAttachment';
 import { useDragDrop } from '@/hooks/useDragDrop';
@@ -99,10 +94,7 @@ export function InputArea({ sessionId, onSend, disabled }: InputAreaProps) {
 
   return (
     <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
-      <div
-        ref={containerRef}
-        className="relative w-full max-w-[735px] mx-auto pointer-events-auto"
-      >
+      <div ref={containerRef} className="relative w-full max-w-[735px] mx-auto pointer-events-auto">
         <DropZoneOverlay isVisible={isDragging} />
         <div className="relative flex flex-col rounded-xl border border-border bg-background p-2 shadow-lg">
           {/* 画像プレビュー */}

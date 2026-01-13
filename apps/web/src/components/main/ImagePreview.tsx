@@ -18,11 +18,7 @@ export function ImagePreview({ images, onRemove, disabled }: ImagePreviewProps) 
           key={img.id}
           className="relative group w-16 h-16 rounded-lg overflow-hidden border border-border bg-muted"
         >
-          <img
-            src={img.preview}
-            alt="Attached"
-            className="w-full h-full object-cover"
-          />
+          <img src={img.preview} alt="Attached" className="w-full h-full object-cover" />
           {!disabled && (
             <Button
               variant="destructive"

@@ -10,6 +10,7 @@ import { useSessionEvents } from '@/hooks/useSessionEvents';
 import { useSession } from '@/hooks/useSession';
 import { sessionService } from '@/services/session.service';
 import { SidebarToggleButton } from '@/components/layout/SidebarToggleButton';
+import { extractTextFromContent } from '@/lib/content-builder';
 
 interface MainAreaProps {
   branchName?: string;
@@ -63,10 +64,12 @@ export function MainArea({
     onSessionArchived?.();
   };
 
-  const handleNewSession = async (content: string, modelId: string) => {
+  const handleNewSession = async (content: UserMessageContentBlock[], modelId: string) => {
     try {
       setSessionError(null);
-      const title = await sessionService.generateTitle(content);
+      // タイトル生成用にテキストを抽出
+      const textContent = extractTextFromContent(content);
+      const title = await sessionService.generateTitle(textContent);
 
       const request: SessionCreateRequest = {
         title: title ?? undefined,

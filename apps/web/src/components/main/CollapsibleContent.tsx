@@ -23,7 +23,9 @@ export function CollapsibleContent({
   return (
     <div className="mt-1 ml-4">
       <div className="flex items-start gap-1 text-muted-foreground">
-        <span className="select-none" aria-hidden="true">└─</span>
+        <span className="select-none" aria-hidden="true">
+          └─
+        </span>
         <pre
           id={contentId}
           className={cn(
