@@ -19,8 +19,21 @@ vi.mock('openai', () => {
   return { default: MockOpenAI };
 });
 
-// Mock requestContext getter
-const mockRequestContextGet = vi.fn();
+// Mock UserContext
+const mockGetPat = vi.fn();
+const mockGetSpAccessToken = vi.fn();
+const mockGetAccessToken = vi.fn();
+
+vi.mock('../lib/user-context.js', () => ({
+  createUserContext: vi.fn(() => ({
+    userId: 'test-user',
+    userHome: '/home/test-user',
+    getPat: mockGetPat,
+    getSpAccessToken: mockGetSpAccessToken,
+    getAccessToken: mockGetAccessToken,
+    oboAccessToken: undefined,
+  })),
+}));
 
 describe('title route', () => {
   let app: FastifyInstance;
@@ -44,12 +57,10 @@ describe('title route', () => {
     // Reset mocks
     vi.clearAllMocks();
 
-    // Default: return PAT token
-    mockRequestContextGet.mockImplementation((key: string) => {
-      if (key === 'pat') return 'test-pat-token';
-      if (key === 'sp_access_token') return null;
-      return null;
-    });
+    // Default: return PAT token via getAccessToken
+    mockGetPat.mockResolvedValue('test-pat-token');
+    mockGetSpAccessToken.mockResolvedValue(null);
+    mockGetAccessToken.mockResolvedValue('test-pat-token');
   });
 
   afterEach(async () => {
@@ -63,13 +74,6 @@ describe('title route', () => {
   async function registerPlugins() {
     await app.register(configPlugin);
     await app.register(requestDecoratorPlugin);
-
-    // Mock fastify.requestContext
-    app.decorate('requestContext', {
-      get: mockRequestContextGet,
-      set: vi.fn(),
-      getStore: vi.fn(),
-    });
 
     await app.register(titleRoute, { prefix: '/api' });
   }
@@ -163,7 +167,9 @@ describe('title route', () => {
 
     it('should return 401 when no token is available (PAT and SP both missing)', async () => {
       // Mock: No PAT and no SP token
-      mockRequestContextGet.mockImplementation(() => null);
+      mockGetPat.mockResolvedValue(null);
+      mockGetSpAccessToken.mockResolvedValue(null);
+      mockGetAccessToken.mockResolvedValue(undefined);
 
       await registerPlugins();
 
@@ -183,11 +189,9 @@ describe('title route', () => {
 
     it('should use SP token when PAT is not available', async () => {
       // Mock: No PAT, but SP token is available
-      mockRequestContextGet.mockImplementation((key: string) => {
-        if (key === 'pat') return null;
-        if (key === 'sp_access_token') return 'test-sp-token';
-        return null;
-      });
+      mockGetPat.mockResolvedValue(null);
+      mockGetSpAccessToken.mockResolvedValue('test-sp-token');
+      mockGetAccessToken.mockResolvedValue('test-sp-token');
 
       mockCreate.mockResolvedValue({
         choices: [
@@ -215,12 +219,10 @@ describe('title route', () => {
     });
 
     it('should prefer PAT over SP token', async () => {
-      // Mock: Both PAT and SP token available
-      mockRequestContextGet.mockImplementation((key: string) => {
-        if (key === 'pat') return 'test-pat-token';
-        if (key === 'sp_access_token') return 'test-sp-token';
-        return null;
-      });
+      // Mock: Both PAT and SP token available - getAccessToken returns PAT
+      mockGetPat.mockResolvedValue('test-pat-token');
+      mockGetSpAccessToken.mockResolvedValue('test-sp-token');
+      mockGetAccessToken.mockResolvedValue('test-pat-token');
 
       mockCreate.mockResolvedValue({
         choices: [
@@ -246,8 +248,8 @@ describe('title route', () => {
       const body = response.json();
       expect(body.title).toBe('PAT Priority Test');
 
-      // Verify that requestContext.get was called for 'pat' first
-      expect(mockRequestContextGet).toHaveBeenCalledWith('pat');
+      // Verify that getAccessToken was called (which returns PAT first)
+      expect(mockGetAccessToken).toHaveBeenCalled();
     });
 
     it('should return 500 with ApiError when LLM call fails', async () => {

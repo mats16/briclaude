@@ -136,10 +136,10 @@ export interface SessionUpdateRequest {
 // Session Events Types (GET /api/sessions/:id/events)
 // =====================================================
 
-import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+import type { SDKMessage, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 
 // SDK Message 型を re-export
-export type { SDKMessage };
+export type { SDKMessage, SDKUserMessage };
 
 /**
  * GET /api/sessions/:session_id/events のクエリパラメータ

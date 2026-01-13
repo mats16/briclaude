@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { WsServerMessage, SDKMessage, WsConnectedMessage } from '@repo/types';
+import type { WsServerMessage, SDKMessage, SDKUserMessage, WsConnectedMessage } from '@repo/types';
 
 interface UseSessionWebSocketOptions {
   sessionId: string | null;
@@ -13,6 +13,7 @@ interface UseSessionWebSocketReturn {
   isConnecting: boolean;
   error: Error | null;
   reconnect: () => void;
+  sendMessage: (content: string) => void;
 }
 
 const MAX_RECONNECT_ATTEMPTS = 5;
@@ -135,10 +136,33 @@ export function useSessionWebSocket({
     return () => clearInterval(pingInterval);
   }, [isConnected]);
 
+  // メッセージ送信関数
+  const sendMessage = useCallback(
+    (content: string) => {
+      if (!sessionId || wsRef.current?.readyState !== WebSocket.OPEN) {
+        return;
+      }
+
+      const message: SDKUserMessage = {
+        type: 'user',
+        uuid: crypto.randomUUID(),
+        session_id: sessionId,
+        message: {
+          role: 'user',
+          content,
+        },
+        parent_tool_use_id: null,
+      };
+      wsRef.current.send(JSON.stringify(message));
+    },
+    [sessionId]
+  );
+
   return {
     isConnected,
     isConnecting,
     error,
     reconnect,
+    sendMessage,
   };
 }

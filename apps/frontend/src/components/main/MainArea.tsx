@@ -20,13 +20,13 @@ export function MainArea({ branchName, onSendMessage, onSessionArchived }: MainA
     sessionId: sessionId ?? null,
   });
 
-  const { events, isLoading, isConnected, error } = useSessionEvents({
+  const { events, isLoading, isConnected, error, sendMessage } = useSessionEvents({
     sessionId: sessionId ?? null,
   });
 
   const handleSend = (content: string) => {
     onSendMessage?.(content);
-    // TODO: 実行中のセッションにメッセージ送信機能（Phase 2）
+    sendMessage(content);
   };
 
   const handleTitleUpdate = async (newTitle: string) => {
@@ -59,7 +59,11 @@ export function MainArea({ branchName, onSendMessage, onSessionArchived }: MainA
         onArchive={handleArchive}
       />
       <MessageArea events={events} isLoading={isLoading} error={error} />
-      <InputArea sessionId={sessionId} onSend={handleSend} />
+      <InputArea
+        sessionId={sessionId}
+        onSend={handleSend}
+        disabled={session?.session_status === 'archived'}
+      />
     </div>
   );
 }

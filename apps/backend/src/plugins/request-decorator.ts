@@ -34,8 +34,8 @@ export default fp(
     // Add request context decorator
     fastify.decorateRequest('ctx', null);
 
-    // Add preHandler hook for extracting request context
-    fastify.addHook('preHandler', async (req, _reply) => {
+    // Add onRequest hook for extracting request context
+    fastify.addHook('onRequest', async (req, _reply) => {
       const userEmail = (req.headers['x-forwarded-email'] ?? '') as string;
       req.ctx = {
         host: (req.headers['x-forwarded-host'] as string) ?? req.hostname,

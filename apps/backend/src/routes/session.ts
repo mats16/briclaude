@@ -21,10 +21,12 @@ import {
   getSession,
   updateSession,
   archiveSession,
+  sendMessageToSession,
 } from '../services/session.service.js';
 import { listSessionEvents, getSessionLastEventId } from '../services/session-events.service.js';
 import { wsManager } from '../services/websocket-manager.service.js';
 import { SessionId } from '../models/session.model.js';
+import { createUserContext } from '../lib/user-context.js';
 
 /**
  * エラーレスポンスを生成するヘルパー
@@ -70,7 +72,8 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     }
 
     try {
-      const result = await createSession(fastify, user.id, request.body);
+      const ctx = createUserContext(fastify, request);
+      const result = await createSession(fastify, user.id, request.body, ctx);
       return reply.status(201).send(result);
     } catch (error) {
       request.log.error(error, 'Failed to create session');
@@ -196,7 +199,8 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     const sessionId = SessionId.fromString(session_id);
 
     try {
-      const session = await archiveSession(fastify, user.id, sessionId);
+      const ctx = createUserContext(fastify, request);
+      const session = await archiveSession(fastify, user.id, sessionId, ctx);
 
       if (!session) {
         return sendError(reply, 404, 'NotFound', 'Session not found');
@@ -253,6 +257,10 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
       return;
     }
 
+    // WebSocket接続時に UserContext を生成して保持
+    // （message イベントハンドラ内でも使用するため）
+    const ctx = createUserContext(fastify, request);
+
     try {
       // 最新イベント ID を取得して接続成功メッセージを送信
       const lastEventId = await getSessionLastEventId(fastify, user.id, sessionId);
@@ -269,12 +277,26 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
 
       request.log.info({ sessionId: session_id, userId: user.id }, 'WebSocket connected');
 
-      // クライアントからのメッセージ処理（ping/pong）
-      socket.on('message', (data: Buffer) => {
+      // クライアントからのメッセージ処理（ping/pong, user message）
+      socket.on('message', async (data: Buffer) => {
         try {
           const msg = JSON.parse(data.toString());
           if (msg.type === 'ping') {
             socket.send(JSON.stringify({ type: 'pong' }));
+          } else if (msg.type === 'user') {
+            // SDKUserMessage を受信 → セッションにメッセージ送信
+            try {
+              await sendMessageToSession(fastify, user.id, sessionId, msg, ctx);
+            } catch (error) {
+              request.log.error(error, 'Failed to send message to session');
+              // エラー時は WsErrorMessage を送信
+              const errorMsg: WsErrorMessage = {
+                type: 'error',
+                code: 'MESSAGE_SEND_ERROR',
+                message: error instanceof Error ? error.message : 'Failed to send message',
+              };
+              socket.send(JSON.stringify(errorMsg));
+            }
           }
         } catch {
           // JSON パースエラーは無視
