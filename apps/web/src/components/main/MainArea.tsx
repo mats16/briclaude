@@ -97,7 +97,9 @@ export function MainArea({
           sources: workspacePath
             ? [{ type: 'databricks_workspace', path: workspacePath }]
             : [],
-          outcomes: [],
+          outcomes: workspacePath
+            ? [{ type: 'databricks_workspace', path: workspacePath }]
+            : [],
         },
       };
 
