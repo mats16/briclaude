@@ -1,8 +1,26 @@
+import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { cn } from '@/lib/utils';
+
+import type { Element } from 'hast';
+
+/**
+ * hast ノードの子要素が単一の p タグかどうかを判定
+ */
+function hasOnlyParagraphChild(node: Element | undefined): boolean {
+  if (!node?.children) return false;
+
+  // element タイプの子要素のみをフィルタ
+  const elementChildren = node.children.filter(
+    (child): child is Element => child.type === 'element'
+  );
+
+  // 単一の p タグの場合
+  return elementChildren.length === 1 && elementChildren[0].tagName === 'p';
+}
 
 /**
  * 安全なURLかどうかを検証
@@ -33,7 +51,7 @@ interface MarkdownContentProps {
 
 export function MarkdownContent({ content, className }: MarkdownContentProps) {
   return (
-    <div className={cn('max-w-none', className)}>
+    <div className={cn('max-w-none whitespace-normal', className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -86,12 +104,25 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
           h4: ({ children }) => <h4 className="text-sm font-bold mt-2 mb-1">{children}</h4>,
           // リスト
           ul: ({ children }) => (
-            <ul className="list-disc list-inside my-2 space-y-1">{children}</ul>
+            <ul className="list-disc list-inside my-2">{children}</ul>
           ),
           ol: ({ children }) => (
-            <ol className="list-decimal list-inside my-2 space-y-1">{children}</ol>
+            <ol className="list-decimal list-inside my-2">{children}</ol>
           ),
-          li: ({ children }) => <li className="ml-2">{children}</li>,
+          li: ({ children, node }) => {
+            // 緩いリストの場合、li 内に p タグが生成される
+            // その場合は children をそのまま表示（p のマージンは CSS で調整）
+            // node を使って p タグのみの場合を検出し、インラインで表示
+            if (hasOnlyParagraphChild(node)) {
+              // p タグの children を直接展開してインラインで表示
+              const childArray = React.Children.toArray(children);
+              if (childArray.length === 1 && React.isValidElement(childArray[0])) {
+                const pProps = childArray[0].props as { children?: React.ReactNode };
+                return <li className="ml-2">{pProps.children}</li>;
+              }
+            }
+            return <li className="ml-2">{children}</li>;
+          },
           // 段落
           p: ({ children }) => <p className="my-1">{children}</p>,
           // リンク（安全なURLのみ許可）
