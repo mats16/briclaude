@@ -38,6 +38,7 @@
     "emptyChat": "会話を開始",
     "renameSession": "名前を変更",
     "archiveSession": "アーカイブ",
+    "archiveSessionError": "セッションのアーカイブに失敗しました",
     "renameSessionDescription": "このセッションの新しい名前を入力してください。",
     "sessionTitlePlaceholder": "セッション名",
     "sessionNotFound": "セッションが見つかりませんでした",

@@ -1,5 +1,8 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import type { SessionResponse } from '@repo/types';
 import { useSessions } from '@/hooks/useSessions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { sessionService } from '@/services';
@@ -13,7 +16,14 @@ const SIDEBAR_WIDTH = 300;
 export function AppLayout() {
   const { sessionId } = useParams<{ sessionId?: string }>();
   const navigate = useNavigate();
-  const { sessions, isLoading: isSessionsLoading, refetch: refetchSessions } = useSessions();
+  const { t } = useTranslation();
+  const {
+    sessions,
+    isLoading: isSessionsLoading,
+    refetch: refetchSessions,
+    updateSession,
+    getSession,
+  } = useSessions();
   const isMobile = useIsMobile();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -37,14 +47,37 @@ export function AppLayout() {
   );
 
   const handleArchiveSession = useCallback(
-    async (targetSessionId: string) => {
-      await sessionService.archiveSession(targetSessionId);
-      refetchSessions();
-      if (sessionId === targetSessionId) {
+    async (targetSessionId: string, shouldNavigate = false) => {
+      const originalSession = getSession(targetSessionId);
+      if (!originalSession) return;
+
+      // Optimistic update
+      const optimisticSession: SessionResponse = {
+        ...originalSession,
+        session_status: 'archived',
+      };
+      updateSession(optimisticSession);
+
+      // Navigate if needed
+      const needsNavigation = shouldNavigate || sessionId === targetSessionId;
+      if (needsNavigation) {
         navigate('/');
       }
+
+      try {
+        await sessionService.archiveSession(targetSessionId);
+      } catch {
+        // Rollback on failure
+        updateSession(originalSession);
+        toast.error(t('main.archiveSessionError'));
+      }
     },
-    [refetchSessions, sessionId, navigate]
+    [getSession, updateSession, sessionId, navigate, t]
+  );
+
+  const handleMainAreaArchive = useCallback(
+    (targetSessionId: string) => handleArchiveSession(targetSessionId, true),
+    [handleArchiveSession]
   );
 
   const sidebarProps = useMemo(
@@ -70,7 +103,7 @@ export function AppLayout() {
               <SidebarTrigger />
             </div>
             <div className="flex-1 min-h-0">
-              <MainArea onSessionArchived={refetchSessions} onSessionCreated={refetchSessions} />
+              <MainArea onSessionArchived={handleMainAreaArchive} onSessionCreated={refetchSessions} />
             </div>
           </div>
         </div>
@@ -103,7 +136,7 @@ export function AppLayout() {
         {/* Main Area */}
         <div className="flex-1 h-full min-w-0">
           <MainArea
-            onSessionArchived={refetchSessions}
+            onSessionArchived={handleMainAreaArchive}
             onSessionCreated={refetchSessions}
             isSidebarOpen={isSidebarOpen}
             onToggleSidebar={toggleSidebar}

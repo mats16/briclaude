@@ -16,7 +16,7 @@ import { extractTextFromContent } from '@/lib/content-builder';
 interface MainAreaProps {
   branchName?: string;
   onSendMessage?: (content: UserMessageContentBlock[]) => void;
-  onSessionArchived?: () => void;
+  onSessionArchived?: (sessionId: string) => void;
   onSessionCreated?: () => void;
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
@@ -74,8 +74,7 @@ export function MainArea({
 
   const handleArchive = async () => {
     if (!sessionId) return;
-    await sessionService.archiveSession(sessionId);
-    onSessionArchived?.();
+    onSessionArchived?.(sessionId);
   };
 
   const handleNewSession = async (
