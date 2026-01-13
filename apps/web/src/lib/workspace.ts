@@ -34,7 +34,7 @@ const ALLOWED_PATH_PREFIXES = ['/Workspace', '/Repos'] as const;
 export function extractNameFromPath(path: string): string {
   if (!path) return '';
   const segments = path.split('/').filter(Boolean);
-  return segments[segments.length - 1] ?? path;
+  return segments[segments.length - 1] ?? '';
 }
 
 /**
@@ -75,6 +75,11 @@ export function sanitizePath(path: string): string {
 
   // トリムして正規化
   let sanitized = path.trim();
+
+  // トリム後も空文字列チェック
+  if (!sanitized) {
+    throw new Error('Path is required');
+  }
 
   // パストラバーサル攻撃の検出（../ や ..\）
   if (sanitized.includes('..')) {
