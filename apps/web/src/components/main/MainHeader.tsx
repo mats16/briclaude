@@ -75,7 +75,7 @@ export function MainHeader({
 
   return (
     <>
-      <div className="flex items-center justify-between h-[50px] px-4 border-b border-border">
+      <div className="flex items-center justify-between h-[50px] px-2 border-b border-border">
         <div className="flex items-center gap-2 min-w-0">
           {onToggleSidebar && (
             <Button

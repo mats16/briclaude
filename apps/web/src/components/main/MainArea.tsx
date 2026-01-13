@@ -101,7 +101,7 @@ export function MainArea({
     return (
       <div className="relative z-0 flex flex-col w-full h-full min-w-0 overflow-hidden bg-background">
         {/* Simple header with toggle button only */}
-        <div className="flex items-center h-[50px] px-4 border-b border-border shrink-0">
+        <div className="flex items-center h-[50px] px-2 border-b border-border shrink-0">
           {onToggleSidebar && (
             <Button
               variant="ghost"
