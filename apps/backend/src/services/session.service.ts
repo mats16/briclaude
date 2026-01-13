@@ -287,7 +287,21 @@ export async function createSession(
   });
 
   // 7. アクセストークンを取得（PAT → SP フォールバック）
-  const accessToken = await ctx.getAccessToken();
+  let accessToken: string | undefined;
+  try {
+    accessToken = await ctx.getAccessToken();
+  } catch (tokenError) {
+    fastify.log.error(
+      { sessionId: sessionId.toString(), userId, error: tokenError },
+      'Failed to retrieve access token'
+    );
+    const error = new Error(
+      'アクセストークンの取得中にエラーが発生しました。しばらく待ってから再試行してください。'
+    );
+    (error as Error & { code: string }).code = 'TOKEN_RETRIEVAL_ERROR';
+    throw error;
+  }
+
   if (!accessToken) {
     const error = new Error(
       'アクセストークンが取得できません。PATを登録するか、管理者に連絡してください。'
@@ -589,7 +603,21 @@ export async function sendMessageToSession(
   wsManager.broadcast(sessionId.toString(), userMessage);
 
   // 5. アクセストークンを取得（PAT → SP フォールバック）
-  const accessToken = await ctx.getAccessToken();
+  let accessToken: string | undefined;
+  try {
+    accessToken = await ctx.getAccessToken();
+  } catch (tokenError) {
+    fastify.log.error(
+      { sessionId: sessionId.toString(), userId, error: tokenError },
+      'Failed to retrieve access token'
+    );
+    const error = new Error(
+      'アクセストークンの取得中にエラーが発生しました。しばらく待ってから再試行してください。'
+    );
+    (error as Error & { code: string }).code = 'TOKEN_RETRIEVAL_ERROR';
+    throw error;
+  }
+
   if (!accessToken) {
     const error = new Error(
       'アクセストークンが取得できません。PATを登録するか、管理者に連絡してください。'

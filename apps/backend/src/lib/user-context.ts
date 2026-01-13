@@ -14,8 +14,8 @@ export class UserContext {
   /** ユーザーのホームディレクトリ */
   readonly userHome: string;
 
-  private _pat: string | undefined | null = null; // null = 未取得
-  private _spAccessToken: string | undefined | null = null;
+  /** PAT キャッシュ（リクエストスコープ）: null = 未取得 */
+  private _pat: string | undefined | null = null;
 
   constructor(
     private readonly fastify: FastifyInstance,
@@ -27,7 +27,7 @@ export class UserContext {
   }
 
   /**
-   * PAT を取得（遅延評価、キャッシュ付き）
+   * PAT を取得（遅延評価、リクエストスコープでキャッシュ）
    * DB から取得するため非同期
    */
   async getPat(): Promise<string | undefined> {
@@ -47,14 +47,11 @@ export class UserContext {
   }
 
   /**
-   * SP トークンを取得（遅延評価、キャッシュ付き）
+   * SP トークンを取得（キャッシュなし - token-resolver.service 側でグローバルキャッシュあり）
    * OAuth から取得するため非同期
    */
   async getSpAccessToken(): Promise<string | undefined> {
-    if (this._spAccessToken === null) {
-      this._spAccessToken = await getServicePrincipalToken(this.fastify);
-    }
-    return this._spAccessToken;
+    return getServicePrincipalToken(this.fastify);
   }
 
   /**
