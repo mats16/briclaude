@@ -91,7 +91,6 @@ export function MainArea({
     } catch (err) {
       console.error('Failed to create session:', err);
       setSessionError(t('sidebar.sessionCreateError'));
-      throw err;
     }
   };
 
