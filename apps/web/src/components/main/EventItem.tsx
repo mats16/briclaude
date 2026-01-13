@@ -18,6 +18,44 @@ import {
   type ToolUseBlock as ToolUseBlockType,
 } from '@/lib/message-utils';
 
+// XSS対策: 許可されたメディアタイプのホワイトリスト
+const ALLOWED_IMAGE_MEDIA_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+]);
+
+/**
+ * 安全な画像 data URL を生成する
+ * media_type と data を検証してからURLを構築
+ */
+function createSafeImageDataUrl(source: ImageContentBlockType['source']): string | null {
+  const { media_type, data } = source;
+
+  // media_type のホワイトリスト検証
+  if (!ALLOWED_IMAGE_MEDIA_TYPES.has(media_type)) {
+    console.warn(`Invalid media type rejected: ${media_type}`);
+    return null;
+  }
+
+  // data が有効な base64 文字列かチェック（基本的なバリデーション）
+  if (typeof data !== 'string' || data.length === 0) {
+    console.warn('Invalid image data');
+    return null;
+  }
+
+  // base64文字列に不正な文字が含まれていないか確認
+  const base64Regex = /^[A-Za-z0-9+/=]+$/;
+  if (!base64Regex.test(data)) {
+    console.warn('Invalid base64 data');
+    return null;
+  }
+
+  return `data:${media_type};base64,${data}`;
+}
+
 interface EventItemProps {
   event: SDKMessage;
   toolResultMap: Map<string, ToolResult>;
@@ -158,10 +196,21 @@ export function EventItem({ event, toolResultMap, childEventsMap }: EventItemPro
       >
         {parsed.contents.map((content, index) => {
           if (content.type === 'image') {
+            const safeDataUrl = createSafeImageDataUrl(content.source);
+            if (!safeDataUrl) {
+              return (
+                <div
+                  key={index}
+                  className="max-w-[300px] p-4 bg-muted rounded-lg mb-2 text-muted-foreground text-xs"
+                >
+                  Invalid image format
+                </div>
+              );
+            }
             return (
               <img
                 key={index}
-                src={`data:${content.source.media_type};base64,${content.source.data}`}
+                src={safeDataUrl}
                 alt="User attached"
                 className="max-w-[300px] max-h-[300px] rounded-lg mb-2"
               />

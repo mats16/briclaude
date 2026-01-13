@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, type RefObject } from 'react';
+import { useState, useEffect, useRef, type RefObject } from 'react';
 
 interface UseDragDropOptions {
   onDrop: (files: FileList) => void;
@@ -18,84 +18,79 @@ export function useDragDrop(
   const [isDragging, setIsDragging] = useState(false);
   const dragCounterRef = useRef(0);
 
-  const handleDragEnter = useCallback(
-    (e: DragEvent) => {
+  // 最新のオプションをrefで保持して、イベントリスナーの再登録を防ぐ
+  const optionsRef = useRef({ onDrop, accept, disabled });
+  optionsRef.current = { onDrop, accept, disabled };
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const matchesAccept = (fileType: string, acceptTypes: string[]) =>
+      acceptTypes.some(type => {
+        if (type.endsWith('/*')) {
+          return fileType.startsWith(type.replace('/*', '/'));
+        }
+        return fileType === type;
+      });
+
+    const handleDragEnter = (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
 
-      if (disabled) return;
+      if (optionsRef.current.disabled) return;
 
       dragCounterRef.current += 1;
 
       if (e.dataTransfer?.items) {
-        const hasValidItem = Array.from(e.dataTransfer.items).some(item => {
-          if (item.kind !== 'file') return false;
-          return accept.some(type => {
-            if (type.endsWith('/*')) {
-              return item.type.startsWith(type.replace('/*', '/'));
-            }
-            return item.type === type;
-          });
-        });
+        const hasValidItem = Array.from(e.dataTransfer.items).some(
+          item => item.kind === 'file' && matchesAccept(item.type, optionsRef.current.accept)
+        );
         if (hasValidItem) {
           setIsDragging(true);
         }
       }
-    },
-    [accept, disabled]
-  );
+    };
 
-  const handleDragLeave = useCallback((e: DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
 
-    dragCounterRef.current -= 1;
-    if (dragCounterRef.current === 0) {
-      setIsDragging(false);
-    }
-  }, []);
+      dragCounterRef.current -= 1;
+      if (dragCounterRef.current === 0) {
+        setIsDragging(false);
+      }
+    };
 
-  const handleDragOver = useCallback((e: DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
 
-  const handleDrop = useCallback(
-    (e: DragEvent) => {
+    const handleDrop = (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
 
       setIsDragging(false);
       dragCounterRef.current = 0;
 
-      if (disabled) return;
+      if (optionsRef.current.disabled) return;
 
       const files = e.dataTransfer?.files;
       if (files && files.length > 0) {
         // 画像ファイルのみフィルタ
         const imageFiles = Array.from(files).filter(file =>
-          accept.some(type => {
-            if (type.endsWith('/*')) {
-              return file.type.startsWith(type.replace('/*', '/'));
-            }
-            return file.type === type;
-          })
+          matchesAccept(file.type, optionsRef.current.accept)
         );
 
         if (imageFiles.length > 0) {
           // FileList を作成できないので、DataTransfer を使用
           const dt = new DataTransfer();
           imageFiles.forEach(file => dt.items.add(file));
-          onDrop(dt.files);
+          optionsRef.current.onDrop(dt.files);
         }
       }
-    },
-    [accept, disabled, onDrop]
-  );
-
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
+    };
 
     element.addEventListener('dragenter', handleDragEnter);
     element.addEventListener('dragleave', handleDragLeave);
@@ -108,7 +103,7 @@ export function useDragDrop(
       element.removeEventListener('dragover', handleDragOver);
       element.removeEventListener('drop', handleDrop);
     };
-  }, [ref, handleDragEnter, handleDragLeave, handleDragOver, handleDrop]);
+  }, [ref]);
 
   return { isDragging };
 }

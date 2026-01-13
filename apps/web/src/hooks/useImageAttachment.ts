@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AttachedImage } from '@/lib/content-builder';
 import {
   encodeImageToWebP,
@@ -24,9 +25,20 @@ interface UseImageAttachmentReturn {
 export function useImageAttachment(
   options: UseImageAttachmentOptions = {}
 ): UseImageAttachmentReturn {
+  const { t } = useTranslation();
   const { maxImages = MAX_IMAGES_PER_MESSAGE, onError } = options;
   const [images, setImages] = useState<AttachedImage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // メモリリーク対策: マウント状態を追跡
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const addImages = useCallback(
     async (files: FileList | File[]) => {
@@ -35,11 +47,11 @@ export function useImageAttachment(
       // 有効なファイルをフィルタ
       const validFiles = fileArray.filter(file => {
         if (!isValidImageFile(file)) {
-          onError?.(`${file.name} is not a supported image format`);
+          onError?.(t('image.unsupportedFormat', { fileName: file.name }));
           return false;
         }
         if (!isValidImageSize(file)) {
-          onError?.(`${file.name} exceeds maximum file size (20MB)`);
+          onError?.(t('image.exceedsMaxSize', { fileName: file.name }));
           return false;
         }
         return true;
@@ -50,12 +62,12 @@ export function useImageAttachment(
       const availableSlots = maxImages - currentCount;
 
       if (availableSlots <= 0) {
-        onError?.(`Maximum ${maxImages} images allowed`);
+        onError?.(t('image.maxImagesAllowed', { count: maxImages }));
         return;
       }
 
       if (validFiles.length > availableSlots) {
-        onError?.(`Maximum ${maxImages} images allowed`);
+        onError?.(t('image.maxImagesAllowed', { count: maxImages }));
         validFiles.splice(availableSlots);
       }
 
@@ -78,14 +90,25 @@ export function useImageAttachment(
           })
         );
 
+        // メモリリーク対策: アンマウント後は state を更新しない
+        if (!isMountedRef.current) {
+          // アンマウント済みの場合、作成したオブジェクトURLを解放
+          newImages.forEach(img => URL.revokeObjectURL(img.preview));
+          return;
+        }
+
         setImages(prev => [...prev, ...newImages]);
       } catch {
-        onError?.('Failed to process image');
+        if (isMountedRef.current) {
+          onError?.(t('image.processingFailed'));
+        }
       } finally {
-        setIsProcessing(false);
+        if (isMountedRef.current) {
+          setIsProcessing(false);
+        }
       }
     },
-    [images.length, maxImages, onError]
+    [images.length, maxImages, onError, t]
   );
 
   const removeImage = useCallback((id: string) => {

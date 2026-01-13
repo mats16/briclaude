@@ -40,6 +40,12 @@
     "renameSessionDescription": "このセッションの新しい名前を入力してください。",
     "sessionTitlePlaceholder": "セッション名"
   },
+  "image": {
+    "unsupportedFormat": "{{fileName}} はサポートされていない画像形式です",
+    "exceedsMaxSize": "{{fileName}} が最大ファイルサイズ (20MB) を超えています",
+    "maxImagesAllowed": "最大 {{count}} 枚の画像まで添付できます",
+    "processingFailed": "画像の処理に失敗しました"
+  },
   "user": {
     "settings": "設定",
     "language": "言語",

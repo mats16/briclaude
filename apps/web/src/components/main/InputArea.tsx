@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import useLocalStorageState from 'use-local-storage-state';
 import { Send, Image, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -90,7 +90,10 @@ export function InputArea({ sessionId, onSend, disabled }: InputAreaProps) {
     [addImages]
   );
 
-  const canSubmit = (content.trim() || hasImages) && !disabled && !isSubmitting;
+  const canSubmit = useMemo(
+    () => (content.trim() || hasImages) && !disabled && !isSubmitting,
+    [content, hasImages, disabled, isSubmitting]
+  );
 
   return (
     <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
