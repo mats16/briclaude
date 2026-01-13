@@ -38,6 +38,7 @@
     "emptyChat": "Start a conversation",
     "renameSession": "Rename",
     "archiveSession": "Archive",
+    "archiveSessionError": "Failed to archive session",
     "renameSessionDescription": "Enter a new name for this session.",
     "sessionTitlePlaceholder": "Session title",
     "sessionNotFound": "Session not found",

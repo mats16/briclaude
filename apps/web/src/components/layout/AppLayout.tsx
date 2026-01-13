@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { SessionResponse } from '@repo/types';
 import { useSessions } from '@/hooks/useSessions';
@@ -15,6 +16,7 @@ const SIDEBAR_WIDTH = 300;
 export function AppLayout() {
   const { sessionId } = useParams<{ sessionId?: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const {
     sessions,
     isLoading: isSessionsLoading,
@@ -67,10 +69,10 @@ export function AppLayout() {
       } catch {
         // Rollback on failure
         updateSession(originalSession);
-        toast.error('Failed to archive session');
+        toast.error(t('main.archiveSessionError'));
       }
     },
-    [getSession, updateSession, sessionId, navigate]
+    [getSession, updateSession, sessionId, navigate, t]
   );
 
   const handleMainAreaArchive = useCallback(

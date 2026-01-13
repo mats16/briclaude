@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { SessionResponse } from '@repo/types';
 import { sessionService } from '@/services/session.service';
 
@@ -15,6 +15,10 @@ export function useSessions(): UseSessionsReturn {
   const [sessions, setSessions] = useState<SessionResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+
+  // Ref to avoid getSession depending on sessions state
+  const sessionsRef = useRef(sessions);
+  sessionsRef.current = sessions;
 
   const fetchSessions = useCallback(async () => {
     setIsLoading(true);
@@ -37,8 +41,8 @@ export function useSessions(): UseSessionsReturn {
   }, []);
 
   const getSession = useCallback(
-    (sessionId: string) => sessions.find(s => s.id === sessionId),
-    [sessions]
+    (sessionId: string) => sessionsRef.current.find(s => s.id === sessionId),
+    []
   );
 
   useEffect(() => {
