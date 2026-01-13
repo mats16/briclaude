@@ -69,7 +69,7 @@ export class ClaudeSettings {
   toJson(): ClaudeSettingsJson {
     const json: ClaudeSettingsJson = {};
 
-    if (this.hooks && Object.keys(this.hooks).length > 0) {
+    if (Object.keys(this.hooks).length > 0) {
       json.hooks = this.hooks;
     }
 

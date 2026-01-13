@@ -1,9 +1,11 @@
 import type { DatabricksWorkspaceSource, SessionOutcome } from '@repo/types';
 
 /** systemPrompt の設定型 */
-export type SystemPromptConfig =
-  | { type: 'preset'; preset: 'claude_code' }
-  | { type: 'preset'; preset: 'claude_code'; append: string };
+export interface SystemPromptConfig {
+  type: 'preset';
+  preset: 'claude_code';
+  append?: string;
+}
 
 /**
  * outcomes から Databricks Workspace のエントリを抽出
