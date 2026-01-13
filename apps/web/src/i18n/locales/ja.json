@@ -34,6 +34,7 @@
     "attachImage": "画像を添付",
     "dropImageHere": "画像をここにドロップ",
     "openInCli": "CLIで開く",
+    "openWorkspace": "Workspace を開く",
     "emptyChat": "会話を開始",
     "renameSession": "名前を変更",
     "archiveSession": "アーカイブ",
@@ -94,6 +95,22 @@
   "language": {
     "en": "英語",
     "ja": "日本語"
+  },
+  "workspace": {
+    "select": "Workspace フォルダを選択",
+    "patRequired": "Workspace を選択するには PAT の設定が必要です",
+    "recent": "最近",
+    "selectOther": "別のフォルダを選択",
+    "clear": "選択解除",
+    "browserTitle": "Workspace を選択",
+    "browserDescription": "作業対象の Workspace フォルダまたはリポジトリを選択してください。",
+    "cancel": "キャンセル",
+    "selectButton": "選択",
+    "selectCurrentFolder": "このフォルダを選択",
+    "open": "開く",
+    "loading": "読み込み中...",
+    "empty": "このフォルダは空です",
+    "error": "Workspaceの読み込みに失敗しました"
   },
   "welcome": {
     "title": "Claude Code へようこそ",

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GitBranch, ChevronDown, Pencil, Archive } from 'lucide-react';
+import { GitBranch, ChevronDown, Pencil, Archive, Folder } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,10 +19,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { SidebarToggleButton } from '@/components/layout/SidebarToggleButton';
+import { useUser } from '@/hooks/useUser';
 
 interface MainHeaderProps {
   title?: string;
   branchName?: string;
+  workspacePath?: string | null;
   onTitleUpdate?: (newTitle: string) => Promise<void>;
   onArchive?: () => Promise<void>;
   isSidebarOpen?: boolean;
@@ -32,12 +34,14 @@ interface MainHeaderProps {
 export function MainHeader({
   title = 'New Session',
   branchName,
+  workspacePath,
   onTitleUpdate,
   onArchive,
   isSidebarOpen = true,
   onToggleSidebar,
 }: MainHeaderProps) {
   const { t } = useTranslation();
+  const { databricksHost } = useUser();
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [newTitle, setNewTitle] = useState(title);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -83,6 +87,18 @@ export function MainHeader({
                 <Pencil className="h-4 w-4" />
                 {t('main.renameSession')}
               </DropdownMenuItem>
+              {workspacePath && databricksHost && (
+                <DropdownMenuItem asChild>
+                  <a
+                    href={`https://${databricksHost}/#workspace${workspacePath}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Folder className="h-4 w-4" />
+                    {t('main.openWorkspace')}
+                  </a>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={handleArchive}>
                 <Archive className="h-4 w-4" />
                 {t('main.archiveSession')}

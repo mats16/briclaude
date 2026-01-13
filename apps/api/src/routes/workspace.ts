@@ -95,10 +95,7 @@ const workspaceRoute: FastifyPluginAsync = async fastify => {
       });
     }
 
-    const url = new URL(
-      '/api/2.0/workspace/get-status',
-      `https://${databricksHost}`
-    );
+    const url = new URL('/api/2.0/workspace/get-status', `https://${databricksHost}`);
     url.searchParams.set('path', request.query.path);
 
     const response = await fetch(url.toString(), {
@@ -130,10 +127,7 @@ const workspaceRoute: FastifyPluginAsync = async fastify => {
       });
     }
 
-    const url = new URL(
-      '/api/2.0/workspace/mkdirs',
-      `https://${databricksHost}`
-    );
+    const url = new URL('/api/2.0/workspace/mkdirs', `https://${databricksHost}`);
 
     const response = await fetch(url.toString(), {
       method: 'POST',

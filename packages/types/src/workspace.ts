@@ -40,14 +40,31 @@ export interface WorkspaceGetStatusQuerystring {
 }
 
 /** GET /api/workspace/get-status response */
-export interface WorkspaceGetStatusResponse extends WorkspaceObjectInfo {}
+export type WorkspaceGetStatusResponse = WorkspaceObjectInfo;
 
 /** POST /api/workspace/mkdirs request body */
 export interface WorkspaceMkdirsRequest {
   path: string;
 }
 
-/** POST /api/workspace/mkdirs response */
-export interface WorkspaceMkdirsResponse {
-  // Empty object on success
+/** POST /api/workspace/mkdirs response - Empty object on success */
+export type WorkspaceMkdirsResponse = Record<string, never>;
+
+// =====================================================
+// Workspace Selection Types (Frontend)
+// =====================================================
+
+/** 最近使用したWorkspaceパスの情報 */
+export interface RecentWorkspace {
+  path: string;
+  name: string;
+  last_used_at: number;
+  object_type?: WorkspaceObjectType;
+}
+
+/** Workspace選択時の結果 */
+export interface WorkspaceSelection {
+  path: string;
+  name: string;
+  object_type: WorkspaceObjectType;
 }

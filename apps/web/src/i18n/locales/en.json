@@ -34,6 +34,7 @@
     "attachImage": "Attach image",
     "dropImageHere": "Drop image here",
     "openInCli": "Open in CLI",
+    "openWorkspace": "Open Workspace",
     "emptyChat": "Start a conversation",
     "renameSession": "Rename",
     "archiveSession": "Archive",
@@ -94,6 +95,22 @@
   "language": {
     "en": "English",
     "ja": "Japanese"
+  },
+  "workspace": {
+    "select": "Select Workspace Folder",
+    "patRequired": "PAT configuration is required to select Workspace",
+    "recent": "Recent",
+    "selectOther": "Select another folder",
+    "clear": "Clear selection",
+    "browserTitle": "Select Workspace",
+    "browserDescription": "Select a workspace folder or repository to work with.",
+    "cancel": "Cancel",
+    "selectButton": "Select",
+    "selectCurrentFolder": "Select this folder",
+    "open": "Open",
+    "loading": "Loading...",
+    "empty": "This folder is empty",
+    "error": "Failed to load workspace"
   },
   "welcome": {
     "title": "Welcome to Claude Code",

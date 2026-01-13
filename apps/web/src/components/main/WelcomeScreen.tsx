@@ -15,28 +15,38 @@ import { QuickstartCard } from './QuickstartCard';
 import { QuickstartModal, QuickstartType } from './QuickstartModal';
 import { ImagePreview } from './ImagePreview';
 import { DropZoneOverlay } from './DropZoneOverlay';
+import { WorkspaceSelector } from '@/components/workspace/WorkspaceSelector';
 import { useImageAttachment } from '@/hooks/useImageAttachment';
 import { useDragDrop } from '@/hooks/useDragDrop';
+import { useRecentWorkspaces } from '@/hooks/useRecentWorkspaces';
+import { useUser } from '@/hooks/useUser';
 import { buildMessageContent } from '@/lib/content-builder';
 import { SESSION_MODELS, DEFAULT_SESSION_MODEL, TEXTAREA_MAX_HEIGHT_MAIN } from '@/constants';
 import type { UserMessageContentBlock } from '@repo/types';
 
 interface WelcomeScreenProps {
-  onNewSession?: (content: UserMessageContentBlock[], modelId: string) => Promise<void> | void;
+  onNewSession?: (
+    content: UserMessageContentBlock[],
+    modelId: string,
+    workspacePath: string | null
+  ) => Promise<void> | void;
   sessionError?: string | null;
 }
 
 export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps) {
   const { t } = useTranslation();
+  const { hasPat } = useUser();
   const [selectedQuickstart, setSelectedQuickstart] = useState<QuickstartType | null>(null);
   const [content, setContent] = useLocalStorageState('chat-draft-new-session', {
     defaultValue: '',
   });
   const [selectedModel, setSelectedModel] = useState(DEFAULT_SESSION_MODEL);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { addRecentWorkspace } = useRecentWorkspaces();
 
   // 画像添付フック
   const { images, isProcessing, addImages, removeImage, clearImages, hasImages } =
@@ -67,7 +77,11 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
     setIsSubmitting(true);
     try {
       const messageContent = buildMessageContent(content.trim(), images);
-      await onNewSession?.(messageContent, selectedModel.id);
+      // Workspace選択があれば履歴に追加
+      if (selectedWorkspace) {
+        addRecentWorkspace(selectedWorkspace);
+      }
+      await onNewSession?.(messageContent, selectedModel.id, selectedWorkspace);
       setContent('');
       clearImages();
     } finally {
@@ -123,6 +137,28 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8">
+      {/* Workspace Selector */}
+      <div className="w-full max-w-3xl mb-4">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <WorkspaceSelector
+                  value={selectedWorkspace}
+                  onChange={setSelectedWorkspace}
+                  disabled={isSubmitting || !hasPat}
+                />
+              </div>
+            </TooltipTrigger>
+            {!hasPat && (
+              <TooltipContent>
+                <p>{t('workspace.patRequired')}</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+
       {/* Chat Input Area */}
       <div ref={containerRef} className="relative w-full max-w-3xl mb-6">
         <DropZoneOverlay isVisible={isDragging} />

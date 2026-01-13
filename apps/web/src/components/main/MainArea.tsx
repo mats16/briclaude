@@ -55,6 +55,14 @@ export function MainArea({
     return lastEvent.type !== 'result';
   }, [events]);
 
+  // session_context.sources から databricks_workspace のパスを取得
+  const workspacePath = useMemo(() => {
+    const sources = session?.session_context?.sources;
+    if (!sources) return null;
+    const workspaceSource = sources.find(s => s.type === 'databricks_workspace');
+    return workspaceSource?.path ?? null;
+  }, [session?.session_context?.sources]);
+
   const handleSend = (content: UserMessageContentBlock[]) => {
     onSendMessage?.(content);
     sendMessage(content);
@@ -70,7 +78,11 @@ export function MainArea({
     onSessionArchived?.();
   };
 
-  const handleNewSession = async (content: UserMessageContentBlock[], modelId: string) => {
+  const handleNewSession = async (
+    content: UserMessageContentBlock[],
+    modelId: string,
+    workspacePath: string | null
+  ) => {
     try {
       setCreateSessionError(null);
       // タイトル生成用にテキストを抽出
@@ -96,8 +108,8 @@ export function MainArea({
         ],
         session_context: {
           model: modelId as 'opus' | 'sonnet' | 'haiku',
-          sources: [],
-          outcomes: [],
+          sources: workspacePath ? [{ type: 'databricks_workspace', path: workspacePath }] : [],
+          outcomes: workspacePath ? [{ type: 'databricks_workspace', path: workspacePath }] : [],
         },
       };
 
@@ -141,6 +153,7 @@ export function MainArea({
       <MainHeader
         title={session?.title ?? 'New Session'}
         branchName={branchName}
+        workspacePath={workspacePath}
         onTitleUpdate={handleTitleUpdate}
         onArchive={handleArchive}
         isSidebarOpen={isSidebarOpen}
