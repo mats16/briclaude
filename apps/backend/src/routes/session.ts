@@ -285,18 +285,8 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
             socket.send(JSON.stringify({ type: 'pong' }));
           } else if (msg.type === 'user') {
             // SDKUserMessage を受信 → セッションにメッセージ送信
-            try {
-              await sendMessageToSession(fastify, user.id, sessionId, msg, ctx);
-            } catch (error) {
-              request.log.error(error, 'Failed to send message to session');
-              // エラー時は WsErrorMessage を送信
-              const errorMsg: WsErrorMessage = {
-                type: 'error',
-                code: 'MESSAGE_SEND_ERROR',
-                message: error instanceof Error ? error.message : 'Failed to send message',
-              };
-              socket.send(JSON.stringify(errorMsg));
-            }
+            // SDK がエラーも SDKMessage として返すため、サーバーサイドでのエラーハンドリングは不要
+            await sendMessageToSession(fastify, user.id, sessionId, msg, ctx);
           }
         } catch {
           // JSON パースエラーは無視
