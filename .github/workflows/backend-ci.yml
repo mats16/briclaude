@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'apps/backend/**'
+      - 'apps/api/**'
       - 'packages/types/**'
       - 'packages/eslint-config/**'
       - 'packages/typescript-config/**'
@@ -15,7 +15,7 @@ on:
       - '.github/workflows/backend-ci.yml'
   pull_request:
     paths:
-      - 'apps/backend/**'
+      - 'apps/api/**'
       - 'packages/types/**'
       - 'packages/eslint-config/**'
       - 'packages/typescript-config/**'
@@ -103,7 +103,7 @@ jobs:
           key: ${{ runner.os }}-build-backend-${{ github.sha }}
 
       - name: Run lint
-        run: npx turbo run lint --filter=@repo/backend
+        run: npx turbo run lint --filter=@repo/api
 
   test-unit:
     name: Unit Tests
@@ -132,7 +132,7 @@ jobs:
 
       - name: Run unit tests (exclude integration tests)
         run: npm test -- --exclude='**/integration.test.ts'
-        working-directory: apps/backend
+        working-directory: apps/api
         env:
           NODE_ENV: test
           ENCRYPTION_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -193,7 +193,7 @@ jobs:
 
       - name: Run integration tests
         run: npm test -- integration.test.ts
-        working-directory: apps/backend
+        working-directory: apps/api
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
@@ -226,4 +226,4 @@ jobs:
           key: ${{ runner.os }}-build-backend-${{ github.sha }}
 
       - name: Run type check
-        run: npx turbo run type-check --filter=@repo/backend
+        run: npx turbo run type-check --filter=@repo/api
