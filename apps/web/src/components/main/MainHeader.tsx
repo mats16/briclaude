@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { SidebarToggleButton } from '@/components/layout/SidebarToggleButton';
 
 interface MainHeaderProps {
   sessionId?: string;
@@ -26,6 +27,8 @@ interface MainHeaderProps {
   isConnected?: boolean;
   onTitleUpdate?: (newTitle: string) => Promise<void>;
   onArchive?: () => Promise<void>;
+  isSidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
 }
 
 export function MainHeader({
@@ -35,6 +38,8 @@ export function MainHeader({
   isConnected = false,
   onTitleUpdate,
   onArchive,
+  isSidebarOpen = true,
+  onToggleSidebar,
 }: MainHeaderProps) {
   const { t } = useTranslation();
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
@@ -71,8 +76,11 @@ export function MainHeader({
 
   return (
     <>
-      <div className="flex items-center justify-between h-[50px] px-4 border-b border-border">
+      <div className="flex items-center justify-between h-[50px] px-2 border-b border-border">
         <div className="flex items-center gap-2 min-w-0">
+          {onToggleSidebar && (
+            <SidebarToggleButton isOpen={isSidebarOpen} onToggle={onToggleSidebar} />
+          )}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>

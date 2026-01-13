@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSessions } from '@/hooks/useSessions';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -7,13 +7,27 @@ import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { MainArea } from '@/components/main/MainArea';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
-import { SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_DEFAULT_WIDTH } from '@/constants';
+
+const SIDEBAR_WIDTH = 300;
 
 export function AppLayout() {
   const { sessionId } = useParams<{ sessionId?: string }>();
   const navigate = useNavigate();
   const { sessions, isLoading: isSessionsLoading, refetch: refetchSessions } = useSessions();
   const isMobile = useIsMobile();
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    const saved = localStorage.getItem('sidebar-open');
+    return saved !== 'false';
+  });
+
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarOpen(prev => {
+      const newValue = !prev;
+      localStorage.setItem('sidebar-open', String(newValue));
+      return newValue;
+    });
+  }, []);
 
   const handleSelectSession = useCallback(
     (selectedSessionId: string) => {
@@ -33,54 +47,6 @@ export function AppLayout() {
     [refetchSessions, sessionId, navigate]
   );
 
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const saved = localStorage.getItem('sidebar-width');
-    if (saved) {
-      const width = parseInt(saved, 10);
-      if (!isNaN(width) && width >= SIDEBAR_MIN_WIDTH && width <= SIDEBAR_MAX_WIDTH) {
-        return width;
-      }
-    }
-    return SIDEBAR_DEFAULT_WIDTH;
-  });
-  const [isDragging, setIsDragging] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const sidebarWidthRef = useRef(sidebarWidth);
-
-  useEffect(() => {
-    sidebarWidthRef.current = sidebarWidth;
-  }, [sidebarWidth]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!containerRef.current) return;
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const newWidth = e.clientX - containerRect.left;
-      const clampedWidth = Math.min(Math.max(newWidth, SIDEBAR_MIN_WIDTH), SIDEBAR_MAX_WIDTH);
-      setSidebarWidth(clampedWidth);
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      localStorage.setItem('sidebar-width', sidebarWidthRef.current.toString());
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging]);
-
   const sidebarProps = useMemo(
     () => ({
       sessions,
@@ -88,18 +54,12 @@ export function AppLayout() {
       onSelectSession: handleSelectSession,
       onArchiveSession: handleArchiveSession,
       isSessionsLoading,
-      onSessionCreated: refetchSessions,
     }),
-    [
-      sessions,
-      sessionId,
-      handleSelectSession,
-      handleArchiveSession,
-      isSessionsLoading,
-      refetchSessions,
-    ]
+    [sessions, sessionId, handleSelectSession, handleArchiveSession, isSessionsLoading]
   );
 
+  // Mobile: SidebarProvider manages open state internally via SidebarTrigger (offcanvas mode)
+  // Desktop: We manage open state manually with isSidebarOpen/toggleSidebar for smooth animation
   if (isMobile) {
     return (
       <SidebarProvider defaultOpen={false}>
@@ -110,7 +70,7 @@ export function AppLayout() {
               <SidebarTrigger />
             </div>
             <div className="flex-1 min-h-0">
-              <MainArea onSessionArchived={refetchSessions} />
+              <MainArea onSessionArchived={refetchSessions} onSessionCreated={refetchSessions} />
             </div>
           </div>
         </div>
@@ -123,29 +83,32 @@ export function AppLayout() {
       defaultOpen={true}
       style={
         {
-          '--sidebar-width': `${sidebarWidth}px`,
+          '--sidebar-width': `${SIDEBAR_WIDTH}px`,
         } as React.CSSProperties
       }
     >
-      <div ref={containerRef} className="flex h-screen w-screen overflow-hidden bg-background">
-        <div style={{ width: sidebarWidth }} className="h-full shrink-0">
-          <AppSidebar {...sidebarProps} />
-        </div>
-
+      <div className="flex h-screen w-screen overflow-hidden bg-background">
+        {/* Sidebar */}
         <div
-          onMouseDown={handleMouseDown}
           className={cn(
-            'w-1 h-full shrink-0 cursor-col-resize transition-colors',
-            'bg-border hover:bg-primary/30',
-            isDragging && 'bg-primary/50'
+            'h-full shrink-0 transition-all duration-300 ease-in-out overflow-hidden',
+            isSidebarOpen ? 'w-[300px]' : 'w-0'
           )}
-        />
-
-        <div className="flex-1 h-full min-w-0">
-          <MainArea onSessionArchived={refetchSessions} />
+        >
+          <div className="w-[300px] h-full">
+            <AppSidebar {...sidebarProps} />
+          </div>
         </div>
 
-        {isDragging && <div className="fixed inset-0 z-50 cursor-col-resize" />}
+        {/* Main Area */}
+        <div className="flex-1 h-full min-w-0">
+          <MainArea
+            onSessionArchived={refetchSessions}
+            onSessionCreated={refetchSessions}
+            isSidebarOpen={isSidebarOpen}
+            onToggleSidebar={toggleSidebar}
+          />
+        </div>
       </div>
     </SidebarProvider>
   );
