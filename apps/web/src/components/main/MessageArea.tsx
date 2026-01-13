@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { SDKMessage } from '@repo/types';
 import { EventItem } from './EventItem';
+import { ThinkingIndicator } from './ThinkingIndicator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { extractToolResults, groupChildEvents } from '@/lib/message-utils';
 
@@ -8,9 +9,10 @@ interface MessageAreaProps {
   events: SDKMessage[];
   isLoading?: boolean;
   error?: Error | null;
+  isAgentThinking?: boolean;
 }
 
-export function MessageArea({ events, isLoading, error }: MessageAreaProps) {
+export function MessageArea({ events, isLoading, error, isAgentThinking }: MessageAreaProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // tool_result を事前に抽出してマップ化
@@ -65,6 +67,7 @@ export function MessageArea({ events, isLoading, error }: MessageAreaProps) {
             childEventsMap={childEventsMap}
           />
         ))}
+        {isAgentThinking && <ThinkingIndicator />}
         <div ref={bottomRef} />
       </div>
     </div>

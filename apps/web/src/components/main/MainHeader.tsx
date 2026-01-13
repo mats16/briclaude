@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GitBranch, ExternalLink, Copy, ChevronDown, Pencil, Archive } from 'lucide-react';
+import { GitBranch, ChevronDown, Pencil, Archive } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,7 +21,6 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { SidebarToggleButton } from '@/components/layout/SidebarToggleButton';
 
 interface MainHeaderProps {
-  sessionId?: string;
   title?: string;
   branchName?: string;
   onTitleUpdate?: (newTitle: string) => Promise<void>;
@@ -31,7 +30,6 @@ interface MainHeaderProps {
 }
 
 export function MainHeader({
-  sessionId,
   title = 'New Session',
   branchName,
   onTitleUpdate,
@@ -64,12 +62,6 @@ export function MainHeader({
   const handleArchive = async () => {
     if (!onArchive) return;
     await onArchive();
-  };
-
-  const handleCopySessionId = () => {
-    if (sessionId) {
-      navigator.clipboard.writeText(sessionId);
-    }
   };
 
   return (
@@ -115,29 +107,6 @@ export function MainHeader({
               </Tooltip>
             </TooltipProvider>
           )}
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={handleCopySessionId}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Copy session ID</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <Button variant="outline" size="sm" className="gap-1.5">
-            {t('main.openInCli')}
-            <ExternalLink className="h-3.5 w-3.5" />
-          </Button>
         </div>
       </div>
 
