@@ -23,7 +23,11 @@ const start = async () => {
         app.log.warn(`Port ${basePort} is in use, using ${availablePort} instead`);
       }
 
-      // ポート番号をファイルに書き込み
+      // まずポートをバインド（レースコンディション回避のため）
+      await app.listen({ port: availablePort, host: '0.0.0.0' });
+      console.log(`Server listening on http://localhost:${availablePort}`);
+
+      // バインド成功後にポート番号をファイルに書き込み
       await fs.writeFile(PORT_FILE_PATH, String(availablePort), 'utf-8');
       app.log.info(`API port written to ${PORT_FILE_PATH}`);
 
@@ -50,9 +54,6 @@ const start = async () => {
       process.on('SIGINT', cleanup);
       process.on('SIGTERM', cleanup);
       process.on('exit', cleanupSync);
-
-      await app.listen({ port: availablePort, host: '0.0.0.0' });
-      console.log(`Server listening on http://localhost:${availablePort}`);
     } else {
       // 本番環境: 従来通り
       await app.listen({ port: basePort, host: '0.0.0.0' });
