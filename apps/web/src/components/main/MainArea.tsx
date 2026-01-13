@@ -1,4 +1,7 @@
-import { useParams } from 'react-router-dom';
+import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import type { SessionCreateRequest } from '@repo/types';
 import { MainHeader } from './MainHeader';
 import { MessageArea } from './MessageArea';
 import { InputArea } from './InputArea';
@@ -11,10 +14,19 @@ interface MainAreaProps {
   branchName?: string;
   onSendMessage?: (content: string) => void;
   onSessionArchived?: () => void;
+  onSessionCreated?: () => void;
 }
 
-export function MainArea({ branchName, onSendMessage, onSessionArchived }: MainAreaProps) {
+export function MainArea({
+  branchName,
+  onSendMessage,
+  onSessionArchived,
+  onSessionCreated,
+}: MainAreaProps) {
   const { sessionId } = useParams<{ sessionId?: string }>();
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   const { session, updateSession } = useSession({
     sessionId: sessionId ?? null,
@@ -39,11 +51,50 @@ export function MainArea({ branchName, onSendMessage, onSessionArchived }: MainA
     onSessionArchived?.();
   };
 
+  const handleNewSession = async (content: string, modelId: string) => {
+    try {
+      setSessionError(null);
+      const title = await sessionService.generateTitle(content);
+
+      const request: SessionCreateRequest = {
+        title: title ?? undefined,
+        events: [
+          {
+            type: 'event',
+            data: {
+              uuid: crypto.randomUUID(),
+              session_id: '',
+              type: 'user',
+              parent_tool_use_id: null,
+              message: {
+                role: 'user',
+                content: content,
+              },
+            },
+          },
+        ],
+        session_context: {
+          model: modelId as 'opus' | 'sonnet' | 'haiku',
+          sources: [],
+          outcomes: [],
+        },
+      };
+
+      const response = await sessionService.createSession(request);
+      onSessionCreated?.();
+      navigate(`/${response.id}`);
+    } catch (err) {
+      console.error('Failed to create session:', err);
+      setSessionError(t('sidebar.sessionCreateError'));
+      throw err;
+    }
+  };
+
   // セッション未選択時はウェルカムスクリーンを表示
   if (!sessionId) {
     return (
       <div className="relative z-0 flex flex-col w-full h-full min-w-0 overflow-hidden bg-background">
-        <WelcomeScreen />
+        <WelcomeScreen onNewSession={handleNewSession} sessionError={sessionError} />
       </div>
     );
   }

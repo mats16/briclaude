@@ -88,16 +88,8 @@ export function AppLayout() {
       onSelectSession: handleSelectSession,
       onArchiveSession: handleArchiveSession,
       isSessionsLoading,
-      onSessionCreated: refetchSessions,
     }),
-    [
-      sessions,
-      sessionId,
-      handleSelectSession,
-      handleArchiveSession,
-      isSessionsLoading,
-      refetchSessions,
-    ]
+    [sessions, sessionId, handleSelectSession, handleArchiveSession, isSessionsLoading]
   );
 
   if (isMobile) {
@@ -110,7 +102,7 @@ export function AppLayout() {
               <SidebarTrigger />
             </div>
             <div className="flex-1 min-h-0">
-              <MainArea onSessionArchived={refetchSessions} />
+              <MainArea onSessionArchived={refetchSessions} onSessionCreated={refetchSessions} />
             </div>
           </div>
         </div>
@@ -142,7 +134,7 @@ export function AppLayout() {
         />
 
         <div className="flex-1 h-full min-w-0">
-          <MainArea onSessionArchived={refetchSessions} />
+          <MainArea onSessionArchived={refetchSessions} onSessionCreated={refetchSessions} />
         </div>
 
         {isDragging && <div className="fixed inset-0 z-50 cursor-col-resize" />}
