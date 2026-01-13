@@ -13,6 +13,7 @@ import type {
   SessionUpdateRequest,
   WsConnectedMessage,
   WsErrorMessage,
+  SDKAuthStatusMessage,
   ApiError,
 } from '@repo/types';
 import {
@@ -285,8 +286,29 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
             socket.send(JSON.stringify({ type: 'pong' }));
           } else if (msg.type === 'user') {
             // SDKUserMessage を受信 → セッションにメッセージ送信
-            // SDK がエラーも SDKMessage として返すため、サーバーサイドでのエラーハンドリングは不要
-            await sendMessageToSession(fastify, user.id, sessionId, msg, ctx);
+            try {
+              await sendMessageToSession(fastify, user.id, sessionId, msg, ctx);
+            } catch (error) {
+              // サーバーサイドエラー（トークン取得失敗など）を SDKAuthStatusMessage として送信
+              // SDK のエラーは SDK 内で SDKMessage として処理されるため、ここでは catch されない
+              request.log.error(error, 'Failed to send message to session');
+
+              const errorCode = (error as Error & { code?: string }).code;
+              const authStatusMsg: SDKAuthStatusMessage = {
+                type: 'auth_status',
+                uuid: crypto.randomUUID(),
+                session_id: sessionId.toString(),
+                isAuthenticating: false,
+                output: [],
+                error:
+                  errorCode === 'NO_ACCESS_TOKEN' || errorCode === 'TOKEN_RETRIEVAL_ERROR'
+                    ? 'Invalid API key · Please run /login'
+                    : error instanceof Error
+                      ? error.message
+                      : 'Unknown error',
+              };
+              socket.send(JSON.stringify(authStatusMsg));
+            }
           }
         } catch {
           // JSON パースエラーは無視
