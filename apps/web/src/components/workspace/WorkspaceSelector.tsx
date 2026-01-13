@@ -43,16 +43,16 @@ export function WorkspaceSelector({ value, onChange, disabled = false }: Workspa
   const userHomePath = user?.name ? `/Workspace/Users/${user.name}` : '/Workspace';
 
   const handleSelect = useCallback(
-    (path: string) => {
+    (path: string, objectType?: WorkspaceSelection['object_type']) => {
       onChange(path);
-      addRecentWorkspace(path);
+      addRecentWorkspace(path, objectType);
     },
     [onChange, addRecentWorkspace]
   );
 
   const handleModalSelect = useCallback(
     (selection: WorkspaceSelection) => {
-      handleSelect(selection.path);
+      handleSelect(selection.path, selection.object_type);
     },
     [handleSelect]
   );
@@ -66,7 +66,9 @@ export function WorkspaceSelector({ value, onChange, disabled = false }: Workspa
   );
 
   const displayName = value ? extractNameFromPath(value) : t('workspace.select');
-  const Icon = value ? getIcon() : Folder;
+  // 現在選択中のワークスペースのobject_typeを取得
+  const currentWorkspace = value ? recentWorkspaces.find(w => w.path === value) : null;
+  const Icon = getIcon(currentWorkspace?.object_type);
 
   return (
     <>
@@ -114,13 +116,13 @@ export function WorkspaceSelector({ value, onChange, disabled = false }: Workspa
                 {t('workspace.recent')}
               </DropdownMenuLabel>
               {recentWorkspaces.map(workspace => {
-                const ItemIcon = getIcon();
+                const ItemIcon = getIcon(workspace.object_type);
                 const isSelected = value === workspace.path;
 
                 return (
                   <DropdownMenuItem
                     key={workspace.path}
-                    onClick={() => handleSelect(workspace.path)}
+                    onClick={() => handleSelect(workspace.path, workspace.object_type)}
                     className="flex items-start gap-3 py-2"
                   >
                     <ItemIcon className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />

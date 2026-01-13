@@ -199,7 +199,7 @@ export function WorkspaceBrowserModal({
                       className={cn(
                         'flex items-center gap-2 px-3 py-2 rounded-md transition-colors',
                         'hover:bg-accent',
-                        isSelected && 'bg-accent ring-2 ring-primary',
+                        isSelected && 'bg-accent',
                         !selectable && !isDirectory && 'opacity-50'
                       )}
                     >

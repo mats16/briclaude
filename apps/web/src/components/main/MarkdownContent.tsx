@@ -103,12 +103,8 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
           h3: ({ children }) => <h3 className="text-base font-bold mt-2 mb-1">{children}</h3>,
           h4: ({ children }) => <h4 className="text-sm font-bold mt-2 mb-1">{children}</h4>,
           // リスト
-          ul: ({ children }) => (
-            <ul className="list-disc list-inside my-2">{children}</ul>
-          ),
-          ol: ({ children }) => (
-            <ol className="list-decimal list-inside my-2">{children}</ol>
-          ),
+          ul: ({ children }) => <ul className="list-disc list-inside my-2">{children}</ul>,
+          ol: ({ children }) => <ol className="list-decimal list-inside my-2">{children}</ol>,
           li: ({ children, node }) => {
             // 緩いリストの場合、li 内に p タグが生成される
             // その場合は children をそのまま表示（p のマージンは CSS で調整）
