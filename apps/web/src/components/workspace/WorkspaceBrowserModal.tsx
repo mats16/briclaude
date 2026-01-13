@@ -75,6 +75,8 @@ export function WorkspaceBrowserModal({
 }: WorkspaceBrowserModalProps) {
   const { t } = useTranslation();
   const [currentPath, setCurrentPath] = useState(initialPath);
+  // currentPath の object_type を追跡（ナビゲーション時に更新）
+  const [currentObjectType, setCurrentObjectType] = useState<WorkspaceObjectType>('DIRECTORY');
   const [objects, setObjects] = useState<WorkspaceObjectInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +86,7 @@ export function WorkspaceBrowserModal({
   useEffect(() => {
     if (open) {
       setCurrentPath(initialPath);
+      setCurrentObjectType('DIRECTORY'); // 初期パスは通常 DIRECTORY
       setSelectedItem(null);
       setError(null);
     }
@@ -127,15 +130,19 @@ export function WorkspaceBrowserModal({
     fetchObjects();
   }, [open, currentPath, t]);
 
-  const handleNavigate = useCallback((path: string) => {
-    setCurrentPath(safeSanitizePath(path));
-  }, []);
+  const handleNavigate = useCallback(
+    (path: string, objectType: WorkspaceObjectType = 'DIRECTORY') => {
+      setCurrentPath(safeSanitizePath(path));
+      setCurrentObjectType(objectType);
+    },
+    []
+  );
 
   const handleItemDoubleClick = useCallback(
     (item: WorkspaceObjectInfo) => {
-      // ディレクトリの場合はナビゲート
-      if (item.object_type === 'DIRECTORY') {
-        setCurrentPath(safeSanitizePath(item.path));
+      // ディレクトリまたはリポジトリの場合はナビゲート
+      if (item.object_type === 'DIRECTORY' || item.object_type === 'REPO') {
+        handleNavigate(item.path, item.object_type);
         return;
       }
 
@@ -149,7 +156,7 @@ export function WorkspaceBrowserModal({
         onOpenChange(false);
       }
     },
-    [selectableTypes, onSelect, onOpenChange]
+    [selectableTypes, onSelect, onOpenChange, handleNavigate]
   );
 
   const isSelectable = (item: WorkspaceObjectInfo) => selectableTypes.includes(item.object_type);
@@ -230,7 +237,7 @@ export function WorkspaceBrowserModal({
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 shrink-0"
-                          onClick={() => setCurrentPath(safeSanitizePath(item.path))}
+                          onClick={() => handleNavigate(item.path, item.object_type)}
                           aria-label={t('workspace.open')}
                         >
                           <ChevronRight className="h-4 w-4" />
@@ -268,7 +275,7 @@ export function WorkspaceBrowserModal({
               onSelect({
                 path: pathToSelect,
                 name: extractNameFromPath(pathToSelect),
-                object_type: selectedItem?.object_type ?? 'DIRECTORY',
+                object_type: selectedItem?.object_type ?? currentObjectType,
               });
               onOpenChange(false);
             }}
