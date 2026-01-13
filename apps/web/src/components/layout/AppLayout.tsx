@@ -58,6 +58,8 @@ export function AppLayout() {
     [sessions, sessionId, handleSelectSession, handleArchiveSession, isSessionsLoading]
   );
 
+  // Mobile: SidebarProvider manages open state internally via SidebarTrigger (offcanvas mode)
+  // Desktop: We manage open state manually with isSidebarOpen/toggleSidebar for smooth animation
   if (isMobile) {
     return (
       <SidebarProvider defaultOpen={false}>

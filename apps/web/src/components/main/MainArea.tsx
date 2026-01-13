@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { PanelLeft, PanelLeftClose } from 'lucide-react';
 import type { SessionCreateRequest } from '@repo/types';
 import { MainHeader } from './MainHeader';
 import { MessageArea } from './MessageArea';
@@ -10,7 +9,7 @@ import { WelcomeScreen } from './WelcomeScreen';
 import { useSessionEvents } from '@/hooks/useSessionEvents';
 import { useSession } from '@/hooks/useSession';
 import { sessionService } from '@/services/session.service';
-import { Button } from '@/components/ui/button';
+import { SidebarToggleButton } from '@/components/layout/SidebarToggleButton';
 
 interface MainAreaProps {
   branchName?: string;
@@ -103,18 +102,7 @@ export function MainArea({
         {/* Simple header with toggle button only */}
         <div className="flex items-center h-[50px] px-2 border-b border-border shrink-0">
           {onToggleSidebar && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggleSidebar}
-              className="h-8 w-8 shrink-0"
-            >
-              {isSidebarOpen ? (
-                <PanelLeftClose className="h-4 w-4" />
-              ) : (
-                <PanelLeft className="h-4 w-4" />
-              )}
-            </Button>
+            <SidebarToggleButton isOpen={isSidebarOpen} onToggle={onToggleSidebar} />
           )}
         </div>
         <WelcomeScreen onNewSession={handleNewSession} sessionError={sessionError} />

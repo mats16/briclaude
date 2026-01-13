@@ -1,14 +1,5 @@
 import { useState } from 'react';
-import {
-  GitBranch,
-  ExternalLink,
-  Copy,
-  ChevronDown,
-  Pencil,
-  Archive,
-  PanelLeft,
-  PanelLeftClose,
-} from 'lucide-react';
+import { GitBranch, ExternalLink, Copy, ChevronDown, Pencil, Archive } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { SidebarToggleButton } from '@/components/layout/SidebarToggleButton';
 
 interface MainHeaderProps {
   sessionId?: string;
@@ -87,18 +79,7 @@ export function MainHeader({
       <div className="flex items-center justify-between h-[50px] px-2 border-b border-border">
         <div className="flex items-center gap-2 min-w-0">
           {onToggleSidebar && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggleSidebar}
-              className="h-8 w-8 shrink-0"
-            >
-              {isSidebarOpen ? (
-                <PanelLeftClose className="h-4 w-4" />
-              ) : (
-                <PanelLeft className="h-4 w-4" />
-              )}
-            </Button>
+            <SidebarToggleButton isOpen={isSidebarOpen} onToggle={onToggleSidebar} />
           )}
           <TooltipProvider>
             <Tooltip>
