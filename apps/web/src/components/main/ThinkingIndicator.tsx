@@ -23,7 +23,7 @@ export function ThinkingIndicator() {
   }, [index]);
 
   return (
-    <div className="flex items-center gap-2 py-3">
+    <div className="flex items-center gap-2 py-3 mb-8">
       <ToyBrick className="h-4 w-4 text-foreground animate-squish" />
       <span className="text-sm text-muted-foreground">
         {displayedText}
