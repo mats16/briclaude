@@ -17,6 +17,7 @@ import type {
   SessionStatus,
   SessionCreateEventData,
   SessionUpdateRequest,
+  CodedError,
 } from '@repo/types';
 import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
@@ -297,16 +298,16 @@ export async function createSession(
     );
     const error = new Error(
       'アクセストークンの取得中にエラーが発生しました。しばらく待ってから再試行してください。'
-    );
-    (error as Error & { code: string }).code = 'TOKEN_RETRIEVAL_ERROR';
+    ) as CodedError;
+    error.code = 'TOKEN_RETRIEVAL_ERROR';
     throw error;
   }
 
   if (!accessToken) {
     const error = new Error(
       'アクセストークンが取得できません。PATを登録するか、管理者に連絡してください。'
-    );
-    (error as Error & { code: string }).code = 'NO_ACCESS_TOKEN';
+    ) as CodedError;
+    error.code = 'NO_ACCESS_TOKEN';
     throw error;
   }
 
@@ -613,16 +614,16 @@ export async function sendMessageToSession(
     );
     const error = new Error(
       'アクセストークンの取得中にエラーが発生しました。しばらく待ってから再試行してください。'
-    );
-    (error as Error & { code: string }).code = 'TOKEN_RETRIEVAL_ERROR';
+    ) as CodedError;
+    error.code = 'TOKEN_RETRIEVAL_ERROR';
     throw error;
   }
 
   if (!accessToken) {
     const error = new Error(
       'アクセストークンが取得できません。PATを登録するか、管理者に連絡してください。'
-    );
-    (error as Error & { code: string }).code = 'NO_ACCESS_TOKEN';
+    ) as CodedError;
+    error.code = 'NO_ACCESS_TOKEN';
     throw error;
   }
   const { userHome } = ctx;

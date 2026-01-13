@@ -16,6 +16,7 @@ import type {
   SDKAuthStatusMessage,
   ApiError,
 } from '@repo/types';
+import { isAuthError } from '@repo/types';
 import {
   createSession,
   listSessions,
@@ -300,12 +301,11 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
                 session_id: sessionId.toString(),
                 isAuthenticating: false,
                 output: [],
-                error:
-                  errorCode === 'NO_ACCESS_TOKEN' || errorCode === 'TOKEN_RETRIEVAL_ERROR'
-                    ? 'Invalid API key · Please run /login'
-                    : error instanceof Error
-                      ? error.message
-                      : 'Unknown error',
+                error: isAuthError(errorCode)
+                  ? 'Invalid API key · Please run /login'
+                  : error instanceof Error
+                    ? error.message
+                    : 'Unknown error',
               };
               socket.send(JSON.stringify(authStatusMsg));
             }
