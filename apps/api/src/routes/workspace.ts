@@ -1,33 +1,37 @@
 import { FastifyPluginAsync } from 'fastify';
-import proxy from '@fastify/http-proxy';
 import { createUserContext } from '../lib/user-context.js';
 
-declare module 'fastify' {
-  interface FastifyRequest {
-    patToken?: string;
-  }
-}
-
 const workspaceRoute: FastifyPluginAsync = async fastify => {
-  // preHandler で PAT を取得してリクエストに保存
-  fastify.addHook('preHandler', async request => {
+  fastify.get<{
+    Querystring: { path: string };
+  }>('/workspace/list', async (request, reply) => {
     const ctx = createUserContext(fastify, request);
     const pat = await ctx.getPat();
-    request.patToken = pat;
-  });
 
-  await fastify.register(proxy, {
-    upstream: `https://${fastify.config.DATABRICKS_HOST}`,
-    prefix: '/workspace',
-    rewritePrefix: '/api/2.0/workspace',
-    replyOptions: {
-      rewriteRequestHeaders: req => {
-        return {
-          'content-type': 'application/json',
-          authorization: req.patToken ? `Bearer ${req.patToken}` : '',
-        };
+    if (!pat) {
+      return reply.status(401).send({
+        error: 'Unauthorized',
+        message: 'PAT is not registered',
+        statusCode: 401,
+      });
+    }
+
+    const url = new URL(
+      '/api/2.0/workspace/list',
+      `https://${fastify.config.DATABRICKS_HOST}`
+    );
+    url.searchParams.set('path', request.query.path);
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${pat}`,
       },
-    },
+    });
+
+    const data = await response.json();
+    return reply.status(response.status).send(data);
   });
 };
 
