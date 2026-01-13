@@ -1,23 +1,14 @@
 import { useCallback } from 'react';
 import useLocalStorageState from 'use-local-storage-state';
 import type { RecentWorkspace } from '@repo/types';
+import { extractNameFromPath, MAX_RECENT_WORKSPACES } from '@/lib/workspace';
 
-const MAX_RECENT_WORKSPACES = 3;
 const STORAGE_KEY = 'recent-workspaces';
 
 interface UseRecentWorkspacesReturn {
   recentWorkspaces: RecentWorkspace[];
   addRecentWorkspace: (path: string) => void;
   clearRecentWorkspaces: () => void;
-}
-
-/**
- * パスから表示用の名前を抽出する
- * 例: /Workspace/Users/john/project -> project
- */
-function extractNameFromPath(path: string): string {
-  const segments = path.split('/').filter(Boolean);
-  return segments[segments.length - 1] ?? path;
 }
 
 /**

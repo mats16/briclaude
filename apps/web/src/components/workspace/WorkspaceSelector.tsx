@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { extractNameFromPath } from '@/lib/workspace';
 import { useRecentWorkspaces } from '@/hooks/useRecentWorkspaces';
 import { useUser } from '@/hooks/useUser';
 import { WorkspaceBrowserModal } from './WorkspaceBrowserModal';
@@ -20,14 +21,6 @@ interface WorkspaceSelectorProps {
   value: string | null;
   onChange: (path: string | null) => void;
   disabled?: boolean;
-}
-
-/**
- * パスから名前を抽出
- */
-function extractNameFromPath(path: string): string {
-  const segments = path.split('/').filter(Boolean);
-  return segments[segments.length - 1] ?? path;
 }
 
 /**

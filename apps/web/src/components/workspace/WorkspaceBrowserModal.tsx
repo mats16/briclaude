@@ -22,6 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { extractNameFromPath, safeSanitizePath } from '@/lib/workspace';
 import { workspaceService, ApiClientError } from '@/services';
 import { WorkspaceBreadcrumb } from './WorkspaceBreadcrumb';
 
@@ -61,14 +62,6 @@ function getObjectIcon(objectType: WorkspaceObjectType) {
     default:
       return Database;
   }
-}
-
-/**
- * パスから名前を抽出
- */
-function extractNameFromPath(path: string): string {
-  const segments = path.split('/').filter(Boolean);
-  return segments[segments.length - 1] ?? path;
 }
 
 export function WorkspaceBrowserModal({
@@ -135,14 +128,14 @@ export function WorkspaceBrowserModal({
   }, [open, currentPath, t]);
 
   const handleNavigate = useCallback((path: string) => {
-    setCurrentPath(path);
+    setCurrentPath(safeSanitizePath(path));
   }, []);
 
   const handleItemDoubleClick = useCallback(
     (item: WorkspaceObjectInfo) => {
       // ディレクトリの場合はナビゲート
       if (item.object_type === 'DIRECTORY') {
-        setCurrentPath(item.path);
+        setCurrentPath(safeSanitizePath(item.path));
         return;
       }
 
@@ -237,7 +230,7 @@ export function WorkspaceBrowserModal({
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 shrink-0"
-                          onClick={() => setCurrentPath(item.path)}
+                          onClick={() => setCurrentPath(safeSanitizePath(item.path))}
                           aria-label={t('workspace.open')}
                         >
                           <ChevronRight className="h-4 w-4" />
