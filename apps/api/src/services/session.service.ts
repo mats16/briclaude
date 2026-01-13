@@ -272,7 +272,7 @@ export async function createSession(
   if (workspaceSources.length > 0) {
     const claudeSettings = new ClaudeSettings();
     for (const source of workspaceSources) {
-      const exportCommand = ClaudeSettings.createWorkspaceExportCommand(source.path, cwd);
+      const exportCommand = ClaudeSettings.createWorkspaceExportCommand(source.path);
       claudeSettings.addSessionStartHook(exportCommand);
     }
     await claudeSettings.saveToSession(cwd);

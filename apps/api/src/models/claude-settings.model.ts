@@ -85,21 +85,16 @@ export class ClaudeSettings {
    * Databricks Workspace からファイルを取得するための SessionStart hook コマンドを生成
    *
    * @param workspacePath - Databricks Workspace のパス（例: /Workspace/Users/user@example.com/project）
-   * @param localDir - ローカルの出力先ディレクトリ（デフォルト: カレントディレクトリ）
    * @returns databricks workspace export-dir コマンド文字列
    *
    * @example
    * ```typescript
-   * const cmd = ClaudeSettings.createWorkspaceExportCommand('/Workspace/Users/user/project', '/home/user/session');
-   * // => 'databricks workspace export-dir "/Workspace/Users/user/project" "/home/user/session" --overwrite'
+   * const cmd = ClaudeSettings.createWorkspaceExportCommand('/Workspace/Users/user/project');
+   * // => 'databricks workspace export-dir "/Workspace/Users/user/project" . --overwrite'
    * ```
    */
-  static createWorkspaceExportCommand(workspacePath: string, localDir: string = '.'): string {
-    // セキュリティ: パスのサニタイズ（ダブルクォートをエスケープ）
-    const sanitizedPath = workspacePath.replace(/"/g, '\\"');
-    const sanitizedLocalDir = localDir.replace(/"/g, '\\"');
-
+  static createWorkspaceExportCommand(workspacePath: string): string {
     // databricks workspace export-dir は --overwrite オプションで既存ファイルを上書き
-    return `databricks workspace export-dir "${sanitizedPath}" "${sanitizedLocalDir}" --overwrite`;
+    return `databricks workspace export-dir "${workspacePath}" . --overwrite`;
   }
 }
