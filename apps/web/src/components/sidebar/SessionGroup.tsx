@@ -84,14 +84,9 @@ export function SessionGroup({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() => setFilter('active')}
-              className="flex justify-between"
-            >
+            <DropdownMenuItem onClick={() => setFilter('active')} className="flex justify-between">
               {t('sidebar.filter.active')}
-              <Check
-                className={cn('h-4 w-4', filter === 'active' ? 'opacity-100' : 'opacity-0')}
-              />
+              <Check className={cn('h-4 w-4', filter === 'active' ? 'opacity-100' : 'opacity-0')} />
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setFilter('archived')}
@@ -102,14 +97,9 @@ export function SessionGroup({
                 className={cn('h-4 w-4', filter === 'archived' ? 'opacity-100' : 'opacity-0')}
               />
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setFilter('all')}
-              className="flex justify-between"
-            >
+            <DropdownMenuItem onClick={() => setFilter('all')} className="flex justify-between">
               {t('sidebar.filter.all')}
-              <Check
-                className={cn('h-4 w-4', filter === 'all' ? 'opacity-100' : 'opacity-0')}
-              />
+              <Check className={cn('h-4 w-4', filter === 'all' ? 'opacity-100' : 'opacity-0')} />
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

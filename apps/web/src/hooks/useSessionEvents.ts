@@ -60,7 +60,11 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
   }, []);
 
   // WebSocket 接続
-  const { isConnected, error: wsError, sendMessage } = useSessionWebSocket({
+  const {
+    isConnected,
+    error: wsError,
+    sendMessage,
+  } = useSessionWebSocket({
     sessionId,
     onEvent: handleEvent,
     onConnected: handleConnected,

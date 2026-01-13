@@ -2,12 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { SessionResponse, SessionCreateRequest } from '@repo/types';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-} from '@/components/ui/sidebar';
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from '@/components/ui/sidebar';
 import { AppSidebarHeader } from './AppSidebarHeader';
 import { NewSessionInput } from './NewSessionInput';
 import { SessionGroup } from './SessionGroup';

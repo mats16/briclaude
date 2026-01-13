@@ -23,10 +23,10 @@ Turborepo + npm workspaces で管理され、TypeScript により型安全性を
 ## プロジェクト構造
 
 ```
-claude-code-on-databricks/
+briclaude/
 ├── apps/
-│   ├── frontend/          # React + Vite + shadcn/ui
-│   └── backend/           # Fastify API + Drizzle ORM
+│   ├── web/               # React + Vite + shadcn/ui
+│   └── api/               # Fastify API + Drizzle ORM
 ├── packages/
 │   ├── types/             # @repo/types - 共通の型定義
 │   ├── eslint-config/     # ESLint 共通設定
@@ -56,7 +56,7 @@ npm run build --filter=@repo/types
 ### shadcn/ui コンポーネントの追加（オプション）
 
 ```bash
-cd apps/frontend
+cd apps/web
 
 # Button コンポーネント
 npx shadcn@latest add button
@@ -81,10 +81,10 @@ npm run dev
 
 ```bash
 # バックエンドのみ
-npm run dev --filter=@repo/backend
+npm run dev --filter=@repo/api
 
 # フロントエンドのみ
-npm run dev --filter=@repo/frontend
+npm run dev --filter=@repo/web
 ```
 
 ## ビルド
@@ -93,7 +93,7 @@ npm run dev --filter=@repo/frontend
 # すべてをビルド (依存関係を自動解決)
 npm run build
 
-# ビルド順序: @repo/types → @repo/backend → @repo/frontend
+# ビルド順序: @repo/types → @repo/api → @repo/web
 ```
 
 ## コード品質
@@ -126,13 +126,13 @@ npm run type-check
 
 ```bash
 # バックエンドテスト実行
-npm run test --filter=@repo/backend
+npm run test --filter=@repo/api
 
 # ウォッチモード
-npm run test:watch --filter=@repo/backend
+npm run test:watch --filter=@repo/api
 
 # カバレッジ
-npm run test:coverage --filter=@repo/backend
+npm run test:coverage --filter=@repo/api
 ```
 
 ## API 連携
@@ -284,8 +284,8 @@ npm run clean
 詳細な開発ガイドラインについては以下を参照:
 
 - [CLAUDE.md](./CLAUDE.md) - プロジェクト概要とコーディング規約
-- [apps/frontend/CLAUDE.md](./apps/frontend/CLAUDE.md) - フロントエンド開発ガイド
-- [apps/backend/CLAUDE.md](./apps/backend/CLAUDE.md) - バックエンド開発ガイド
+- [apps/web/CLAUDE.md](./apps/web/CLAUDE.md) - フロントエンド開発ガイド
+- [apps/api/CLAUDE.md](./apps/api/CLAUDE.md) - バックエンド開発ガイド
 
 ## ライセンス
 

@@ -90,7 +90,14 @@ export function AppLayout() {
       isSessionsLoading,
       onSessionCreated: refetchSessions,
     }),
-    [sessions, sessionId, handleSelectSession, handleArchiveSession, isSessionsLoading, refetchSessions]
+    [
+      sessions,
+      sessionId,
+      handleSelectSession,
+      handleArchiveSession,
+      isSessionsLoading,
+      refetchSessions,
+    ]
   );
 
   if (isMobile) {
@@ -120,10 +127,7 @@ export function AppLayout() {
         } as React.CSSProperties
       }
     >
-      <div
-        ref={containerRef}
-        className="flex h-screen w-screen overflow-hidden bg-background"
-      >
+      <div ref={containerRef} className="flex h-screen w-screen overflow-hidden bg-background">
         <div style={{ width: sidebarWidth }} className="h-full shrink-0">
           <AppSidebar {...sidebarProps} />
         </div>

@@ -24,7 +24,13 @@ interface UserFooterProps {
   onRetry?: () => void;
 }
 
-export function UserFooter({ userName, databricksHost, isLoading, error, onRetry }: UserFooterProps) {
+export function UserFooter({
+  userName,
+  databricksHost,
+  isLoading,
+  error,
+  onRetry,
+}: UserFooterProps) {
   const { t, i18n } = useTranslation();
   const [settingsOpen, setSettingsOpen] = useState(false);
 

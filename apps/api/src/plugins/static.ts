@@ -9,7 +9,7 @@ const LONG_CACHE_PATTERN = /\.(js|css|woff2?|ttf|eot)$/;
 
 export default fp(
   async fastify => {
-    const frontendDistPath = path.join(__dirname, '../../../frontend/dist');
+    const frontendDistPath = path.join(__dirname, '../../../web/dist');
 
     // 静的ファイル配信を登録
     await fastify.register(staticPlugin, {

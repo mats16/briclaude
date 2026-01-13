@@ -1,5 +1,5 @@
 {
-  "name": "claude-code-on-databricks",
+  "name": "briclaude",
   "private": true,
   "version": "1.0.0",
   "description": "Claude Code-like application on Databricks Apps",
