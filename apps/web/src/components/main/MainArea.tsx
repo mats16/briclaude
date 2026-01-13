@@ -117,10 +117,7 @@ export function MainArea({
             </Button>
           )}
         </div>
-        <WelcomeScreen
-          onNewSession={handleNewSession}
-          sessionError={sessionError}
-        />
+        <WelcomeScreen onNewSession={handleNewSession} sessionError={sessionError} />
       </div>
     );
   }
