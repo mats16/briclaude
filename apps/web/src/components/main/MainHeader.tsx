@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { GitBranch, ChevronDown, Pencil, Archive, ExternalLink } from 'lucide-react';
+import { GitBranch, ChevronDown, Pencil, Archive, Folder } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -84,25 +83,22 @@ export function MainHeader({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-0">
-              {workspacePath && databricksHost && (
-                <>
-                  <DropdownMenuItem asChild>
-                    <a
-                      href={`https://${databricksHost}/#workspace${workspacePath}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      {t('main.openWorkspace')}
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
               <DropdownMenuItem onClick={handleOpenRenameDialog}>
                 <Pencil className="h-4 w-4" />
                 {t('main.renameSession')}
               </DropdownMenuItem>
+              {workspacePath && databricksHost && (
+                <DropdownMenuItem asChild>
+                  <a
+                    href={`https://${databricksHost}/#workspace${workspacePath}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Folder className="h-4 w-4" />
+                    {t('main.openWorkspace')}
+                  </a>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={handleArchive}>
                 <Archive className="h-4 w-4" />
                 {t('main.archiveSession')}
