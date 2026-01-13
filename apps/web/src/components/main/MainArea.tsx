@@ -126,7 +126,12 @@ export function MainArea({
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={onToggleSidebar}
       />
-      <MessageArea events={events} isLoading={isLoading} error={error} isAgentThinking={isAgentThinking} />
+      <MessageArea
+        events={events}
+        isLoading={isLoading}
+        error={error}
+        isAgentThinking={isAgentThinking}
+      />
       <InputArea
         sessionId={sessionId}
         onSend={handleSend}
