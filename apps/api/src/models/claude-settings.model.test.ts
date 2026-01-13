@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ClaudeSettings, ClaudeSettingsSaveError } from './claude-settings.model.js';
 import * as fs from 'node:fs/promises';
 import * as directory from '../utils/directory.js';
