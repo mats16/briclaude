@@ -2,11 +2,11 @@ import { vi } from 'vitest';
 import '@testing-library/dom';
 
 // Mock URL.createObjectURL and revokeObjectURL
-global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
-global.URL.revokeObjectURL = vi.fn();
+globalThis.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+globalThis.URL.revokeObjectURL = vi.fn();
 
 // Mock crypto.randomUUID
-Object.defineProperty(global, 'crypto', {
+Object.defineProperty(globalThis, 'crypto', {
   value: {
     randomUUID: () => 'test-uuid-1234',
   },
@@ -27,7 +27,8 @@ class MockImage {
   }
 }
 
-global.Image = MockImage as unknown as typeof Image;
+(globalThis as typeof globalThis & { Image: typeof Image }).Image =
+  MockImage as unknown as typeof Image;
 
 // Mock canvas
 HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
@@ -39,7 +40,7 @@ HTMLCanvasElement.prototype.toDataURL = vi.fn(() => 'data:image/webp;base64,mock
 // Mock DataTransfer
 class MockDataTransfer {
   items: DataTransferItem[] = [];
-  files: FileList;
+  files: FileList = [] as unknown as FileList;
   private _files: File[] = [];
 
   constructor() {
@@ -50,34 +51,30 @@ class MockDataTransfer {
       length: 0,
     } as unknown as DataTransferItem[];
 
-    this.files = {
-      length: 0,
-      item: (index: number) => this._files[index] || null,
+    // Update files getter to return actual files
+    Object.defineProperty(this, 'files', {
+      get: () => this.createFileList(),
+    });
+  }
+
+  private createFileList(): FileList {
+    const files = this._files;
+    const fileList = {
+      length: files.length,
+      item: (index: number) => files[index] || null,
       [Symbol.iterator]: function* () {
-        for (const file of []) yield file;
+        yield* files;
       },
     } as unknown as FileList;
 
-    // Update files getter to return actual files
-    Object.defineProperty(this, 'files', {
-      get: () => {
-        const fileList = {
-          length: this._files.length,
-          item: (index: number) => this._files[index] || null,
-          [Symbol.iterator]: function* () {
-            for (const file of this._files) yield file;
-          },
-        } as unknown as FileList;
-
-        // Add numeric indices
-        this._files.forEach((file, index) => {
-          (fileList as unknown as Record<number, File>)[index] = file;
-        });
-
-        return fileList;
-      },
+    // Add numeric indices
+    files.forEach((file, index) => {
+      (fileList as unknown as Record<number, File>)[index] = file;
     });
+
+    return fileList;
   }
 }
 
-global.DataTransfer = MockDataTransfer as unknown as typeof DataTransfer;
+(globalThis as typeof globalThis & { DataTransfer: typeof DataTransfer }).DataTransfer =
+  MockDataTransfer as unknown as typeof DataTransfer;

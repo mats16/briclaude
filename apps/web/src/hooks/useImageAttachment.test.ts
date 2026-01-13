@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useImageAttachment } from './useImageAttachment';
 import * as imageUtils from '@/lib/image-utils';
+import type { Base64ImageSource } from '@repo/types';
 
 // Mock image-utils
 vi.mock('@/lib/image-utils', async () => {
@@ -206,10 +207,10 @@ describe('useImageAttachment', () => {
 
   it('画像処理中は isProcessing が true になる', async () => {
     // encodeImageToWebP を遅延させる
-    let resolveEncode: (value: unknown) => void;
+    let resolveEncode: ((value: Base64ImageSource) => void) | undefined;
     vi.mocked(imageUtils.encodeImageToWebP).mockImplementation(
       () =>
-        new Promise(resolve => {
+        new Promise<Base64ImageSource>(resolve => {
           resolveEncode = resolve;
         })
     );
