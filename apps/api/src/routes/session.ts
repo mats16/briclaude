@@ -56,6 +56,18 @@ function closeWebSocketWithError(
   socket.close(closeCode, message);
 }
 
+/**
+ * セッションIDをパースするヘルパー
+ * 無効な TypeID 形式の場合は null を返す
+ */
+function parseSessionId(sessionIdStr: string): SessionId | null {
+  try {
+    return SessionId.fromString(sessionIdStr);
+  } catch {
+    return null;
+  }
+}
+
 const sessionRoute: FastifyPluginAsync = async fastify => {
   fastify.post<{
     Body: SessionCreateRequest;
@@ -120,7 +132,11 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     }
 
     const { session_id } = request.params;
-    const sessionId = SessionId.fromString(session_id);
+    const sessionId = parseSessionId(session_id);
+
+    if (!sessionId) {
+      return sendError(reply, 404, 'NotFound', 'Session not found');
+    }
 
     try {
       const session = await getSession(fastify, user.id, sessionId);
@@ -150,8 +166,12 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     }
 
     const { session_id } = request.params;
-    const sessionId = SessionId.fromString(session_id);
+    const sessionId = parseSessionId(session_id);
     const { title } = request.body;
+
+    if (!sessionId) {
+      return sendError(reply, 404, 'NotFound', 'Session not found');
+    }
 
     // 1. 必須フィールドのチェック
     if (title === undefined) {
@@ -198,7 +218,11 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     }
 
     const { session_id } = request.params;
-    const sessionId = SessionId.fromString(session_id);
+    const sessionId = parseSessionId(session_id);
+
+    if (!sessionId) {
+      return sendError(reply, 404, 'NotFound', 'Session not found');
+    }
 
     try {
       const ctx = createUserContext(fastify, request);
@@ -228,7 +252,12 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
     }
 
     const { session_id } = request.params;
-    const sessionId = SessionId.fromString(session_id);
+    const sessionId = parseSessionId(session_id);
+
+    if (!sessionId) {
+      return sendError(reply, 404, 'NotFound', 'Session not found');
+    }
+
     const { after, limit } = request.query;
 
     try {
@@ -252,7 +281,12 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
   }>('/sessions/:session_id/subscribe', { websocket: true }, async (socket, request) => {
     const { user } = request.ctx!;
     const { session_id } = request.params;
-    const sessionId = SessionId.fromString(session_id);
+    const sessionId = parseSessionId(session_id);
+
+    if (!sessionId) {
+      closeWebSocketWithError(socket, 'NOT_FOUND', 'Session not found', 4004);
+      return;
+    }
 
     if (!user.id) {
       closeWebSocketWithError(socket, 'UNAUTHORIZED', 'User ID not found', 4001);
