@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import type { SessionResponse } from '@repo/types';
 import { useSessions } from '@/hooks/useSessions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { sessionService } from '@/services';
@@ -13,7 +14,8 @@ const SIDEBAR_WIDTH = 300;
 export function AppLayout() {
   const { sessionId } = useParams<{ sessionId?: string }>();
   const navigate = useNavigate();
-  const { sessions, isLoading: isSessionsLoading, refetch: refetchSessions } = useSessions();
+  const { sessions, isLoading: isSessionsLoading, refetch: refetchSessions, updateSession } =
+    useSessions();
   const isMobile = useIsMobile();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -38,13 +40,21 @@ export function AppLayout() {
 
   const handleArchiveSession = useCallback(
     async (targetSessionId: string) => {
-      await sessionService.archiveSession(targetSessionId);
-      refetchSessions();
+      const archivedSession = await sessionService.archiveSession(targetSessionId);
+      updateSession(archivedSession);
       if (sessionId === targetSessionId) {
         navigate('/');
       }
     },
-    [refetchSessions, sessionId, navigate]
+    [updateSession, sessionId, navigate]
+  );
+
+  const handleMainAreaArchive = useCallback(
+    (archivedSession: SessionResponse) => {
+      updateSession(archivedSession);
+      navigate('/');
+    },
+    [updateSession, navigate]
   );
 
   const sidebarProps = useMemo(
@@ -70,7 +80,7 @@ export function AppLayout() {
               <SidebarTrigger />
             </div>
             <div className="flex-1 min-h-0">
-              <MainArea onSessionArchived={refetchSessions} onSessionCreated={refetchSessions} />
+              <MainArea onSessionArchived={handleMainAreaArchive} onSessionCreated={refetchSessions} />
             </div>
           </div>
         </div>
@@ -103,7 +113,7 @@ export function AppLayout() {
         {/* Main Area */}
         <div className="flex-1 h-full min-w-0">
           <MainArea
-            onSessionArchived={refetchSessions}
+            onSessionArchived={handleMainAreaArchive}
             onSessionCreated={refetchSessions}
             isSidebarOpen={isSidebarOpen}
             onToggleSidebar={toggleSidebar}

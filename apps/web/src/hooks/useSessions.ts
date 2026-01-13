@@ -7,6 +7,7 @@ interface UseSessionsReturn {
   isLoading: boolean;
   error: Error | null;
   refetch: () => Promise<void>;
+  updateSession: (updatedSession: SessionResponse) => void;
 }
 
 export function useSessions(): UseSessionsReturn {
@@ -28,6 +29,12 @@ export function useSessions(): UseSessionsReturn {
     }
   }, []);
 
+  const updateSession = useCallback((updatedSession: SessionResponse) => {
+    setSessions(prevSessions =>
+      prevSessions.map(s => (s.id === updatedSession.id ? updatedSession : s))
+    );
+  }, []);
+
   useEffect(() => {
     fetchSessions();
   }, [fetchSessions]);
@@ -37,5 +44,6 @@ export function useSessions(): UseSessionsReturn {
     isLoading,
     error,
     refetch: fetchSessions,
+    updateSession,
   };
 }
