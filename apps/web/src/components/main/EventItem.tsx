@@ -3,6 +3,7 @@ import type { SDKMessage } from '@repo/types';
 import { Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ToolUseBlock } from './ToolUseBlock';
+import { MarkdownContent } from './MarkdownContent';
 import {
   extractToolUseBlocks,
   type ToolResult,
@@ -155,12 +156,14 @@ export function EventItem({
       >
         {parsed.contents.map((content, index) => {
           if (content.type === 'text') {
-            // assistant メッセージのテキストには黒丸を追加
+            // assistant メッセージのテキストには黒丸を追加し、Markdown でレンダリング
             if (parsed.role === 'assistant') {
               return (
                 <div key={index} className="flex items-start gap-1 py-1">
-                  <Circle className="h-2 w-2 fill-current flex-shrink-0 mt-1.5" />
-                  <span>{content.text}</span>
+                  <Circle className="h-2 w-2 fill-current flex-shrink-0 mt-2" />
+                  <div className="flex-1 min-w-0">
+                    <MarkdownContent content={content.text} />
+                  </div>
                 </div>
               );
             }
