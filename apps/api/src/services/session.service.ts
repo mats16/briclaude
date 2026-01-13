@@ -18,7 +18,10 @@ import type {
   SessionCreateEventData,
   SessionUpdateRequest,
   CodedError,
+  DatabricksWorkspaceSource,
 } from '@repo/types';
+import { ClaudeSettings } from '../models/claude-settings.model.js';
+import { buildSystemPromptConfig } from '../utils/system-prompt.helper.js';
 import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 import { ensureDirectory, removeDirectory } from '../utils/directory.js';
@@ -261,7 +264,24 @@ export async function createSession(
 
   await ensureDirectory(cwd);
 
-  // 4. context オブジェクトの構築
+  // 4. settings.local.json の生成（databricks_workspace がある場合）
+  const workspaceSources = session_context.sources.filter(
+    (s): s is DatabricksWorkspaceSource => s.type === 'databricks_workspace'
+  );
+
+  if (workspaceSources.length > 0) {
+    const exportCommands = workspaceSources.map(source =>
+      ClaudeSettings.createWorkspaceExportCommand(source.path)
+    );
+    const claudeSettings = new ClaudeSettings().addSessionStartHooks(exportCommands);
+    await claudeSettings.saveToSession(cwd);
+    fastify.log.info(
+      { sessionId: sessionId.toString(), workspaceSources },
+      'Created settings.local.json with SessionStart hooks'
+    );
+  }
+
+  // 5. context オブジェクトの構築
   const sessionContext: SessionContextResponse = {
     allowed_tools: [],
     disallowed_tools: [],
@@ -338,6 +358,9 @@ export async function createSession(
       prompt = typeof userContent === 'string' ? userContent : '';
     }
 
+    // outcomes に基づいて systemPrompt を構築
+    const systemPromptConfig = buildSystemPromptConfig(session_context.outcomes);
+
     const response = query({
       prompt,
       options: {
@@ -346,10 +369,7 @@ export async function createSession(
         maxTurns: 100,
         settingSources: ['user', 'project', 'local'],
         permissionMode: 'bypassPermissions',
-        systemPrompt: {
-          type: 'preset',
-          preset: 'claude_code',
-        },
+        systemPrompt: systemPromptConfig,
         tools: {
           type: 'preset',
           preset: 'claude_code',
@@ -378,10 +398,11 @@ export async function createSession(
           ANTHROPIC_DEFAULT_HAIKU_MODEL: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
           // Databricks
           DATABRICKS_HOST: `https://${fastify.config.DATABRICKS_HOST}`,
+          DATABRICKS_TOKEN: accessToken,
         },
         sandbox: {
-          enabled: true,
-          autoAllowBashIfSandboxed: true,
+          // ネットワーク疎通を通せないので無効化しておく
+          enabled: false,
         },
       },
     });
@@ -664,6 +685,9 @@ export async function sendMessageToSession(
       prompt = messageContent;
     }
 
+    // outcomes に基づいて systemPrompt を構築
+    const systemPromptConfig = buildSystemPromptConfig(sessionContext.outcomes);
+
     const response = query({
       prompt,
       options: {
@@ -673,10 +697,7 @@ export async function sendMessageToSession(
         maxTurns: 100,
         settingSources: ['user', 'project', 'local'],
         permissionMode: 'bypassPermissions',
-        systemPrompt: {
-          type: 'preset',
-          preset: 'claude_code',
-        },
+        systemPrompt: systemPromptConfig,
         tools: {
           type: 'preset',
           preset: 'claude_code',
@@ -705,10 +726,11 @@ export async function sendMessageToSession(
           ANTHROPIC_DEFAULT_HAIKU_MODEL: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
           // Databricks
           DATABRICKS_HOST: `https://${fastify.config.DATABRICKS_HOST}`,
+          DATABRICKS_TOKEN: accessToken,
         },
         sandbox: {
-          enabled: true,
-          autoAllowBashIfSandboxed: true,
+          // ネットワーク疎通を通せないので無効化しておく
+          enabled: false,
         },
       },
     });

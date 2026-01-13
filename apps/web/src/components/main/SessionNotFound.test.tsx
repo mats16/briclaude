@@ -22,7 +22,8 @@ beforeEach(async () => {
         translation: {
           main: {
             sessionNotFound: 'セッションが見つかりませんでした',
-            sessionNotFoundDescription: 'このセッションは削除されたか、存在しない可能性があります。',
+            sessionNotFoundDescription:
+              'このセッションは削除されたか、存在しない可能性があります。',
             goHome: 'ホームに戻る',
           },
         },
