@@ -9,9 +9,7 @@ export type SystemPromptConfig =
  * outcomes から Databricks Workspace のエントリを抽出
  */
 function filterWorkspaceOutcomes(outcomes: SessionOutcome[]): DatabricksWorkspaceSource[] {
-  return outcomes.filter(
-    (o): o is DatabricksWorkspaceSource => o.type === 'databricks_workspace'
-  );
+  return outcomes.filter((o): o is DatabricksWorkspaceSource => o.type === 'databricks_workspace');
 }
 
 /**
