@@ -95,6 +95,7 @@
   },
   "workspace": {
     "select": "Select Workspace Folder",
+    "patRequired": "PAT configuration is required to select Workspace",
     "recent": "Recent",
     "selectOther": "Select another folder",
     "clear": "Clear selection",

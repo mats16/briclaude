@@ -95,6 +95,7 @@
   },
   "workspace": {
     "select": "Workspace フォルダを選択",
+    "patRequired": "Workspace を選択するには PAT の設定が必要です",
     "recent": "最近",
     "selectOther": "別のフォルダを選択",
     "clear": "選択解除",

@@ -139,11 +139,24 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
     <div className="flex-1 flex flex-col items-center justify-center p-8">
       {/* Workspace Selector */}
       <div className="w-full max-w-3xl mb-4">
-        <WorkspaceSelector
-          value={selectedWorkspace}
-          onChange={setSelectedWorkspace}
-          disabled={isSubmitting || !hasPat}
-        />
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <WorkspaceSelector
+                  value={selectedWorkspace}
+                  onChange={setSelectedWorkspace}
+                  disabled={isSubmitting || !hasPat}
+                />
+              </div>
+            </TooltipTrigger>
+            {!hasPat && (
+              <TooltipContent>
+                <p>{t('workspace.patRequired')}</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* Chat Input Area */}
