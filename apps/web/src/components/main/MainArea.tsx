@@ -49,6 +49,14 @@ export function MainArea({
     return lastEvent.type !== 'result';
   }, [events]);
 
+  // session_context.sources から databricks_workspace のパスを取得
+  const workspacePath = useMemo(() => {
+    const sources = session?.session_context?.sources;
+    if (!sources) return null;
+    const workspaceSource = sources.find(s => s.type === 'databricks_workspace');
+    return workspaceSource?.path ?? null;
+  }, [session?.session_context?.sources]);
+
   const handleSend = (content: UserMessageContentBlock[]) => {
     onSendMessage?.(content);
     sendMessage(content);
@@ -128,6 +136,7 @@ export function MainArea({
       <MainHeader
         title={session?.title ?? 'New Session'}
         branchName={branchName}
+        workspacePath={workspacePath}
         onTitleUpdate={handleTitleUpdate}
         onArchive={handleArchive}
         isSidebarOpen={isSidebarOpen}

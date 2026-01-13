@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { GitBranch, ChevronDown, Pencil, Archive } from 'lucide-react';
+import { GitBranch, ChevronDown, Pencil, Archive, ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -19,10 +20,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { SidebarToggleButton } from '@/components/layout/SidebarToggleButton';
+import { useUser } from '@/hooks/useUser';
 
 interface MainHeaderProps {
   title?: string;
   branchName?: string;
+  workspacePath?: string | null;
   onTitleUpdate?: (newTitle: string) => Promise<void>;
   onArchive?: () => Promise<void>;
   isSidebarOpen?: boolean;
@@ -32,12 +35,14 @@ interface MainHeaderProps {
 export function MainHeader({
   title = 'New Session',
   branchName,
+  workspacePath,
   onTitleUpdate,
   onArchive,
   isSidebarOpen = true,
   onToggleSidebar,
 }: MainHeaderProps) {
   const { t } = useTranslation();
+  const { databricksHost } = useUser();
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [newTitle, setNewTitle] = useState(title);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,6 +84,21 @@ export function MainHeader({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-0">
+              {workspacePath && databricksHost && (
+                <>
+                  <DropdownMenuItem asChild>
+                    <a
+                      href={`https://${databricksHost}/#workspace${workspacePath}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      {t('main.openWorkspace')}
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem onClick={handleOpenRenameDialog}>
                 <Pencil className="h-4 w-4" />
                 {t('main.renameSession')}
