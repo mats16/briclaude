@@ -5,3 +5,4 @@ export * from './token';
 export * from './user';
 export * from './title';
 export * from './websocket';
+export * from './workspace';
