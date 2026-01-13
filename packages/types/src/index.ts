@@ -1,4 +1,5 @@
 export * from './api';
+export * from './message';
 export * from './session';
 export * from './token';
 export * from './user';

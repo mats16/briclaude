@@ -1,11 +1,18 @@
 import { useMemo } from 'react';
 import type { SDKMessage } from '@repo/types';
+import {
+  isSDKUserMessageEvent,
+  isSDKAssistantMessageEvent,
+  isSDKSystemMessageEvent,
+  isTextContentBlock,
+  isToolUseContentBlock,
+} from '@repo/types';
 import { Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ToolUseBlock } from './ToolUseBlock';
 import { MarkdownContent } from './MarkdownContent';
 import {
-  extractToolUseBlocks,
+  extractToolUseBlocksAsMap,
   type ToolResult,
   type ToolUseBlock as ToolUseBlockType,
 } from '@/lib/message-utils';
@@ -35,21 +42,17 @@ interface ParsedMessage {
 }
 
 export function EventItem({ event, toolResultMap, childEventsMap }: EventItemProps) {
-  const msg = event as Record<string, unknown>;
-  const type = event.type;
-  const subtype = 'subtype' in event ? (event.subtype as string | undefined) : undefined;
-
   const parsed = useMemo((): ParsedMessage | null => {
     // user メッセージ
-    if (type === 'user' && msg.message) {
-      const userMsg = msg.message as { role: string; content: unknown };
+    if (isSDKUserMessageEvent(event)) {
+      const content = event.message.content;
 
       // content が配列の場合
-      if (Array.isArray(userMsg.content)) {
+      if (Array.isArray(content)) {
         // テキストコンテンツのみを抽出（tool_result は除外）
-        const textContent = userMsg.content
-          .filter((c: unknown) => (c as { type: string }).type === 'text')
-          .map((c: unknown) => (c as { text: string }).text)
+        const textContent = content
+          .filter(isTextContentBlock)
+          .map(c => c.text)
           .join('\n');
 
         // テキストがある場合のみ表示、それ以外はスキップ
@@ -63,10 +66,10 @@ export function EventItem({ event, toolResultMap, childEventsMap }: EventItemPro
         return null;
       }
 
-      if (typeof userMsg.content === 'string') {
+      if (typeof content === 'string') {
         return {
           role: 'user',
-          contents: [{ type: 'text', text: userMsg.content }],
+          contents: [{ type: 'text', text: content }],
         };
       }
 
@@ -75,20 +78,20 @@ export function EventItem({ event, toolResultMap, childEventsMap }: EventItemPro
     }
 
     // assistant メッセージ
-    if (type === 'assistant') {
-      const assistantMsg = msg.message as { content?: unknown[] } | undefined;
-      const rawContent = assistantMsg?.content ?? [];
+    if (isSDKAssistantMessageEvent(event)) {
+      const rawContent = event.message.content ?? [];
       const contents: ContentBlock[] = [];
+
+      // tool_use ブロックを事前に Map として抽出（O(1) アクセス用）
+      const toolBlockMap = extractToolUseBlocksAsMap(event);
 
       // テキストと tool_use を順序通りに処理
       for (const block of rawContent) {
-        const b = block as { type: string; text?: string };
-
-        if (b.type === 'text' && b.text) {
-          contents.push({ type: 'text', text: b.text });
-        } else if (b.type === 'tool_use') {
-          const toolBlocks = extractToolUseBlocks(msg);
-          const toolBlock = toolBlocks.find(t => t.id === (block as { id: string }).id);
+        if (isTextContentBlock(block)) {
+          contents.push({ type: 'text', text: block.text });
+        } else if (isToolUseContentBlock(block)) {
+          // Map から O(1) で取得
+          const toolBlock = toolBlockMap.get(block.id);
 
           if (toolBlock) {
             contents.push({
@@ -106,31 +109,30 @@ export function EventItem({ event, toolResultMap, childEventsMap }: EventItemPro
     }
 
     // system init メッセージ
-    if (type === 'system' && subtype === 'init') {
-      const model = (msg as { model?: string }).model;
+    if (isSDKSystemMessageEvent(event) && event.subtype === 'init') {
       return {
         role: 'system',
         contents: [
           {
             type: 'text',
-            text: `Session initialized${model ? ` (model: ${model})` : ''}`,
+            text: `Session initialized${event.model ? ` (model: ${event.model})` : ''}`,
           },
         ],
       };
     }
 
     // result メッセージはスキップ
-    if (type === 'result') {
+    if (event.type === 'result') {
       return null;
     }
 
     // stream_event（部分レスポンス）はスキップ
-    if (type === 'stream_event') {
+    if (event.type === 'stream_event') {
       return null;
     }
 
     return null;
-  }, [type, subtype, msg, toolResultMap]);
+  }, [event, toolResultMap]);
 
   if (!parsed) return null;
 

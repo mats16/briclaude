@@ -1,4 +1,11 @@
 import type { SDKMessage } from '@repo/types';
+import {
+  isSDKUserMessageEvent,
+  isSDKAssistantMessageEvent,
+  isToolResultContentBlock,
+  isToolUseContentBlock,
+  hasParentToolUseId,
+} from '@repo/types';
 
 export interface ToolResult {
   content: string;
@@ -19,28 +26,19 @@ export function extractToolResults(events: SDKMessage[]): Map<string, ToolResult
   const toolResultMap = new Map<string, ToolResult>();
 
   for (const event of events) {
-    if (event.type !== 'user') continue;
+    if (!isSDKUserMessageEvent(event)) continue;
 
-    const userMsg = event as { message?: { content?: unknown[] } };
-    const content = userMsg.message?.content;
-
+    const content = event.message.content;
     if (!Array.isArray(content)) continue;
 
     for (const block of content) {
-      const resultBlock = block as {
-        type?: string;
-        tool_use_id?: string;
-        content?: string;
-        is_error?: boolean;
-      };
-
-      if (resultBlock.type === 'tool_result' && resultBlock.tool_use_id) {
-        toolResultMap.set(resultBlock.tool_use_id, {
+      if (isToolResultContentBlock(block)) {
+        toolResultMap.set(block.tool_use_id, {
           content:
-            typeof resultBlock.content === 'string'
-              ? resultBlock.content
-              : JSON.stringify(resultBlock.content),
-          isError: resultBlock.is_error ?? false,
+            typeof block.content === 'string'
+              ? block.content
+              : JSON.stringify(block.content),
+          isError: block.is_error ?? false,
         });
       }
     }
@@ -52,34 +50,62 @@ export function extractToolResults(events: SDKMessage[]): Map<string, ToolResult
 /**
  * assistant メッセージの content から tool_use ブロックを抽出
  */
-export function extractToolUseBlocks(assistantMsg: Record<string, unknown>): ToolUseBlock[] {
+export function extractToolUseBlocks(assistantMsg: SDKMessage): ToolUseBlock[] {
   const toolUses: ToolUseBlock[] = [];
 
-  // message.content を確認
-  const message = assistantMsg.message as { content?: unknown[] } | undefined;
-  const content = message?.content;
+  if (!isSDKAssistantMessageEvent(assistantMsg)) return toolUses;
 
+  const content = assistantMsg.message.content;
   if (!Array.isArray(content)) return toolUses;
 
   for (const block of content) {
-    const toolBlock = block as {
-      type?: string;
-      id?: string;
-      name?: string;
-      input?: Record<string, unknown>;
-    };
-
-    if (toolBlock.type === 'tool_use' && toolBlock.id && toolBlock.name && toolBlock.input) {
+    if (isToolUseContentBlock(block)) {
       toolUses.push({
         type: 'tool_use',
-        id: toolBlock.id,
-        name: toolBlock.name,
-        input: toolBlock.input,
+        id: block.id,
+        name: block.name,
+        input: block.input,
       });
     }
   }
 
   return toolUses;
+}
+
+/**
+ * assistant メッセージの content から tool_use ブロックを Map として抽出
+ * ID をキーとしてアクセスできるため、ループ内での検索が O(1) になる
+ */
+export function extractToolUseBlocksAsMap(assistantMsg: SDKMessage): Map<string, ToolUseBlock> {
+  const toolUseMap = new Map<string, ToolUseBlock>();
+
+  if (!isSDKAssistantMessageEvent(assistantMsg)) return toolUseMap;
+
+  const content = assistantMsg.message.content;
+  if (!Array.isArray(content)) return toolUseMap;
+
+  for (const block of content) {
+    if (isToolUseContentBlock(block)) {
+      toolUseMap.set(block.id, {
+        type: 'tool_use',
+        id: block.id,
+        name: block.name,
+        input: block.input,
+      });
+    }
+  }
+
+  return toolUseMap;
+}
+
+/**
+ * ToolUseContentBlock から id を取得（型安全）
+ */
+export function getToolUseId(block: unknown): string | null {
+  if (isToolUseContentBlock(block)) {
+    return block.id;
+  }
+  return null;
 }
 
 /**
@@ -90,18 +116,18 @@ export function getToolInputDisplay(name: string, input: Record<string, unknown>
 
   switch (lowerName) {
     case 'bash':
-      return (input.command as string) ?? '';
+      return typeof input.command === 'string' ? input.command : '';
     case 'read':
-      return (input.file_path as string) ?? '';
+      return typeof input.file_path === 'string' ? input.file_path : '';
     case 'write':
     case 'edit':
-      return (input.file_path as string) ?? '';
+      return typeof input.file_path === 'string' ? input.file_path : '';
     case 'glob':
-      return (input.pattern as string) ?? '';
+      return typeof input.pattern === 'string' ? input.pattern : '';
     case 'grep':
-      return (input.pattern as string) ?? '';
+      return typeof input.pattern === 'string' ? input.pattern : '';
     case 'task':
-      return (input.description as string) ?? '';
+      return typeof input.description === 'string' ? input.description : '';
     default:
       return JSON.stringify(input);
   }
@@ -114,10 +140,8 @@ export function groupChildEvents(events: SDKMessage[]): Map<string, SDKMessage[]
   const childEventsMap = new Map<string, SDKMessage[]>();
 
   for (const event of events) {
-    const msg = event as Record<string, unknown>;
-    const parentToolUseId = msg.parent_tool_use_id as string | null | undefined;
-
-    if (parentToolUseId) {
+    if (hasParentToolUseId(event)) {
+      const parentToolUseId = event.parent_tool_use_id;
       const existing = childEventsMap.get(parentToolUseId) ?? [];
       existing.push(event);
       childEventsMap.set(parentToolUseId, existing);
@@ -144,9 +168,9 @@ export function extractNestedToolUses(
   const tools: NestedToolUse[] = [];
 
   for (const event of childEvents) {
-    if (event.type !== 'assistant') continue;
+    if (!isSDKAssistantMessageEvent(event)) continue;
 
-    const toolBlocks = extractToolUseBlocks(event as Record<string, unknown>);
+    const toolBlocks = extractToolUseBlocks(event);
     for (const toolBlock of toolBlocks) {
       const result = toolResultMap.get(toolBlock.id);
       tools.push({
@@ -168,9 +192,9 @@ export function countNestedToolUses(childEvents: SDKMessage[]): number {
   let count = 0;
 
   for (const event of childEvents) {
-    if (event.type !== 'assistant') continue;
+    if (!isSDKAssistantMessageEvent(event)) continue;
 
-    const toolBlocks = extractToolUseBlocks(event as Record<string, unknown>);
+    const toolBlocks = extractToolUseBlocks(event);
     count += toolBlocks.length;
   }
 

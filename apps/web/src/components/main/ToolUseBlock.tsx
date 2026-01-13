@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import type { SDKMessage } from '@repo/types';
 import { Circle } from 'lucide-react';
 import { CollapsibleContent } from './CollapsibleContent';
@@ -41,6 +41,7 @@ export function ToolUseBlock({
     <div className="py-1">
       <div className="flex items-center gap-1">
         <Circle
+          aria-hidden="true"
           className={cn(
             'h-2 w-2 fill-current flex-shrink-0',
             isRunning && 'text-foreground animate-pulse',
@@ -74,6 +75,7 @@ interface TaskChildContentProps {
 
 function TaskChildContent({ childEvents, toolResultMap, toolCount }: TaskChildContentProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const contentId = useId();
   const nestedTools = extractNestedToolUses(childEvents, toolResultMap);
 
   const summaryText = `${toolCount}個のツール使用`;
@@ -83,14 +85,17 @@ function TaskChildContent({ childEvents, toolResultMap, toolCount }: TaskChildCo
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
+        aria-expanded={isExpanded}
+        aria-controls={contentId}
+        aria-label={isExpanded ? 'ツール使用の詳細を折りたたむ' : `${toolCount}個のツール使用の詳細を表示`}
         className="flex items-start gap-1 text-muted-foreground hover:text-foreground transition-colors text-left w-full"
       >
-        <span className="select-none">└</span>
+        <span className="select-none" aria-hidden="true">└</span>
         <span className="text-xs">{summaryText}</span>
       </button>
 
       {isExpanded && (
-        <div className="ml-4 mt-2 space-y-1 border-l border-border pl-3">
+        <div id={contentId} className="ml-4 mt-2 space-y-1 border-l border-border pl-3">
           {nestedTools.map((tool, index) => (
             <NestedToolItem key={index} tool={tool} />
           ))}
@@ -111,13 +116,16 @@ interface NestedToolItemProps {
 
 function NestedToolItem({ tool }: NestedToolItemProps) {
   const [isResultExpanded, setIsResultExpanded] = useState(false);
+  const resultId = useId();
   const hasResult = tool.result && tool.result.length > 0;
   const shouldCollapseResult = hasResult && tool.result!.length > 200;
+  const hiddenChars = shouldCollapseResult ? tool.result!.length - 200 : 0;
 
   return (
     <div className="py-0.5">
       <div className="flex items-center gap-1">
         <Circle
+          aria-hidden="true"
           className={cn(
             'h-2 w-2 fill-current flex-shrink-0',
             tool.isError ? 'text-red-500' : 'text-green-500'
@@ -130,6 +138,7 @@ function NestedToolItem({ tool }: NestedToolItemProps) {
       {hasResult && (
         <div className="ml-4 mt-0.5">
           <pre
+            id={resultId}
             className={cn(
               'text-xs font-mono whitespace-pre-wrap break-all',
               tool.isError ? 'text-destructive' : 'text-muted-foreground'
@@ -141,9 +150,12 @@ function NestedToolItem({ tool }: NestedToolItemProps) {
             <button
               type="button"
               onClick={() => setIsResultExpanded(!isResultExpanded)}
+              aria-expanded={isResultExpanded}
+              aria-controls={resultId}
+              aria-label={isResultExpanded ? '結果を折りたたむ' : `残り ${hiddenChars} 文字を表示`}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              {isResultExpanded ? '折りたたむ' : `... +${tool.result!.length - 200} 文字`}
+              {isResultExpanded ? '折りたたむ' : `... +${hiddenChars} 文字`}
             </button>
           )}
         </div>
