@@ -1,4 +1,4 @@
-// apps/backend/src/models/session.model.test.ts
+// apps/api/src/models/session.model.test.ts
 import { describe, it, expect } from 'vitest';
 import { TypeID } from 'typeid-js';
 import { SessionId } from './session.model.js';

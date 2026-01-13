@@ -1,4 +1,4 @@
-// apps/backend/src/utils/encryption.ts
+// apps/api/src/utils/encryption.ts
 import crypto from 'crypto';
 
 /**

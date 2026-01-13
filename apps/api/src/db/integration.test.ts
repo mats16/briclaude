@@ -1,4 +1,4 @@
-// apps/backend/src/db/integration.test.ts
+// apps/api/src/db/integration.test.ts
 // 統合テスト: 実際のデータベースに接続してテスト
 // ローカル: .env の DATABASE_URL を使用
 // CI: Docker の PostgreSQL を使用

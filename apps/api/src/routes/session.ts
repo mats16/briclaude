@@ -1,4 +1,4 @@
-// apps/backend/src/routes/session.ts
+// apps/api/src/routes/session.ts
 import type { FastifyPluginAsync, FastifyReply } from 'fastify';
 import type { WebSocket } from 'ws';
 import type {

@@ -1,4 +1,4 @@
-// apps/backend/src/utils/directory.test.ts
+// apps/api/src/utils/directory.test.ts
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdir, writeFile, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';

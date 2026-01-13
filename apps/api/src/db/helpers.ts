@@ -1,4 +1,4 @@
-// apps/backend/src/db/helpers.ts
+// apps/api/src/db/helpers.ts
 import { sessionEvents } from './schema.js';
 import type { RLSTransaction } from '../plugins/database.js';
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';

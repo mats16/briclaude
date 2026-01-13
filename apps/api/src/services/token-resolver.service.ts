@@ -1,4 +1,4 @@
-// apps/backend/src/services/token-resolver.service.ts
+// apps/api/src/services/token-resolver.service.ts
 import type { FastifyInstance } from 'fastify';
 import { eq, and } from 'drizzle-orm';
 import { oauthTokens } from '../db/schema.js';

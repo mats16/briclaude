@@ -1,4 +1,4 @@
-// apps/backend/drizzle.config.ts
+// apps/api/drizzle.config.ts
 import { defineConfig } from 'drizzle-kit';
 import { config } from 'dotenv';
 import path from 'path';

@@ -1,4 +1,4 @@
-// apps/backend/src/models/session.model.ts
+// apps/api/src/models/session.model.ts
 /**
  * @fileoverview セッション関連のドメインモデル
  *

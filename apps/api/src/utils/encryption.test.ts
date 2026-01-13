@@ -1,4 +1,4 @@
-// apps/backend/src/utils/encryption.test.ts
+// apps/api/src/utils/encryption.test.ts
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { encrypt, decrypt, DecryptionError } from './encryption.js';
 

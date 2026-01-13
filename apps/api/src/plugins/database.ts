@@ -1,4 +1,4 @@
-// apps/backend/src/plugins/database.ts
+// apps/api/src/plugins/database.ts
 import fp from 'fastify-plugin';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';

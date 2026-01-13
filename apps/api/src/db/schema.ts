@@ -1,4 +1,4 @@
-// apps/backend/src/db/schema.ts
+// apps/api/src/db/schema.ts
 import {
   pgTable,
   uuid,

@@ -1,4 +1,4 @@
-// apps/backend/src/plugins/database.test.ts
+// apps/api/src/plugins/database.test.ts
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Fastify, { FastifyInstance } from 'fastify';
 import configPlugin from './config.js';
