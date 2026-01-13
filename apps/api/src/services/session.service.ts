@@ -363,7 +363,7 @@ export async function createSession(
     const workspaceOutcomes = session_context.outcomes.filter(
       (o): o is DatabricksWorkspaceSource => o.type === 'databricks_workspace'
     );
-    const systemPromptAppend = createWorkspacePushInstruction(workspaceOutcomes, cwd);
+    const systemPromptAppend = createWorkspacePushInstruction(workspaceOutcomes);
     fastify.log.info(
       {
         sessionId: sessionId.toString(),
@@ -416,8 +416,8 @@ export async function createSession(
           DATABRICKS_TOKEN: accessToken,
         },
         sandbox: {
-          enabled: true,
-          autoAllowBashIfSandboxed: true,
+          // ネットワーク疎通を通せないので無効化しておく
+          enabled: false,
         },
       },
     });
@@ -704,10 +704,7 @@ export async function sendMessageToSession(
     const workspaceOutcomesForResume = (sessionContext.outcomes || []).filter(
       (o): o is DatabricksWorkspaceSource => o.type === 'databricks_workspace'
     );
-    const systemPromptAppendForResume = createWorkspacePushInstruction(
-      workspaceOutcomesForResume,
-      sessionContext.cwd
-    );
+    const systemPromptAppendForResume = createWorkspacePushInstruction(workspaceOutcomesForResume);
 
     const response = query({
       prompt,
@@ -752,8 +749,8 @@ export async function sendMessageToSession(
           DATABRICKS_TOKEN: accessToken,
         },
         sandbox: {
-          enabled: true,
-          autoAllowBashIfSandboxed: true,
+          // ネットワーク疎通を通せないので無効化しておく
+          enabled: false,
         },
       },
     });
