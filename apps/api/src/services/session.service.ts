@@ -18,7 +18,9 @@ import type {
   SessionCreateEventData,
   SessionUpdateRequest,
   CodedError,
+  DatabricksWorkspaceSource,
 } from '@repo/types';
+import { ClaudeSettings } from '../models/claude-settings.model.js';
 import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 import { ensureDirectory, removeDirectory } from '../utils/directory.js';
@@ -261,7 +263,25 @@ export async function createSession(
 
   await ensureDirectory(cwd);
 
-  // 4. context オブジェクトの構築
+  // 4. settings.local.json の生成（databricks_workspace がある場合）
+  const workspaceSources = session_context.sources.filter(
+    (s): s is DatabricksWorkspaceSource => s.type === 'databricks_workspace'
+  );
+
+  if (workspaceSources.length > 0) {
+    const claudeSettings = new ClaudeSettings();
+    for (const source of workspaceSources) {
+      const exportCommand = ClaudeSettings.createWorkspaceExportCommand(source.path, cwd);
+      claudeSettings.addSessionStartHook(exportCommand);
+    }
+    await claudeSettings.saveToSession(cwd);
+    fastify.log.info(
+      { sessionId: sessionId.toString(), workspaceSources },
+      'Created settings.local.json with SessionStart hooks'
+    );
+  }
+
+  // 5. context オブジェクトの構築
   const sessionContext: SessionContextResponse = {
     allowed_tools: [],
     disallowed_tools: [],
@@ -378,6 +398,7 @@ export async function createSession(
           ANTHROPIC_DEFAULT_HAIKU_MODEL: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
           // Databricks
           DATABRICKS_HOST: `https://${fastify.config.DATABRICKS_HOST}`,
+          DATABRICKS_TOKEN: accessToken,
         },
         sandbox: {
           enabled: true,
@@ -705,6 +726,7 @@ export async function sendMessageToSession(
           ANTHROPIC_DEFAULT_HAIKU_MODEL: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
           // Databricks
           DATABRICKS_HOST: `https://${fastify.config.DATABRICKS_HOST}`,
+          DATABRICKS_TOKEN: accessToken,
         },
         sandbox: {
           enabled: true,
