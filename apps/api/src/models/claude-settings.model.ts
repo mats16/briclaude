@@ -8,6 +8,20 @@ import type {
 import { ensureDirectoryForFile } from '../utils/directory.js';
 
 /**
+ * settings.local.json の保存に失敗した場合のエラー
+ */
+export class ClaudeSettingsSaveError extends Error {
+  constructor(
+    message: string,
+    public readonly filePath: string,
+    public readonly cause?: Error
+  ) {
+    super(message);
+    this.name = 'ClaudeSettingsSaveError';
+  }
+}
+
+/**
  * Claude Code の settings.local.json を生成・管理するクラス
  *
  * @example
@@ -65,16 +79,26 @@ export class ClaudeSettings {
   /**
    * 指定パスに settings.local.json を保存
    * @param filePath - 保存先のフルパス（通常は .claude/settings.local.json）
+   * @throws {ClaudeSettingsSaveError} ファイル書き込みに失敗した場合
    */
   async save(filePath: string): Promise<void> {
-    await ensureDirectoryForFile(filePath);
-    const json = this.toJson();
-    await writeFile(filePath, JSON.stringify(json, null, 2), 'utf-8');
+    try {
+      await ensureDirectoryForFile(filePath);
+      const json = this.toJson();
+      await writeFile(filePath, JSON.stringify(json, null, 2), 'utf-8');
+    } catch (error) {
+      throw new ClaudeSettingsSaveError(
+        `Failed to save settings to ${filePath}`,
+        filePath,
+        error instanceof Error ? error : new Error(String(error))
+      );
+    }
   }
 
   /**
    * cwd 配下の .claude/settings.local.json に保存するヘルパー
    * @param cwd - セッションの作業ディレクトリ
+   * @throws {ClaudeSettingsSaveError} ファイル書き込みに失敗した場合
    */
   async saveToSession(cwd: string): Promise<void> {
     const settingsPath = path.join(cwd, '.claude', 'settings.local.json');

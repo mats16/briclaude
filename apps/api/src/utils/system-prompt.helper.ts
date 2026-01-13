@@ -1,4 +1,40 @@
-import type { DatabricksWorkspaceSource } from '@repo/types';
+import type { DatabricksWorkspaceSource, SessionOutcome } from '@repo/types';
+
+/** systemPrompt の設定型 */
+export type SystemPromptConfig =
+  | { type: 'preset'; preset: 'claude_code' }
+  | { type: 'preset'; preset: 'claude_code'; append: string };
+
+/**
+ * outcomes から Databricks Workspace のエントリを抽出
+ */
+function filterWorkspaceOutcomes(outcomes: SessionOutcome[]): DatabricksWorkspaceSource[] {
+  return outcomes.filter(
+    (o): o is DatabricksWorkspaceSource => o.type === 'databricks_workspace'
+  );
+}
+
+/**
+ * outcomes に基づいて systemPrompt 設定を構築
+ *
+ * @param outcomes - セッションの outcomes 配列
+ * @returns systemPrompt の設定オブジェクト
+ *
+ * @example
+ * ```typescript
+ * const config = buildSystemPromptConfig(session_context.outcomes);
+ * // Use in query() options: systemPrompt: config
+ * ```
+ */
+export function buildSystemPromptConfig(outcomes: SessionOutcome[] = []): SystemPromptConfig {
+  const workspaceOutcomes = filterWorkspaceOutcomes(outcomes);
+  const append = createWorkspacePushInstruction(workspaceOutcomes);
+
+  if (append) {
+    return { type: 'preset', preset: 'claude_code', append };
+  }
+  return { type: 'preset', preset: 'claude_code' };
+}
 
 /**
  * Databricks Workspace にファイルをアップロードするための systemPrompt 追加指示を生成

@@ -294,6 +294,33 @@ fastify.get('/users/:id', async (request, reply) => {
 });
 ```
 
+## Databricks Workspace Integration
+
+### SessionStart Hooks
+
+When creating a session with `databricks_workspace` sources, the system automatically:
+1. Generates `.claude/settings.local.json` with SessionStart hooks
+2. Executes `databricks workspace export-dir` to pull files into the session
+
+See: `src/models/claude-settings.model.ts`
+
+### Workspace Push Instructions
+
+When outcomes include `databricks_workspace` targets, Claude receives additional system prompts to:
+- Develop changes locally in the session directory
+- Push completed work using `databricks sync`
+- Verify successful uploads
+
+See: `src/utils/system-prompt.helper.ts`
+
+### Related Files
+
+| File | Description |
+|------|-------------|
+| `src/models/claude-settings.model.ts` | ClaudeSettings class for settings.local.json |
+| `src/utils/system-prompt.helper.ts` | systemPrompt.append generation |
+| `src/services/session.service.ts` | Session creation with Workspace integration |
+
 ## Development
 
 ```bash
