@@ -40,7 +40,7 @@ export async function build() {
   await app.register(userTokensRoute, { prefix: '/api' });
   await app.register(sessionRoute, { prefix: '/api' });
   await app.register(titleRoute, { prefix: '/api' });
-  await app.register(workspaceRoute, { prefix: '/api' });
+  await app.register(workspaceRoute, { prefix: '/api/databricks' });
 
   // APIルートのキャッシュ制御
   app.addHook('onSend', async (request, reply) => {
