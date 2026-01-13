@@ -94,12 +94,8 @@ export function MainArea({
         ],
         session_context: {
           model: modelId as 'opus' | 'sonnet' | 'haiku',
-          sources: workspacePath
-            ? [{ type: 'databricks_workspace', path: workspacePath }]
-            : [],
-          outcomes: workspacePath
-            ? [{ type: 'databricks_workspace', path: workspacePath }]
-            : [],
+          sources: workspacePath ? [{ type: 'databricks_workspace', path: workspacePath }] : [],
+          outcomes: workspacePath ? [{ type: 'databricks_workspace', path: workspacePath }] : [],
         },
       };
 

@@ -269,15 +269,17 @@ export function WorkspaceBrowserModal({
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {t('workspace.cancel')}
           </Button>
-          <Button onClick={() => {
-            const pathToSelect = selectedItem?.path ?? currentPath;
-            onSelect({
-              path: pathToSelect,
-              name: extractNameFromPath(pathToSelect),
-              object_type: selectedItem?.object_type ?? 'DIRECTORY',
-            });
-            onOpenChange(false);
-          }}>
+          <Button
+            onClick={() => {
+              const pathToSelect = selectedItem?.path ?? currentPath;
+              onSelect({
+                path: pathToSelect,
+                name: extractNameFromPath(pathToSelect),
+                object_type: selectedItem?.object_type ?? 'DIRECTORY',
+              });
+              onOpenChange(false);
+            }}
+          >
             {t('workspace.selectCurrentFolder')}
           </Button>
         </DialogFooter>

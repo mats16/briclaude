@@ -143,7 +143,10 @@ export function WorkspaceSelector({ value, onChange, disabled = false }: Workspa
             </>
           )}
 
-          <DropdownMenuItem onClick={() => setIsModalOpen(true)} className="flex items-center gap-2">
+          <DropdownMenuItem
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2"
+          >
             <Plus className="h-4 w-4" />
             <span>{t('workspace.selectOther')}</span>
           </DropdownMenuItem>
