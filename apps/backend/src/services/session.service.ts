@@ -286,8 +286,15 @@ export async function createSession(
     });
   });
 
-  // 7. PAT を取得
-  const pat = await ctx.getPat();
+  // 7. アクセストークンを取得（PAT → SP フォールバック）
+  const accessToken = await ctx.getAccessToken();
+  if (!accessToken) {
+    const error = new Error(
+      'アクセストークンが取得できません。PATを登録するか、管理者に連絡してください。'
+    );
+    (error as Error & { code: string }).code = 'NO_ACCESS_TOKEN';
+    throw error;
+  }
 
   // 8. claude-agent-sdk で query 実行
   try {
@@ -324,7 +331,7 @@ export async function createSession(
           CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
-          ANTHROPIC_AUTH_TOKEN: pat,
+          ANTHROPIC_AUTH_TOKEN: accessToken,
           ANTHROPIC_CUSTOM_HEADERS: 'x-databricks-disable-beta-headers: true',
           ANTHROPIC_DEFAULT_OPUS_MODEL: fastify.config.ANTHROPIC_DEFAULT_OPUS_MODEL,
           ANTHROPIC_DEFAULT_SONNET_MODEL: fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL,
@@ -581,8 +588,15 @@ export async function sendMessageToSession(
   // WebSocket でユーザーメッセージをブロードキャスト
   wsManager.broadcast(sessionId.toString(), userMessage);
 
-  // 5. PAT を取得
-  const pat = await ctx.getPat();
+  // 5. アクセストークンを取得（PAT → SP フォールバック）
+  const accessToken = await ctx.getAccessToken();
+  if (!accessToken) {
+    const error = new Error(
+      'アクセストークンが取得できません。PATを登録するか、管理者に連絡してください。'
+    );
+    (error as Error & { code: string }).code = 'NO_ACCESS_TOKEN';
+    throw error;
+  }
   const { userHome } = ctx;
 
   // 6. claude-agent-sdk で query 実行（resume オプション使用）
@@ -621,7 +635,7 @@ export async function sendMessageToSession(
           CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
-          ANTHROPIC_AUTH_TOKEN: pat,
+          ANTHROPIC_AUTH_TOKEN: accessToken,
           ANTHROPIC_CUSTOM_HEADERS: 'x-databricks-disable-beta-headers: true',
           ANTHROPIC_DEFAULT_OPUS_MODEL: fastify.config.ANTHROPIC_DEFAULT_OPUS_MODEL,
           ANTHROPIC_DEFAULT_SONNET_MODEL: fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL,
