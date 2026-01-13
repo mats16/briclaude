@@ -23,10 +23,10 @@ Managed with Turborepo + npm workspaces, with type safety ensured through TypeSc
 ## Project Structure
 
 ```
-claude-code-on-databricks/
+briclaude/
 ├── apps/
-│   ├── frontend/          # React + Vite + shadcn/ui
-│   └── backend/           # Fastify API + Drizzle ORM
+│   ├── web/               # React + Vite + shadcn/ui
+│   └── api/               # Fastify API + Drizzle ORM
 ├── packages/
 │   ├── types/             # @repo/types - Shared type definitions
 │   ├── eslint-config/     # Shared ESLint config
@@ -56,7 +56,7 @@ npm run build --filter=@repo/types
 ### Adding shadcn/ui Components (Optional)
 
 ```bash
-cd apps/frontend
+cd apps/web
 
 # Button component
 npx shadcn@latest add button
@@ -81,10 +81,10 @@ npm run dev
 
 ```bash
 # Backend only
-npm run dev --filter=@repo/backend
+npm run dev --filter=@repo/api
 
 # Frontend only
-npm run dev --filter=@repo/frontend
+npm run dev --filter=@repo/web
 ```
 
 ## Build
@@ -93,7 +93,7 @@ npm run dev --filter=@repo/frontend
 # Build all (dependencies auto-resolved)
 npm run build
 
-# Build order: @repo/types → @repo/backend → @repo/frontend
+# Build order: @repo/types → @repo/api → @repo/web
 ```
 
 ## Code Quality
@@ -126,13 +126,13 @@ npm run type-check
 
 ```bash
 # Run backend tests
-npm run test --filter=@repo/backend
+npm run test --filter=@repo/api
 
 # Watch mode
-npm run test:watch --filter=@repo/backend
+npm run test:watch --filter=@repo/api
 
 # Coverage
-npm run test:coverage --filter=@repo/backend
+npm run test:coverage --filter=@repo/api
 ```
 
 ## API Integration
@@ -284,8 +284,8 @@ npm run clean
 For detailed development guidelines, see:
 
 - [CLAUDE.md](./CLAUDE.md) - Project overview and coding standards
-- [apps/frontend/CLAUDE.md](./apps/frontend/CLAUDE.md) - Frontend development guide
-- [apps/backend/CLAUDE.md](./apps/backend/CLAUDE.md) - Backend development guide
+- [apps/web/CLAUDE.md](./apps/web/CLAUDE.md) - Frontend development guide
+- [apps/api/CLAUDE.md](./apps/api/CLAUDE.md) - Backend development guide
 
 ## License
 

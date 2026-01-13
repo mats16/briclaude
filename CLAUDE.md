@@ -5,10 +5,10 @@ A monorepo for a Claude Code-like AI chat application running on Databricks Apps
 ## Architecture
 
 ```
-claude-code-on-databricks/
+briclaude/
 ├── apps/
-│   ├── frontend/          # React 19 + Vite 7 + shadcn/ui
-│   └── backend/           # Fastify 5 + Drizzle ORM + Claude Agent SDK
+│   ├── web/               # React 19 + Vite 7 + shadcn/ui
+│   └── api/               # Fastify 5 + Drizzle ORM + Claude Agent SDK
 └── packages/
     ├── types/             # Shared TypeScript type definitions
     ├── eslint-config/     # Shared ESLint configuration
@@ -45,7 +45,7 @@ This application runs differently in production and development environments.
 
 - **Authentication**: Handled by Databricks Apps' built-in proxy
 - **User identification**: Via forwarded headers (see below)
-- **Frontend serving**: Static files served from Fastify (`apps/backend/src/plugins/static.ts`)
+- **Frontend serving**: Static files served from Fastify (`apps/api/src/plugins/static.ts`)
 
 ### Development (Local)
 
@@ -106,8 +106,8 @@ npm run type-check   # Type check
 ### Working with Individual Apps
 
 ```bash
-npm run dev --filter=@repo/frontend   # Frontend only
-npm run dev --filter=@repo/backend    # Backend only
+npm run dev --filter=@repo/web   # Frontend only
+npm run dev --filter=@repo/api   # Backend only
 npm run build --filter=@repo/types    # Build types package
 ```
 
@@ -163,8 +163,8 @@ import type { HealthCheckResponse } from '@repo/types';
 Steps to add a new endpoint:
 
 1. Define types in `packages/types/src/`
-2. Implement route in `apps/backend/src/routes/`
-3. Register route in `apps/backend/src/app.ts`
+2. Implement route in `apps/api/src/routes/`
+3. Register route in `apps/api/src/app.ts`
 4. Use types in frontend to call the API
 
 ## Important Notes
@@ -185,12 +185,12 @@ Steps to add a new endpoint:
 
 See each app's CLAUDE.md for detailed guidelines:
 
-- **Frontend**: [apps/frontend/CLAUDE.md](./apps/frontend/CLAUDE.md)
+- **Frontend**: [apps/web/CLAUDE.md](./apps/web/CLAUDE.md)
   - React 19, shadcn/ui, Tailwind CSS usage
   - Component design patterns
   - i18n support
 
-- **Backend**: [apps/backend/CLAUDE.md](./apps/backend/CLAUDE.md)
+- **Backend**: [apps/api/CLAUDE.md](./apps/api/CLAUDE.md)
   - Fastify 5 routing
   - Drizzle ORM and database operations
   - Claude Agent SDK usage
