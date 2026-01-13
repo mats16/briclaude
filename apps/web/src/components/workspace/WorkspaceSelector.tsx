@@ -93,14 +93,21 @@ export function WorkspaceSelector({ value, onChange, disabled = false }: Workspa
             </div>
             <div className="flex items-center gap-1">
               {value && (
-                <button
-                  type="button"
+                <span
+                  role="button"
+                  tabIndex={0}
                   className="p-1 hover:bg-accent rounded"
                   onClick={handleClear}
+                  onPointerDown={e => e.stopPropagation()}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      handleClear(e as unknown as React.MouseEvent);
+                    }
+                  }}
                   aria-label={t('workspace.clear')}
                 >
                   <X className="h-3 w-3" />
-                </button>
+                </span>
               )}
               <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
             </div>

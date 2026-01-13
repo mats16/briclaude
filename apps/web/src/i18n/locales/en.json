@@ -93,7 +93,7 @@
     "ja": "Japanese"
   },
   "workspace": {
-    "select": "Select Workspace",
+    "select": "Select Workspace Folder",
     "recent": "Recent",
     "selectOther": "Select another folder",
     "clear": "Clear selection",

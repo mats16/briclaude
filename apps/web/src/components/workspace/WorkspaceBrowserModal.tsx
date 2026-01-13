@@ -159,26 +159,6 @@ export function WorkspaceBrowserModal({
     [selectableTypes, onSelect, onOpenChange]
   );
 
-  const handleSelect = useCallback(() => {
-    if (!selectedItem) return;
-
-    onSelect({
-      path: selectedItem.path,
-      name: extractNameFromPath(selectedItem.path),
-      object_type: selectedItem.object_type,
-    });
-    onOpenChange(false);
-  }, [selectedItem, onSelect, onOpenChange]);
-
-  const handleSelectCurrentDirectory = useCallback(() => {
-    onSelect({
-      path: currentPath,
-      name: extractNameFromPath(currentPath),
-      object_type: 'DIRECTORY',
-    });
-    onOpenChange(false);
-  }, [currentPath, onSelect, onOpenChange]);
-
   const isSelectable = (item: WorkspaceObjectInfo) => selectableTypes.includes(item.object_type);
 
   return (
@@ -190,11 +170,6 @@ export function WorkspaceBrowserModal({
         </DialogHeader>
 
         <div className="flex flex-col gap-3 flex-1 min-h-0">
-          {/* 現在のフルパス表示 */}
-          <div className="px-1">
-            <p className="text-sm text-muted-foreground font-mono truncate">{currentPath}</p>
-          </div>
-
           {/* パンくずナビゲーション */}
           <div className="border-b pb-2">
             <WorkspaceBreadcrumb path={currentPath} onNavigate={handleNavigate} />
@@ -274,17 +249,36 @@ export function WorkspaceBrowserModal({
               </div>
             )}
           </ScrollArea>
+
+          {/* 現在のフルパス表示 */}
+          <div className="px-1 pt-2 border-t flex items-center gap-2">
+            <span className="text-sm text-foreground shrink-0">Path:</span>
+            <p
+              className={cn(
+                'text-sm font-mono truncate',
+                selectedItem ? 'text-foreground' : 'text-muted-foreground'
+              )}
+              style={{ direction: 'rtl', textAlign: 'left' }}
+            >
+              {selectedItem?.path ?? currentPath}
+            </p>
+          </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={handleSelectCurrentDirectory} className="mr-auto">
-            {t('workspace.selectCurrentFolder')}
-          </Button>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {t('workspace.cancel')}
           </Button>
-          <Button onClick={handleSelect} disabled={!selectedItem}>
-            {t('workspace.selectButton')}
+          <Button onClick={() => {
+            const pathToSelect = selectedItem?.path ?? currentPath;
+            onSelect({
+              path: pathToSelect,
+              name: extractNameFromPath(pathToSelect),
+              object_type: selectedItem?.object_type ?? 'DIRECTORY',
+            });
+            onOpenChange(false);
+          }}>
+            {t('workspace.selectCurrentFolder')}
           </Button>
         </DialogFooter>
       </DialogContent>

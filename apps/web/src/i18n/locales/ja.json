@@ -93,18 +93,18 @@
     "ja": "日本語"
   },
   "workspace": {
-    "select": "Workspaceを選択",
+    "select": "Workspace フォルダを選択",
     "recent": "最近",
-    "selectOther": "別のフォルダーを選択",
+    "selectOther": "別のフォルダを選択",
     "clear": "選択解除",
-    "browserTitle": "Workspaceを選択",
-    "browserDescription": "作業対象のWorkspaceフォルダーまたはリポジトリを選択してください。",
+    "browserTitle": "Workspace を選択",
+    "browserDescription": "作業対象の Workspace フォルダまたはリポジトリを選択してください。",
     "cancel": "キャンセル",
     "selectButton": "選択",
-    "selectCurrentFolder": "このフォルダーを選択",
+    "selectCurrentFolder": "このフォルダを選択",
     "open": "開く",
     "loading": "読み込み中...",
-    "empty": "このフォルダーは空です",
+    "empty": "このフォルダは空です",
     "error": "Workspaceの読み込みに失敗しました"
   },
   "welcome": {
