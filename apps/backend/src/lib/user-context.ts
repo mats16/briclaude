@@ -21,7 +21,10 @@ export class UserContext {
     private readonly fastify: FastifyInstance,
     private readonly request: FastifyRequest
   ) {
-    const user = request.ctx!.user;
+    if (!request.ctx?.user) {
+      throw new Error('User context is not available');
+    }
+    const user = request.ctx.user;
     this.userId = user.id;
     this.userHome = path.join(fastify.config.USER_BASE_DIR, user.id.split('@')[0]);
   }
