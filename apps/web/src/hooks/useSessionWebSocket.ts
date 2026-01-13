@@ -3,6 +3,7 @@ import type { WsServerMessage, SDKMessage, SDKUserMessage, WsConnectedMessage } 
 
 interface UseSessionWebSocketOptions {
   sessionId: string | null;
+  autoConnect?: boolean;
   onEvent?: (event: SDKMessage) => void;
   onConnected?: (message: WsConnectedMessage) => void;
   onError?: (error: Error) => void;
@@ -13,6 +14,7 @@ interface UseSessionWebSocketReturn {
   isConnecting: boolean;
   error: Error | null;
   reconnect: () => void;
+  connect: () => void;
   sendMessage: (content: string) => void;
 }
 
@@ -20,6 +22,7 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 
 export function useSessionWebSocket({
   sessionId,
+  autoConnect = true,
   onEvent,
   onConnected,
   onError,
@@ -31,6 +34,7 @@ export function useSessionWebSocket({
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttempts = useRef(0);
+  const pendingMessagesRef = useRef<string[]>([]);
 
   // stale closure 問題を回避するため、コールバックを ref で保持
   const onEventRef = useRef(onEvent);
@@ -44,7 +48,13 @@ export function useSessionWebSocket({
 
   const connect = useCallback(() => {
     if (!sessionId) return;
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    // OPEN または CONNECTING 状態の場合は何もしない
+    if (
+      wsRef.current?.readyState === WebSocket.OPEN ||
+      wsRef.current?.readyState === WebSocket.CONNECTING
+    ) {
+      return;
+    }
 
     setIsConnecting(true);
     setError(null);
@@ -57,7 +67,6 @@ export function useSessionWebSocket({
 
     ws.onopen = () => {
       setIsConnecting(false);
-      setIsConnected(true);
       reconnectAttempts.current = 0;
     };
 
@@ -66,6 +75,26 @@ export function useSessionWebSocket({
         const message = JSON.parse(event.data) as WsServerMessage;
 
         if (message.type === 'connected') {
+          setIsConnected(true);
+
+          // ペンディングメッセージを送信（サーバー準備完了後）
+          while (pendingMessagesRef.current.length > 0) {
+            const content = pendingMessagesRef.current.shift();
+            if (content && ws.readyState === WebSocket.OPEN) {
+              const userMessage: SDKUserMessage = {
+                type: 'user',
+                uuid: crypto.randomUUID(),
+                session_id: sessionId!,
+                message: {
+                  role: 'user',
+                  content,
+                },
+                parent_tool_use_id: null,
+              };
+              ws.send(JSON.stringify(userMessage));
+            }
+          }
+
           // WsConnectedMessage - ref 経由で最新のコールバックを呼び出す
           onConnectedRef.current?.(message as WsConnectedMessage);
         } else if (message.type === 'error') {
@@ -111,17 +140,20 @@ export function useSessionWebSocket({
     connect();
   }, [connect]);
 
-  // セッション ID が変わったら再接続
+  // セッション ID が変わったら再接続（autoConnect が有効な場合のみ）
   useEffect(() => {
-    connect();
+    if (autoConnect) {
+      connect();
+    }
 
     return () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
       wsRef.current?.close();
+      pendingMessagesRef.current = [];
     };
-  }, [connect]);
+  }, [connect, autoConnect]);
 
   // Ping/Pong によるキープアライブ
   useEffect(() => {
@@ -136,26 +168,32 @@ export function useSessionWebSocket({
     return () => clearInterval(pingInterval);
   }, [isConnected]);
 
-  // メッセージ送信関数
+  // メッセージ送信関数（未接続の場合は透過的に接続）
   const sendMessage = useCallback(
     (content: string) => {
-      if (!sessionId || wsRef.current?.readyState !== WebSocket.OPEN) {
+      if (!sessionId) return;
+
+      // 接続済みの場合は直接送信
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        const message: SDKUserMessage = {
+          type: 'user',
+          uuid: crypto.randomUUID(),
+          session_id: sessionId,
+          message: {
+            role: 'user',
+            content,
+          },
+          parent_tool_use_id: null,
+        };
+        wsRef.current.send(JSON.stringify(message));
         return;
       }
 
-      const message: SDKUserMessage = {
-        type: 'user',
-        uuid: crypto.randomUUID(),
-        session_id: sessionId,
-        message: {
-          role: 'user',
-          content,
-        },
-        parent_tool_use_id: null,
-      };
-      wsRef.current.send(JSON.stringify(message));
+      // 未接続の場合はキューに追加して接続開始
+      pendingMessagesRef.current.push(content);
+      connect();
     },
-    [sessionId]
+    [sessionId, connect]
   );
 
   return {
@@ -163,6 +201,7 @@ export function useSessionWebSocket({
     isConnecting,
     error,
     reconnect,
+    connect,
     sendMessage,
   };
 }

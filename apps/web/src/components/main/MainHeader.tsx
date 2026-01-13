@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GitBranch, ExternalLink, Copy, ChevronDown, Pencil, Archive } from 'lucide-react';
+import { GitBranch, ChevronDown, Pencil, Archive } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,10 +21,8 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { SidebarToggleButton } from '@/components/layout/SidebarToggleButton';
 
 interface MainHeaderProps {
-  sessionId?: string;
   title?: string;
   branchName?: string;
-  isConnected?: boolean;
   onTitleUpdate?: (newTitle: string) => Promise<void>;
   onArchive?: () => Promise<void>;
   isSidebarOpen?: boolean;
@@ -32,10 +30,8 @@ interface MainHeaderProps {
 }
 
 export function MainHeader({
-  sessionId,
   title = 'New Session',
   branchName,
-  isConnected = false,
   onTitleUpdate,
   onArchive,
   isSidebarOpen = true,
@@ -68,12 +64,6 @@ export function MainHeader({
     await onArchive();
   };
 
-  const handleCopySessionId = () => {
-    if (sessionId) {
-      navigator.clipboard.writeText(sessionId);
-    }
-  };
-
   return (
     <>
       <div className="flex items-center justify-between h-[50px] px-2 border-b border-border">
@@ -81,18 +71,6 @@ export function MainHeader({
           {onToggleSidebar && (
             <SidebarToggleButton isOpen={isSidebarOpen} onToggle={onToggleSidebar} />
           )}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div
-                  className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-muted-foreground'}`}
-                />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{isConnected ? 'Connected' : 'Disconnected'}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-1 font-medium text-foreground">
@@ -129,29 +107,6 @@ export function MainHeader({
               </Tooltip>
             </TooltipProvider>
           )}
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={handleCopySessionId}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Copy session ID</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <Button variant="outline" size="sm" className="gap-1.5">
-            {t('main.openInCli')}
-            <ExternalLink className="h-3.5 w-3.5" />
-          </Button>
         </div>
       </div>
 

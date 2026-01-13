@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { SessionCreateRequest } from '@repo/types';
@@ -37,9 +37,16 @@ export function MainArea({
     sessionId: sessionId ?? null,
   });
 
-  const { events, isLoading, isConnected, error, sendMessage } = useSessionEvents({
+  const { events, isLoading, error, sendMessage } = useSessionEvents({
     sessionId: sessionId ?? null,
   });
+
+  // 最後のイベントが result でない場合、エージェントが応答中
+  const isAgentThinking = useMemo(() => {
+    if (events.length === 0) return false;
+    const lastEvent = events[events.length - 1];
+    return lastEvent.type !== 'result';
+  }, [events]);
 
   const handleSend = (content: string) => {
     onSendMessage?.(content);
@@ -112,16 +119,19 @@ export function MainArea({
   return (
     <div className="relative z-0 flex flex-col w-full h-full min-w-0 overflow-hidden bg-background">
       <MainHeader
-        sessionId={sessionId}
         title={session?.title ?? 'New Session'}
         branchName={branchName}
-        isConnected={isConnected}
         onTitleUpdate={handleTitleUpdate}
         onArchive={handleArchive}
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={onToggleSidebar}
       />
-      <MessageArea events={events} isLoading={isLoading} error={error} />
+      <MessageArea
+        events={events}
+        isLoading={isLoading}
+        error={error}
+        isAgentThinking={isAgentThinking}
+      />
       <InputArea
         sessionId={sessionId}
         onSend={handleSend}

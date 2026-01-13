@@ -1,0 +1,144 @@
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { cn } from '@/lib/utils';
+
+/**
+ * 安全なURLかどうかを検証
+ * javascript:, data:, vbscript: などの危険なプロトコルをブロック
+ */
+function isSafeUrl(url: string | undefined): boolean {
+  if (!url) return false;
+
+  // 相対URLは安全
+  if (url.startsWith('/') || url.startsWith('#') || url.startsWith('.')) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(url, window.location.origin);
+    const allowedProtocols = ['http:', 'https:', 'mailto:'];
+    return allowedProtocols.includes(parsed.protocol);
+  } catch {
+    // 不正なURLはブロック
+    return false;
+  }
+}
+
+interface MarkdownContentProps {
+  content: string;
+  className?: string;
+}
+
+export function MarkdownContent({ content, className }: MarkdownContentProps) {
+  return (
+    <div className={cn('max-w-none', className)}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          // コードブロック
+          code({ className, children, ...props }) {
+            const match = /language-(\w+)/.exec(className || '');
+            const codeString = String(children).replace(/\n$/, '');
+
+            // ブロックコード（言語指定あり、または複数行）
+            if (match || codeString.includes('\n')) {
+              return (
+                <SyntaxHighlighter
+                  style={oneLight}
+                  language={match?.[1] || 'text'}
+                  PreTag="div"
+                  customStyle={{
+                    margin: 0,
+                    padding: '0.75rem',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem',
+                    background: 'hsl(var(--muted))',
+                  }}
+                  codeTagProps={{
+                    style: {
+                      fontFamily:
+                        'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                    },
+                  }}
+                >
+                  {codeString}
+                </SyntaxHighlighter>
+              );
+            }
+
+            // インラインコード
+            return (
+              <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
+                {children}
+              </code>
+            );
+          },
+          // pre タグ（SyntaxHighlighter が処理するので素通し）
+          pre({ children }) {
+            return <div className="my-2">{children}</div>;
+          },
+          // 見出し
+          h1: ({ children }) => <h1 className="text-xl font-bold mt-4 mb-2">{children}</h1>,
+          h2: ({ children }) => <h2 className="text-lg font-bold mt-3 mb-2">{children}</h2>,
+          h3: ({ children }) => <h3 className="text-base font-bold mt-2 mb-1">{children}</h3>,
+          h4: ({ children }) => <h4 className="text-sm font-bold mt-2 mb-1">{children}</h4>,
+          // リスト
+          ul: ({ children }) => (
+            <ul className="list-disc list-inside my-2 space-y-1">{children}</ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="list-decimal list-inside my-2 space-y-1">{children}</ol>
+          ),
+          li: ({ children }) => <li className="ml-2">{children}</li>,
+          // 段落
+          p: ({ children }) => <p className="my-1">{children}</p>,
+          // リンク（安全なURLのみ許可）
+          a: ({ href, children }) => {
+            if (!isSafeUrl(href)) {
+              // 危険なURLはリンクとして表示しない
+              return <span className="text-muted-foreground">{children}</span>;
+            }
+            return (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline hover:no-underline"
+              >
+                {children}
+              </a>
+            );
+          },
+          // 引用
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-4 border-muted-foreground/30 pl-4 my-2 italic text-muted-foreground">
+              {children}
+            </blockquote>
+          ),
+          // テーブル
+          table: ({ children }) => (
+            <div className="overflow-x-auto my-2">
+              <table className="min-w-full border-collapse border border-border text-sm">
+                {children}
+              </table>
+            </div>
+          ),
+          thead: ({ children }) => <thead className="bg-muted">{children}</thead>,
+          th: ({ children }) => (
+            <th className="border border-border px-3 py-1 text-left font-semibold">{children}</th>
+          ),
+          td: ({ children }) => <td className="border border-border px-3 py-1">{children}</td>,
+          // 水平線
+          hr: () => <hr className="my-4 border-border" />,
+          // 強調
+          strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+          em: ({ children }) => <em className="italic">{children}</em>,
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}

@@ -6,6 +6,17 @@ const config: Config = {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      keyframes: {
+        squish: {
+          '0%, 100%': { transform: 'scale(1, 1)' },
+          '25%': { transform: 'scale(1.1, 0.9)' },
+          '50%': { transform: 'scale(0.9, 1.1)' },
+          '75%': { transform: 'scale(1.05, 0.95)' },
+        },
+      },
+      animation: {
+        squish: 'squish 1s ease-in-out infinite',
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',

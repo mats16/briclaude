@@ -19,6 +19,7 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
   const [events, setEvents] = useState<SDKMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [shouldAutoConnect, setShouldAutoConnect] = useState(false);
   const seenUuidsRef = useRef<Set<string>>(new Set());
 
   // 過去イベントの取得
@@ -27,6 +28,7 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
 
     setIsLoading(true);
     setError(null);
+    setShouldAutoConnect(false);
 
     try {
       const response = await sessionService.getSessionEvents(targetSessionId);
@@ -35,6 +37,12 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
       seenUuidsRef.current = new Set(
         response.data.filter(e => 'uuid' in e && e.uuid).map(e => e.uuid as string)
       );
+
+      // 最後のイベントが result でない場合のみ自動接続
+      const lastEvent = response.data[response.data.length - 1];
+      const isSessionComplete =
+        lastEvent && 'type' in lastEvent && (lastEvent as { type: string }).type === 'result';
+      setShouldAutoConnect(!isSessionComplete);
     } catch (e) {
       setError(e instanceof Error ? e : new Error('Failed to load events'));
     } finally {
@@ -59,13 +67,10 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
     // WebSocket 接続成功時はリアルタイム更新を受け取る準備のみ
   }, []);
 
-  // WebSocket 接続
-  const {
-    isConnected,
-    error: wsError,
-    sendMessage,
-  } = useSessionWebSocket({
+  // WebSocket 接続（shouldAutoConnect に基づいて自動接続を制御）
+  const { isConnected, sendMessage } = useSessionWebSocket({
     sessionId,
+    autoConnect: shouldAutoConnect,
     onEvent: handleEvent,
     onConnected: handleConnected,
   });
@@ -83,7 +88,7 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
     events,
     isLoading,
     isConnected,
-    error: error || wsError,
+    error,
     sendMessage,
   };
 }

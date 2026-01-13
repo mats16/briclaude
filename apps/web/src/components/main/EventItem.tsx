@@ -1,93 +1,143 @@
 import { useMemo } from 'react';
 import type { SDKMessage } from '@repo/types';
+import {
+  isSDKUserMessageEvent,
+  isSDKAssistantMessageEvent,
+  isSDKSystemMessageEvent,
+  isTextContentBlock,
+  isToolUseContentBlock,
+} from '@repo/types';
+import { Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ToolUseBlock } from './ToolUseBlock';
+import { MarkdownContent } from './MarkdownContent';
+import {
+  extractToolUseBlocksAsMap,
+  type ToolResult,
+  type ToolUseBlock as ToolUseBlockType,
+} from '@/lib/message-utils';
 
 interface EventItemProps {
   event: SDKMessage;
+  toolResultMap: Map<string, ToolResult>;
+  childEventsMap: Map<string, SDKMessage[]>;
 }
 
-interface ParsedContent {
-  role: 'user' | 'assistant' | 'system';
+interface TextContent {
+  type: 'text';
   text: string;
 }
 
-export function EventItem({ event }: EventItemProps) {
-  // SDKMessage を直接使用
-  const msg = event as Record<string, unknown>;
-  const type = event.type;
-  const subtype = 'subtype' in event ? (event.subtype as string | undefined) : undefined;
+interface ToolUseContent {
+  type: 'tool_use';
+  toolUse: ToolUseBlockType;
+  result?: ToolResult;
+}
 
-  // SDK メッセージの種類に応じて表示を変更
-  const content = useMemo((): ParsedContent | null => {
+type ContentBlock = TextContent | ToolUseContent;
+
+interface ParsedMessage {
+  role: 'user' | 'assistant' | 'system';
+  contents: ContentBlock[];
+}
+
+export function EventItem({ event, toolResultMap, childEventsMap }: EventItemProps) {
+  const parsed = useMemo((): ParsedMessage | null => {
     // user メッセージ
-    if (type === 'user' && msg.message) {
-      const userMsg = msg.message as { role: string; content: unknown };
-      if (typeof userMsg.content === 'string') {
-        return { role: 'user', text: userMsg.content };
-      }
-      // content が配列の場合（TextBlock など）
-      if (Array.isArray(userMsg.content)) {
-        const textContent = userMsg.content
-          .filter((c: unknown) => (c as { type: string }).type === 'text')
-          .map((c: unknown) => (c as { text: string }).text)
+    if (isSDKUserMessageEvent(event)) {
+      const content = event.message.content;
+
+      // content が配列の場合
+      if (Array.isArray(content)) {
+        // テキストコンテンツのみを抽出（tool_result は除外）
+        const textContent = content
+          .filter(isTextContentBlock)
+          .map(c => c.text)
           .join('\n');
-        return { role: 'user', text: textContent };
+
+        // テキストがある場合のみ表示、それ以外はスキップ
+        if (textContent) {
+          return {
+            role: 'user',
+            contents: [{ type: 'text', text: textContent }],
+          };
+        }
+        // tool_result のみや空の配列はスキップ
+        return null;
       }
+
+      if (typeof content === 'string') {
+        return {
+          role: 'user',
+          contents: [{ type: 'text', text: content }],
+        };
+      }
+
+      // その他の形式はスキップ
+      return null;
     }
 
     // assistant メッセージ
-    if (type === 'assistant') {
-      // message.content を取得
-      const assistantMsg = msg.message as { content?: unknown[] } | undefined;
-      if (assistantMsg && Array.isArray(assistantMsg.content)) {
-        const textContent = assistantMsg.content
-          .filter((c: unknown) => (c as { type: string }).type === 'text')
-          .map((c: unknown) => (c as { text: string }).text)
-          .join('\n');
-        if (textContent) {
-          return { role: 'assistant', text: textContent };
+    if (isSDKAssistantMessageEvent(event)) {
+      const rawContent = event.message.content ?? [];
+      const contents: ContentBlock[] = [];
+
+      // tool_use ブロックを事前に Map として抽出（O(1) アクセス用）
+      const toolBlockMap = extractToolUseBlocksAsMap(event);
+
+      // テキストと tool_use を順序通りに処理
+      for (const block of rawContent) {
+        if (isTextContentBlock(block)) {
+          contents.push({ type: 'text', text: block.text });
+        } else if (isToolUseContentBlock(block)) {
+          // Map から O(1) で取得
+          const toolBlock = toolBlockMap.get(block.id);
+
+          if (toolBlock) {
+            contents.push({
+              type: 'tool_use',
+              toolUse: toolBlock,
+              result: toolResultMap.get(toolBlock.id),
+            });
+          }
         }
       }
-      // メッセージ直下の content を確認
-      if (Array.isArray(msg.content)) {
-        const textContent = (msg.content as unknown[])
-          .filter((c: unknown) => (c as { type: string }).type === 'text')
-          .map((c: unknown) => (c as { text: string }).text)
-          .join('\n');
-        if (textContent) {
-          return { role: 'assistant', text: textContent };
-        }
+
+      if (contents.length > 0) {
+        return { role: 'assistant', contents };
       }
     }
 
     // system init メッセージ
-    if (type === 'system' && subtype === 'init') {
-      const model = (msg as { model?: string }).model;
-      return { role: 'system', text: `Session initialized${model ? ` (model: ${model})` : ''}` };
+    if (isSDKSystemMessageEvent(event) && event.subtype === 'init') {
+      return {
+        role: 'system',
+        contents: [
+          {
+            type: 'text',
+            text: `Session initialized${event.model ? ` (model: ${event.model})` : ''}`,
+          },
+        ],
+      };
     }
 
-    // result メッセージ
-    if (type === 'result') {
-      const resultMsg = msg as { subtype?: string; result?: string };
-      if (resultMsg.subtype === 'success') {
-        return { role: 'system', text: resultMsg.result || 'Task completed.' };
-      }
-      return { role: 'system', text: `Result: ${resultMsg.subtype || 'unknown'}` };
-    }
-
-    // stream_event（部分レスポンス）はスキップ
-    if (type === 'stream_event') {
+    // result メッセージはスキップ
+    if (event.type === 'result') {
       return null;
     }
 
-    // その他のイベントは非表示
+    // stream_event（部分レスポンス）はスキップ
+    if (event.type === 'stream_event') {
+      return null;
+    }
+
     return null;
-  }, [type, subtype, msg]);
+  }, [event, toolResultMap]);
 
-  if (!content) return null;
+  if (!parsed) return null;
 
-  const isUser = content.role === 'user';
-  const isSystem = content.role === 'system';
+  const isUser = parsed.role === 'user';
+  const isSystem = parsed.role === 'system';
 
   return (
     <div className={cn('py-3', isUser && 'flex justify-end')}>
@@ -95,11 +145,41 @@ export function EventItem({ event }: EventItemProps) {
         className={cn(
           'text-sm whitespace-pre-wrap break-words',
           isUser && 'bg-muted rounded-2xl px-4 py-2 max-w-[80%] text-foreground',
-          !isUser && 'text-foreground',
+          !isUser && 'text-foreground w-full',
           isSystem && 'text-muted-foreground text-xs'
         )}
       >
-        {content.text}
+        {parsed.contents.map((content, index) => {
+          if (content.type === 'text') {
+            // assistant メッセージのテキストには黒丸を追加し、Markdown でレンダリング
+            if (parsed.role === 'assistant') {
+              return (
+                <div key={index} className="flex items-start gap-1 py-1">
+                  <Circle className="h-2 w-2 fill-current flex-shrink-0 mt-2" />
+                  <div className="flex-1 min-w-0">
+                    <MarkdownContent content={content.text} />
+                  </div>
+                </div>
+              );
+            }
+            return <div key={index}>{content.text}</div>;
+          }
+
+          if (content.type === 'tool_use') {
+            return (
+              <ToolUseBlock
+                key={content.toolUse.id}
+                name={content.toolUse.name}
+                input={content.toolUse.input}
+                result={content.result}
+                childEvents={childEventsMap.get(content.toolUse.id)}
+                toolResultMap={toolResultMap}
+              />
+            );
+          }
+
+          return null;
+        })}
       </div>
     </div>
   );
