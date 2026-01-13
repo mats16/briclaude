@@ -1,4 +1,9 @@
 import { FastifyPluginAsync } from 'fastify';
+import type {
+  WorkspaceListQuerystring,
+  WorkspaceGetStatusQuerystring,
+  WorkspaceMkdirsRequest,
+} from '@repo/types';
 import { createUserContext } from '../lib/user-context.js';
 
 const workspaceRoute: FastifyPluginAsync = async fastify => {
@@ -6,7 +11,7 @@ const workspaceRoute: FastifyPluginAsync = async fastify => {
 
   // GET /workspace/list
   fastify.get<{
-    Querystring: { path: string };
+    Querystring: WorkspaceListQuerystring;
   }>('/workspace/list', async (request, reply) => {
     const ctx = createUserContext(fastify, request);
     const pat = await ctx.getPat();
@@ -36,7 +41,7 @@ const workspaceRoute: FastifyPluginAsync = async fastify => {
 
   // GET /workspace/get-status
   fastify.get<{
-    Querystring: { path: string };
+    Querystring: WorkspaceGetStatusQuerystring;
   }>('/workspace/get-status', async (request, reply) => {
     const ctx = createUserContext(fastify, request);
     const pat = await ctx.getPat();
@@ -69,7 +74,7 @@ const workspaceRoute: FastifyPluginAsync = async fastify => {
 
   // POST /workspace/mkdirs
   fastify.post<{
-    Body: { path: string };
+    Body: WorkspaceMkdirsRequest;
   }>('/workspace/mkdirs', async (request, reply) => {
     const ctx = createUserContext(fastify, request);
     const pat = await ctx.getPat();

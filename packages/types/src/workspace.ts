@@ -33,3 +33,21 @@ export interface WorkspaceListQuerystring {
 export interface WorkspaceListResponse {
   objects?: WorkspaceObjectInfo[];
 }
+
+/** GET /api/workspace/get-status query parameters */
+export interface WorkspaceGetStatusQuerystring {
+  path: string;
+}
+
+/** GET /api/workspace/get-status response */
+export interface WorkspaceGetStatusResponse extends WorkspaceObjectInfo {}
+
+/** POST /api/workspace/mkdirs request body */
+export interface WorkspaceMkdirsRequest {
+  path: string;
+}
+
+/** POST /api/workspace/mkdirs response */
+export interface WorkspaceMkdirsResponse {
+  // Empty object on success
+}
