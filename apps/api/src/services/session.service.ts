@@ -21,6 +21,7 @@ import type {
   DatabricksWorkspaceSource,
 } from '@repo/types';
 import { ClaudeSettings } from '../models/claude-settings.model.js';
+import { createWorkspacePushInstruction } from '../utils/system-prompt.helper.js';
 import { sessions } from '../db/schema.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 import { ensureDirectory, removeDirectory } from '../utils/directory.js';
@@ -358,6 +359,21 @@ export async function createSession(
       prompt = typeof userContent === 'string' ? userContent : '';
     }
 
+    // outcomes から databricks_workspace を抽出して systemPrompt.append を生成
+    const workspaceOutcomes = session_context.outcomes.filter(
+      (o): o is DatabricksWorkspaceSource => o.type === 'databricks_workspace'
+    );
+    const systemPromptAppend = createWorkspacePushInstruction(workspaceOutcomes, cwd);
+    fastify.log.info(
+      {
+        sessionId: sessionId.toString(),
+        outcomesCount: session_context.outcomes.length,
+        workspaceOutcomesCount: workspaceOutcomes.length,
+        hasSystemPromptAppend: !!systemPromptAppend,
+      },
+      'systemPrompt.append generation'
+    );
+
     const response = query({
       prompt,
       options: {
@@ -366,10 +382,9 @@ export async function createSession(
         maxTurns: 100,
         settingSources: ['user', 'project', 'local'],
         permissionMode: 'bypassPermissions',
-        systemPrompt: {
-          type: 'preset',
-          preset: 'claude_code',
-        },
+        systemPrompt: systemPromptAppend
+          ? { type: 'preset', preset: 'claude_code', append: systemPromptAppend }
+          : { type: 'preset', preset: 'claude_code' },
         tools: {
           type: 'preset',
           preset: 'claude_code',
@@ -685,6 +700,15 @@ export async function sendMessageToSession(
       prompt = messageContent;
     }
 
+    // outcomes から databricks_workspace を抽出して systemPrompt.append を生成
+    const workspaceOutcomesForResume = (sessionContext.outcomes || []).filter(
+      (o): o is DatabricksWorkspaceSource => o.type === 'databricks_workspace'
+    );
+    const systemPromptAppendForResume = createWorkspacePushInstruction(
+      workspaceOutcomesForResume,
+      sessionContext.cwd
+    );
+
     const response = query({
       prompt,
       options: {
@@ -694,10 +718,9 @@ export async function sendMessageToSession(
         maxTurns: 100,
         settingSources: ['user', 'project', 'local'],
         permissionMode: 'bypassPermissions',
-        systemPrompt: {
-          type: 'preset',
-          preset: 'claude_code',
-        },
+        systemPrompt: systemPromptAppendForResume
+          ? { type: 'preset', preset: 'claude_code', append: systemPromptAppendForResume }
+          : { type: 'preset', preset: 'claude_code' },
         tools: {
           type: 'preset',
           preset: 'claude_code',
