@@ -19,11 +19,14 @@ export function MessageArea({ events, isLoading, error }: MessageAreaProps) {
   // 子イベント（parent_tool_use_id を持つ）をグループ化
   const childEventsMap = useMemo(() => groupChildEvents(events), [events]);
 
-  // トップレベルのイベント（parent_tool_use_id を持たない）のみをフィルタ
+  // トップレベルのイベント（parent_tool_use_id を持たない、type: system を除外）
   const topLevelEvents = useMemo(() => {
     return events.filter(event => {
       const msg = event as Record<string, unknown>;
-      return !msg.parent_tool_use_id;
+      // parent_tool_use_id を持つイベントと system タイプは除外
+      if (msg.parent_tool_use_id) return false;
+      if (msg.type === 'system') return false;
+      return true;
     });
   }, [events]);
 
