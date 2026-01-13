@@ -24,7 +24,6 @@ interface MainHeaderProps {
   sessionId?: string;
   title?: string;
   branchName?: string;
-  isConnected?: boolean;
   onTitleUpdate?: (newTitle: string) => Promise<void>;
   onArchive?: () => Promise<void>;
   isSidebarOpen?: boolean;
@@ -35,7 +34,6 @@ export function MainHeader({
   sessionId,
   title = 'New Session',
   branchName,
-  isConnected = false,
   onTitleUpdate,
   onArchive,
   isSidebarOpen = true,
@@ -81,18 +79,6 @@ export function MainHeader({
           {onToggleSidebar && (
             <SidebarToggleButton isOpen={isSidebarOpen} onToggle={onToggleSidebar} />
           )}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div
-                  className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-muted-foreground'}`}
-                />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{isConnected ? 'Connected' : 'Disconnected'}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-1 font-medium text-foreground">

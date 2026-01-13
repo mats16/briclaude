@@ -35,9 +35,7 @@ export function ToolUseBlock({
 
   // Task ツールの場合、子イベントからネストされたツール使用を抽出
   const hasChildEvents = childEvents && childEvents.length > 0;
-  const nestedToolCount = hasChildEvents
-    ? countNestedToolUses(childEvents)
-    : 0;
+  const nestedToolCount = hasChildEvents ? countNestedToolUses(childEvents) : 0;
 
   return (
     <div className="py-1">
@@ -51,9 +49,7 @@ export function ToolUseBlock({
           )}
         />
         <span className="font-bold text-sm">{name}</span>
-        <span className="text-sm text-muted-foreground font-mono truncate">
-          {inputDisplay}
-        </span>
+        <span className="text-sm text-muted-foreground font-mono truncate">{inputDisplay}</span>
       </div>
 
       {/* Task ツールの場合は子イベントをネスト表示 */}
@@ -64,12 +60,7 @@ export function ToolUseBlock({
           toolCount={nestedToolCount}
         />
       ) : (
-        result && (
-          <CollapsibleContent
-            content={result.content}
-            isError={result.isError}
-          />
-        )
+        result && <CollapsibleContent content={result.content} isError={result.isError} />
       )}
     </div>
   );
@@ -81,11 +72,7 @@ interface TaskChildContentProps {
   toolCount: number;
 }
 
-function TaskChildContent({
-  childEvents,
-  toolResultMap,
-  toolCount,
-}: TaskChildContentProps) {
+function TaskChildContent({ childEvents, toolResultMap, toolCount }: TaskChildContentProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const nestedTools = extractNestedToolUses(childEvents, toolResultMap);
 
@@ -137,9 +124,7 @@ function NestedToolItem({ tool }: NestedToolItemProps) {
           )}
         />
         <span className="font-bold text-xs">{tool.name}</span>
-        <span className="text-xs text-muted-foreground font-mono truncate">
-          {tool.input}
-        </span>
+        <span className="text-xs text-muted-foreground font-mono truncate">{tool.input}</span>
       </div>
 
       {hasResult && (
@@ -150,9 +135,7 @@ function NestedToolItem({ tool }: NestedToolItemProps) {
               tool.isError ? 'text-destructive' : 'text-muted-foreground'
             )}
           >
-            {shouldCollapseResult && !isResultExpanded
-              ? tool.result!.slice(0, 200)
-              : tool.result}
+            {shouldCollapseResult && !isResultExpanded ? tool.result!.slice(0, 200) : tool.result}
           </pre>
           {shouldCollapseResult && (
             <button
@@ -160,9 +143,7 @@ function NestedToolItem({ tool }: NestedToolItemProps) {
               onClick={() => setIsResultExpanded(!isResultExpanded)}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              {isResultExpanded
-                ? '折りたたむ'
-                : `... +${tool.result!.length - 200} 文字`}
+              {isResultExpanded ? '折りたたむ' : `... +${tool.result!.length - 200} 文字`}
             </button>
           )}
         </div>

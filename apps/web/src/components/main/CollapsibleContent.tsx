@@ -17,10 +17,7 @@ export function CollapsibleContent({
   const shouldCollapse = totalChars > collapsedChars;
   const hiddenChars = totalChars - collapsedChars;
 
-  const displayContent =
-    shouldCollapse && !isExpanded
-      ? content.slice(0, collapsedChars)
-      : content;
+  const displayContent = shouldCollapse && !isExpanded ? content.slice(0, collapsedChars) : content;
 
   return (
     <div className="mt-1 ml-4">

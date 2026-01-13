@@ -37,7 +37,7 @@ export function MainArea({
     sessionId: sessionId ?? null,
   });
 
-  const { events, isLoading, isConnected, error, sendMessage } = useSessionEvents({
+  const { events, isLoading, error, sendMessage } = useSessionEvents({
     sessionId: sessionId ?? null,
   });
 
@@ -115,7 +115,6 @@ export function MainArea({
         sessionId={sessionId}
         title={session?.title ?? 'New Session'}
         branchName={branchName}
-        isConnected={isConnected}
         onTitleUpdate={handleTitleUpdate}
         onArchive={handleArchive}
         isSidebarOpen={isSidebarOpen}

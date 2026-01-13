@@ -48,10 +48,7 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
 
             // インラインコード
             return (
-              <code
-                className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono"
-                {...props}
-              >
+              <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
                 {children}
               </code>
             );
@@ -61,26 +58,16 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
             return <div className="my-2">{children}</div>;
           },
           // 見出し
-          h1: ({ children }) => (
-            <h1 className="text-xl font-bold mt-4 mb-2">{children}</h1>
-          ),
-          h2: ({ children }) => (
-            <h2 className="text-lg font-bold mt-3 mb-2">{children}</h2>
-          ),
-          h3: ({ children }) => (
-            <h3 className="text-base font-bold mt-2 mb-1">{children}</h3>
-          ),
-          h4: ({ children }) => (
-            <h4 className="text-sm font-bold mt-2 mb-1">{children}</h4>
-          ),
+          h1: ({ children }) => <h1 className="text-xl font-bold mt-4 mb-2">{children}</h1>,
+          h2: ({ children }) => <h2 className="text-lg font-bold mt-3 mb-2">{children}</h2>,
+          h3: ({ children }) => <h3 className="text-base font-bold mt-2 mb-1">{children}</h3>,
+          h4: ({ children }) => <h4 className="text-sm font-bold mt-2 mb-1">{children}</h4>,
           // リスト
           ul: ({ children }) => (
             <ul className="list-disc list-inside my-2 space-y-1">{children}</ul>
           ),
           ol: ({ children }) => (
-            <ol className="list-decimal list-inside my-2 space-y-1">
-              {children}
-            </ol>
+            <ol className="list-decimal list-inside my-2 space-y-1">{children}</ol>
           ),
           li: ({ children }) => <li className="ml-2">{children}</li>,
           // 段落
@@ -110,23 +97,15 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
               </table>
             </div>
           ),
-          thead: ({ children }) => (
-            <thead className="bg-muted">{children}</thead>
-          ),
+          thead: ({ children }) => <thead className="bg-muted">{children}</thead>,
           th: ({ children }) => (
-            <th className="border border-border px-3 py-1 text-left font-semibold">
-              {children}
-            </th>
+            <th className="border border-border px-3 py-1 text-left font-semibold">{children}</th>
           ),
-          td: ({ children }) => (
-            <td className="border border-border px-3 py-1">{children}</td>
-          ),
+          td: ({ children }) => <td className="border border-border px-3 py-1">{children}</td>,
           // 水平線
           hr: () => <hr className="my-4 border-border" />,
           // 強調
-          strong: ({ children }) => (
-            <strong className="font-bold">{children}</strong>
-          ),
+          strong: ({ children }) => <strong className="font-bold">{children}</strong>,
           em: ({ children }) => <em className="italic">{children}</em>,
         }}
       >

@@ -34,15 +34,10 @@ interface ParsedMessage {
   contents: ContentBlock[];
 }
 
-export function EventItem({
-  event,
-  toolResultMap,
-  childEventsMap,
-}: EventItemProps) {
+export function EventItem({ event, toolResultMap, childEventsMap }: EventItemProps) {
   const msg = event as Record<string, unknown>;
   const type = event.type;
-  const subtype =
-    'subtype' in event ? (event.subtype as string | undefined) : undefined;
+  const subtype = 'subtype' in event ? (event.subtype as string | undefined) : undefined;
 
   const parsed = useMemo((): ParsedMessage | null => {
     // user メッセージ
@@ -93,9 +88,7 @@ export function EventItem({
           contents.push({ type: 'text', text: b.text });
         } else if (b.type === 'tool_use') {
           const toolBlocks = extractToolUseBlocks(msg);
-          const toolBlock = toolBlocks.find(
-            (t) => t.id === (block as { id: string }).id
-          );
+          const toolBlock = toolBlocks.find(t => t.id === (block as { id: string }).id);
 
           if (toolBlock) {
             contents.push({

@@ -21,7 +21,7 @@ export function MessageArea({ events, isLoading, error }: MessageAreaProps) {
 
   // トップレベルのイベント（parent_tool_use_id を持たない）のみをフィルタ
   const topLevelEvents = useMemo(() => {
-    return events.filter((event) => {
+    return events.filter(event => {
       const msg = event as Record<string, unknown>;
       return !msg.parent_tool_use_id;
     });

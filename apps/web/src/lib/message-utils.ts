@@ -52,9 +52,7 @@ export function extractToolResults(events: SDKMessage[]): Map<string, ToolResult
 /**
  * assistant メッセージの content から tool_use ブロックを抽出
  */
-export function extractToolUseBlocks(
-  assistantMsg: Record<string, unknown>
-): ToolUseBlock[] {
+export function extractToolUseBlocks(assistantMsg: Record<string, unknown>): ToolUseBlock[] {
   const toolUses: ToolUseBlock[] = [];
 
   // message.content を確認
@@ -71,12 +69,7 @@ export function extractToolUseBlocks(
       input?: Record<string, unknown>;
     };
 
-    if (
-      toolBlock.type === 'tool_use' &&
-      toolBlock.id &&
-      toolBlock.name &&
-      toolBlock.input
-    ) {
+    if (toolBlock.type === 'tool_use' && toolBlock.id && toolBlock.name && toolBlock.input) {
       toolUses.push({
         type: 'tool_use',
         id: toolBlock.id,
@@ -92,10 +85,7 @@ export function extractToolUseBlocks(
 /**
  * ツール別の入力表示を取得
  */
-export function getToolInputDisplay(
-  name: string,
-  input: Record<string, unknown>
-): string {
+export function getToolInputDisplay(name: string, input: Record<string, unknown>): string {
   const lowerName = name.toLowerCase();
 
   switch (lowerName) {
@@ -120,9 +110,7 @@ export function getToolInputDisplay(
 /**
  * 子イベント（parent_tool_use_id を持つイベント）をグループ化
  */
-export function groupChildEvents(
-  events: SDKMessage[]
-): Map<string, SDKMessage[]> {
+export function groupChildEvents(events: SDKMessage[]): Map<string, SDKMessage[]> {
   const childEventsMap = new Map<string, SDKMessage[]>();
 
   for (const event of events) {
