@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { SDKMessage } from '@repo/types';
+import type { SDKMessage, UserMessageContentBlock } from '@repo/types';
 import { sessionService } from '@/services/session.service';
 import { useSessionWebSocket } from './useSessionWebSocket';
 
@@ -12,7 +12,7 @@ interface UseSessionEventsReturn {
   isLoading: boolean;
   isConnected: boolean;
   error: Error | null;
-  sendMessage: (content: string) => void;
+  sendMessage: (content: UserMessageContentBlock[]) => void;
 }
 
 export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSessionEventsReturn {

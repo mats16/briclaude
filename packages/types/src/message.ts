@@ -30,12 +30,47 @@ export interface ToolResultContentBlock {
   is_error?: boolean;
 }
 
+// =====================================================
+// Image Content Block Types
+// =====================================================
+
+/**
+ * Base64 エンコードされた画像ソース
+ */
+export interface Base64ImageSource {
+  type: 'base64';
+  media_type: 'image/webp' | 'image/png' | 'image/jpeg' | 'image/gif';
+  data: string;
+}
+
+/**
+ * 画像ソース型
+ */
+export type ImageSource = Base64ImageSource;
+
+/**
+ * 画像コンテンツブロック
+ */
+export interface ImageContentBlock {
+  type: 'image';
+  source: ImageSource;
+}
+
 /**
  * すべてのコンテンツブロック型のユニオン
  */
 export type MessageContentBlock =
   | TextContentBlock
+  | ImageContentBlock
   | ToolUseContentBlock
+  | ToolResultContentBlock;
+
+/**
+ * ユーザーメッセージで使用可能なコンテンツブロック
+ */
+export type UserMessageContentBlock =
+  | TextContentBlock
+  | ImageContentBlock
   | ToolResultContentBlock;
 
 // =====================================================
@@ -148,6 +183,22 @@ export function isToolResultContentBlock(
   if (typeof block !== 'object' || block === null) return false;
   const b = block as Record<string, unknown>;
   return b.type === 'tool_result' && typeof b.tool_use_id === 'string';
+}
+
+/**
+ * ImageContentBlock の型ガード
+ */
+export function isImageContentBlock(
+  block: unknown
+): block is ImageContentBlock {
+  if (typeof block !== 'object' || block === null) return false;
+  const b = block as Record<string, unknown>;
+  return (
+    b.type === 'image' &&
+    typeof b.source === 'object' &&
+    b.source !== null &&
+    (b.source as Record<string, unknown>).type === 'base64'
+  );
 }
 
 /**

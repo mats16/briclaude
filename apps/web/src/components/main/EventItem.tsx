@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
-import type { SDKMessage } from '@repo/types';
+import type { SDKMessage, ImageContentBlock as ImageContentBlockType } from '@repo/types';
 import {
   isSDKUserMessageEvent,
   isSDKAssistantMessageEvent,
   isSDKSystemMessageEvent,
   isTextContentBlock,
   isToolUseContentBlock,
+  isImageContentBlock,
 } from '@repo/types';
 import { Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -28,13 +29,18 @@ interface TextContent {
   text: string;
 }
 
+interface ImageContent {
+  type: 'image';
+  source: ImageContentBlockType['source'];
+}
+
 interface ToolUseContent {
   type: 'tool_use';
   toolUse: ToolUseBlockType;
   result?: ToolResult;
 }
 
-type ContentBlock = TextContent | ToolUseContent;
+type ContentBlock = TextContent | ImageContent | ToolUseContent;
 
 interface ParsedMessage {
   role: 'user' | 'assistant' | 'system';
@@ -49,20 +55,21 @@ export function EventItem({ event, toolResultMap, childEventsMap }: EventItemPro
 
       // content が配列の場合
       if (Array.isArray(content)) {
-        // テキストコンテンツのみを抽出（tool_result は除外）
-        const textContent = content
-          .filter(isTextContentBlock)
-          .map(c => c.text)
-          .join('\n');
+        const contents: ContentBlock[] = [];
 
-        // テキストがある場合のみ表示、それ以外はスキップ
-        if (textContent) {
-          return {
-            role: 'user',
-            contents: [{ type: 'text', text: textContent }],
-          };
+        for (const block of content) {
+          if (isImageContentBlock(block)) {
+            contents.push({ type: 'image', source: block.source });
+          } else if (isTextContentBlock(block)) {
+            contents.push({ type: 'text', text: block.text });
+          }
+          // tool_result は除外
         }
-        // tool_result のみや空の配列はスキップ
+
+        // コンテンツがある場合のみ表示
+        if (contents.length > 0) {
+          return { role: 'user', contents };
+        }
         return null;
       }
 
@@ -150,6 +157,17 @@ export function EventItem({ event, toolResultMap, childEventsMap }: EventItemPro
         )}
       >
         {parsed.contents.map((content, index) => {
+          if (content.type === 'image') {
+            return (
+              <img
+                key={index}
+                src={`data:${content.source.media_type};base64,${content.source.data}`}
+                alt="User attached"
+                className="max-w-[300px] max-h-[300px] rounded-lg mb-2"
+              />
+            );
+          }
+
           if (content.type === 'text') {
             // assistant メッセージのテキストには黒丸を追加し、Markdown でレンダリング
             if (parsed.role === 'assistant') {

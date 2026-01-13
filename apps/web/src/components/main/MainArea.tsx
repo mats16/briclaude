@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { SessionCreateRequest } from '@repo/types';
+import type { SessionCreateRequest, UserMessageContentBlock } from '@repo/types';
 import { MainHeader } from './MainHeader';
 import { MessageArea } from './MessageArea';
 import { InputArea } from './InputArea';
@@ -13,7 +13,7 @@ import { SidebarToggleButton } from '@/components/layout/SidebarToggleButton';
 
 interface MainAreaProps {
   branchName?: string;
-  onSendMessage?: (content: string) => void;
+  onSendMessage?: (content: UserMessageContentBlock[]) => void;
   onSessionArchived?: () => void;
   onSessionCreated?: () => void;
   isSidebarOpen?: boolean;
@@ -48,7 +48,7 @@ export function MainArea({
     return lastEvent.type !== 'result';
   }, [events]);
 
-  const handleSend = (content: string) => {
+  const handleSend = (content: UserMessageContentBlock[]) => {
     onSendMessage?.(content);
     sendMessage(content);
   };

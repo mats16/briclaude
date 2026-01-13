@@ -31,6 +31,8 @@
     "selectSession": "セッションを選択してください",
     "inputPlaceholder": "メッセージを入力...",
     "send": "送信",
+    "attachImage": "画像を添付",
+    "dropImageHere": "画像をここにドロップ",
     "openInCli": "CLIで開く",
     "emptyChat": "会話を開始",
     "renameSession": "名前を変更",

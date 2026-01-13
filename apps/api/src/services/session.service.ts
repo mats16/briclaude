@@ -28,6 +28,16 @@ import type { UserContext } from '../lib/user-context.js';
 import path from 'node:path';
 
 /**
+ * 単一の SDKUserMessage を AsyncIterable として返す
+ * query() 関数に構造化コンテンツを渡すために使用
+ */
+async function* singleMessageIterable(
+  msg: SDKUserMessage
+): AsyncIterable<SDKUserMessage> {
+  yield msg;
+}
+
+/**
  * DB から取得するセッションカラムの選択定義
  */
 const SESSION_SELECT_COLUMNS = {
@@ -313,8 +323,25 @@ export async function createSession(
 
   // 8. claude-agent-sdk で query 実行
   try {
+    // userContent が配列（構造化コンテンツ）の場合は SDKUserMessage として渡す
+    let prompt: string | AsyncIterable<SDKUserMessage>;
+    if (Array.isArray(userContent) && userEvent) {
+      prompt = singleMessageIterable({
+        type: 'user',
+        message: {
+          role: 'user',
+          content: userContent,
+        },
+        parent_tool_use_id: null,
+        uuid: userEvent.data.uuid as UUID,
+        session_id: sessionId.toString(),
+      });
+    } else {
+      prompt = typeof userContent === 'string' ? userContent : '';
+    }
+
     const response = query({
-      prompt: userContent,
+      prompt,
       options: {
         cwd: sessionContext.cwd,
         model: session_context.model,
@@ -630,8 +657,17 @@ export async function sendMessageToSession(
 
   // 6. claude-agent-sdk で query 実行（resume オプション使用）
   try {
+    // content が配列（構造化コンテンツ）の場合は SDKUserMessage として渡す
+    const messageContent = userMessage.message.content;
+    let prompt: string | AsyncIterable<SDKUserMessage>;
+    if (Array.isArray(messageContent)) {
+      prompt = singleMessageIterable(userMessage);
+    } else {
+      prompt = messageContent;
+    }
+
     const response = query({
-      prompt: userMessage.message.content,
+      prompt,
       options: {
         resume: sessionRow.sdkSessionId,
         cwd: sessionContext.cwd,

@@ -45,6 +45,8 @@ export interface SessionContextResponse {
 // Session Create Event Types
 // =====================================================
 
+import type { UserMessageContentBlock } from './message.js';
+
 export interface SessionCreateEventData {
   uuid: string;
   session_id: string;
@@ -52,7 +54,7 @@ export interface SessionCreateEventData {
   parent_tool_use_id: string | null;
   message: {
     role: 'user';
-    content: string;
+    content: string | UserMessageContentBlock[];
   };
 }
 
@@ -182,14 +184,20 @@ export interface ChatMessage {
 // Legacy Types (後方互換性のため残す)
 // =====================================================
 
-export interface UserMessageContentBlock {
+/**
+ * @deprecated Use UserMessageContentBlock from message.ts instead
+ */
+export interface LegacyUserMessageContentBlock {
   type: 'text';
   text: string;
 }
 
+/**
+ * @deprecated Use message types from message.ts instead
+ */
 export interface UserMessage {
   role: 'user';
-  content: UserMessageContentBlock[];
+  content: LegacyUserMessageContentBlock[];
 }
 
 /**

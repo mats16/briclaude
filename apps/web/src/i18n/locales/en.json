@@ -31,6 +31,8 @@
     "selectSession": "Select a session to start",
     "inputPlaceholder": "Type your message...",
     "send": "Send",
+    "attachImage": "Attach image",
+    "dropImageHere": "Drop image here",
     "openInCli": "Open in CLI",
     "emptyChat": "Start a conversation",
     "renameSession": "Rename",
