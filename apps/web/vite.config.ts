@@ -95,9 +95,9 @@ export default defineConfig(async ({ mode }) => {
             });
 
             // WebSocket upgrade requests
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             proxy.on(
               'proxyReqWs',
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (proxyReq: any, _req: any, _socket: any, _options: any, _head: any) => {
                 injectHeaders(proxyReq);
               }
