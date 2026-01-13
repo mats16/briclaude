@@ -19,6 +19,7 @@ import { WorkspaceSelector } from '@/components/workspace/WorkspaceSelector';
 import { useImageAttachment } from '@/hooks/useImageAttachment';
 import { useDragDrop } from '@/hooks/useDragDrop';
 import { useRecentWorkspaces } from '@/hooks/useRecentWorkspaces';
+import { useUser } from '@/hooks/useUser';
 import { buildMessageContent } from '@/lib/content-builder';
 import { SESSION_MODELS, DEFAULT_SESSION_MODEL, TEXTAREA_MAX_HEIGHT_MAIN } from '@/constants';
 import type { UserMessageContentBlock } from '@repo/types';
@@ -34,6 +35,7 @@ interface WelcomeScreenProps {
 
 export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps) {
   const { t } = useTranslation();
+  const { hasPat } = useUser();
   const [selectedQuickstart, setSelectedQuickstart] = useState<QuickstartType | null>(null);
   const [content, setContent] = useLocalStorageState('chat-draft-new-session', {
     defaultValue: '',
@@ -140,7 +142,7 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
         <WorkspaceSelector
           value={selectedWorkspace}
           onChange={setSelectedWorkspace}
-          disabled={isSubmitting}
+          disabled={isSubmitting || !hasPat}
         />
       </div>
 
