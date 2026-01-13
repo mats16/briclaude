@@ -3,6 +3,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { UserProvider } from '@/contexts/UserContext';
 import { useUser } from '@/hooks/useUser';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Toaster } from '@/components/ui/sonner';
 
 function LoadingSkeleton() {
   return (
@@ -43,6 +44,7 @@ function App() {
   return (
     <UserProvider>
       <AppContent />
+      <Toaster />
     </UserProvider>
   );
 }

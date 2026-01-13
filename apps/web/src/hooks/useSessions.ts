@@ -8,6 +8,7 @@ interface UseSessionsReturn {
   error: Error | null;
   refetch: () => Promise<void>;
   updateSession: (updatedSession: SessionResponse) => void;
+  getSession: (sessionId: string) => SessionResponse | undefined;
 }
 
 export function useSessions(): UseSessionsReturn {
@@ -35,6 +36,11 @@ export function useSessions(): UseSessionsReturn {
     );
   }, []);
 
+  const getSession = useCallback(
+    (sessionId: string) => sessions.find(s => s.id === sessionId),
+    [sessions]
+  );
+
   useEffect(() => {
     fetchSessions();
   }, [fetchSessions]);
@@ -45,5 +51,6 @@ export function useSessions(): UseSessionsReturn {
     error,
     refetch: fetchSessions,
     updateSession,
+    getSession,
   };
 }

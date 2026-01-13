@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import type { SessionResponse } from '@repo/types';
 import { useSessions } from '@/hooks/useSessions';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -14,8 +15,13 @@ const SIDEBAR_WIDTH = 300;
 export function AppLayout() {
   const { sessionId } = useParams<{ sessionId?: string }>();
   const navigate = useNavigate();
-  const { sessions, isLoading: isSessionsLoading, refetch: refetchSessions, updateSession } =
-    useSessions();
+  const {
+    sessions,
+    isLoading: isSessionsLoading,
+    refetch: refetchSessions,
+    updateSession,
+    getSession,
+  } = useSessions();
   const isMobile = useIsMobile();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -39,22 +45,37 @@ export function AppLayout() {
   );
 
   const handleArchiveSession = useCallback(
-    async (targetSessionId: string) => {
-      const archivedSession = await sessionService.archiveSession(targetSessionId);
-      updateSession(archivedSession);
-      if (sessionId === targetSessionId) {
+    async (targetSessionId: string, shouldNavigate = false) => {
+      const originalSession = getSession(targetSessionId);
+      if (!originalSession) return;
+
+      // Optimistic update
+      const optimisticSession: SessionResponse = {
+        ...originalSession,
+        session_status: 'archived',
+      };
+      updateSession(optimisticSession);
+
+      // Navigate if needed
+      const needsNavigation = shouldNavigate || sessionId === targetSessionId;
+      if (needsNavigation) {
         navigate('/');
       }
+
+      try {
+        await sessionService.archiveSession(targetSessionId);
+      } catch {
+        // Rollback on failure
+        updateSession(originalSession);
+        toast.error('Failed to archive session');
+      }
     },
-    [updateSession, sessionId, navigate]
+    [getSession, updateSession, sessionId, navigate]
   );
 
   const handleMainAreaArchive = useCallback(
-    (archivedSession: SessionResponse) => {
-      updateSession(archivedSession);
-      navigate('/');
-    },
-    [updateSession, navigate]
+    (targetSessionId: string) => handleArchiveSession(targetSessionId, true),
+    [handleArchiveSession]
   );
 
   const sidebarProps = useMemo(

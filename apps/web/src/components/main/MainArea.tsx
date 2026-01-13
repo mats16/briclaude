@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { SessionCreateRequest, SessionResponse, UserMessageContentBlock } from '@repo/types';
+import type { SessionCreateRequest, UserMessageContentBlock } from '@repo/types';
 import { MainHeader } from './MainHeader';
 import { MessageArea } from './MessageArea';
 import { InputArea } from './InputArea';
@@ -16,7 +16,7 @@ import { extractTextFromContent } from '@/lib/content-builder';
 interface MainAreaProps {
   branchName?: string;
   onSendMessage?: (content: UserMessageContentBlock[]) => void;
-  onSessionArchived?: (session: SessionResponse) => void;
+  onSessionArchived?: (sessionId: string) => void;
   onSessionCreated?: () => void;
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
@@ -74,8 +74,7 @@ export function MainArea({
 
   const handleArchive = async () => {
     if (!sessionId) return;
-    const archivedSession = await sessionService.archiveSession(sessionId);
-    onSessionArchived?.(archivedSession);
+    onSessionArchived?.(sessionId);
   };
 
   const handleNewSession = async (
