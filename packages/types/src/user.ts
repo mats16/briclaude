@@ -12,6 +12,6 @@ export interface UserInfo {
 
 export interface UserResponse {
   user: UserInfo;
-  databricksHost: string;
+  databricks_host: string;
   tokens: TokenInfo[];
 }

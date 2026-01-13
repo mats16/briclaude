@@ -39,7 +39,7 @@ const userRoute: FastifyPluginAsync = async fastify => {
 
     return reply.send({
       user,
-      databricksHost: fastify.config.DATABRICKS_HOST,
+      databricks_host: fastify.config.DATABRICKS_HOST,
       tokens,
     });
   });

@@ -38,7 +38,7 @@ export function UserProvider({ children }: UserProviderProps) {
 
       const data = await userService.getCurrentUser();
       setUser(data.user);
-      setDatabricksHost(data.databricksHost);
+      setDatabricksHost(data.databricks_host);
       setTokens(data.tokens ?? []);
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Unknown error');
