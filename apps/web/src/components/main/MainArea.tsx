@@ -64,7 +64,11 @@ export function MainArea({
     onSessionArchived?.();
   };
 
-  const handleNewSession = async (content: UserMessageContentBlock[], modelId: string) => {
+  const handleNewSession = async (
+    content: UserMessageContentBlock[],
+    modelId: string,
+    workspacePath: string | null
+  ) => {
     try {
       setSessionError(null);
       // タイトル生成用にテキストを抽出
@@ -90,7 +94,9 @@ export function MainArea({
         ],
         session_context: {
           model: modelId as 'opus' | 'sonnet' | 'haiku',
-          sources: [],
+          sources: workspacePath
+            ? [{ type: 'databricks_workspace', path: workspacePath }]
+            : [],
           outcomes: [],
         },
       };

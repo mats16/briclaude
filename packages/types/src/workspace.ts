@@ -51,3 +51,21 @@ export interface WorkspaceMkdirsRequest {
 export interface WorkspaceMkdirsResponse {
   // Empty object on success
 }
+
+// =====================================================
+// Workspace Selection Types (Frontend)
+// =====================================================
+
+/** 最近使用したWorkspaceパスの情報 */
+export interface RecentWorkspace {
+  path: string;
+  name: string;
+  last_used_at: number;
+}
+
+/** Workspace選択時の結果 */
+export interface WorkspaceSelection {
+  path: string;
+  name: string;
+  object_type: WorkspaceObjectType;
+}

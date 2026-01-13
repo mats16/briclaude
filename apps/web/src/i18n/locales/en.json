@@ -92,6 +92,21 @@
     "en": "English",
     "ja": "Japanese"
   },
+  "workspace": {
+    "select": "Select Workspace",
+    "recent": "Recent",
+    "selectOther": "Select another folder",
+    "clear": "Clear selection",
+    "browserTitle": "Select Workspace",
+    "browserDescription": "Select a workspace folder or repository to work with.",
+    "cancel": "Cancel",
+    "selectButton": "Select",
+    "selectCurrentFolder": "Select this folder",
+    "open": "Open",
+    "loading": "Loading...",
+    "empty": "This folder is empty",
+    "error": "Failed to load workspace"
+  },
   "welcome": {
     "title": "Welcome to Claude Code",
     "subtitle": "Accelerate your Databricks development with AI Agent.\nStart with a quickstart below or type a message.",
