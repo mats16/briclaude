@@ -14,7 +14,7 @@ import { eq, and } from 'drizzle-orm';
  * トークンをマスク表示用に変換
  * 例: "dapi_abc123xyz" -> "dapi****xyz"
  */
-function maskToken(token: string): string {
+export function maskToken(token: string): string {
   if (token.length <= 8) {
     return '****';
   }

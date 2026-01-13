@@ -2,6 +2,8 @@
 // User Types
 // =====================================================
 
+import type { TokenInfo } from './token.js';
+
 export interface UserInfo {
   id: string;
   name: string;
@@ -11,4 +13,5 @@ export interface UserInfo {
 export interface UserResponse {
   user: UserInfo;
   databricksHost: string;
+  tokens: TokenInfo[];
 }
