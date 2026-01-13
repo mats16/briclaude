@@ -31,12 +31,20 @@
     "selectSession": "Select a session to start",
     "inputPlaceholder": "Type your message...",
     "send": "Send",
+    "attachImage": "Attach image",
+    "dropImageHere": "Drop image here",
     "openInCli": "Open in CLI",
     "emptyChat": "Start a conversation",
     "renameSession": "Rename",
     "archiveSession": "Archive",
     "renameSessionDescription": "Enter a new name for this session.",
     "sessionTitlePlaceholder": "Session title"
+  },
+  "image": {
+    "unsupportedFormat": "{{fileName}} is not a supported image format",
+    "exceedsMaxSize": "{{fileName}} exceeds maximum file size (20MB)",
+    "maxImagesAllowed": "Maximum {{count}} images allowed",
+    "processingFailed": "Failed to process image"
   },
   "user": {
     "settings": "Settings",

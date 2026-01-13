@@ -87,10 +87,14 @@ function TaskChildContent({ childEvents, toolResultMap, toolCount }: TaskChildCo
         onClick={() => setIsExpanded(!isExpanded)}
         aria-expanded={isExpanded}
         aria-controls={contentId}
-        aria-label={isExpanded ? 'ツール使用の詳細を折りたたむ' : `${toolCount}個のツール使用の詳細を表示`}
+        aria-label={
+          isExpanded ? 'ツール使用の詳細を折りたたむ' : `${toolCount}個のツール使用の詳細を表示`
+        }
         className="flex items-start gap-1 text-muted-foreground hover:text-foreground transition-colors text-left w-full"
       >
-        <span className="select-none" aria-hidden="true">└</span>
+        <span className="select-none" aria-hidden="true">
+          └
+        </span>
         <span className="text-xs">{summaryText}</span>
       </button>
 

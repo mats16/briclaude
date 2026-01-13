@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { SessionCreateRequest } from '@repo/types';
+import type { SessionCreateRequest, UserMessageContentBlock } from '@repo/types';
 import { MainHeader } from './MainHeader';
 import { MessageArea } from './MessageArea';
 import { InputArea } from './InputArea';
@@ -10,10 +10,11 @@ import { useSessionEvents } from '@/hooks/useSessionEvents';
 import { useSession } from '@/hooks/useSession';
 import { sessionService } from '@/services/session.service';
 import { SidebarToggleButton } from '@/components/layout/SidebarToggleButton';
+import { extractTextFromContent } from '@/lib/content-builder';
 
 interface MainAreaProps {
   branchName?: string;
-  onSendMessage?: (content: string) => void;
+  onSendMessage?: (content: UserMessageContentBlock[]) => void;
   onSessionArchived?: () => void;
   onSessionCreated?: () => void;
   isSidebarOpen?: boolean;
@@ -48,7 +49,7 @@ export function MainArea({
     return lastEvent.type !== 'result';
   }, [events]);
 
-  const handleSend = (content: string) => {
+  const handleSend = (content: UserMessageContentBlock[]) => {
     onSendMessage?.(content);
     sendMessage(content);
   };
@@ -63,10 +64,12 @@ export function MainArea({
     onSessionArchived?.();
   };
 
-  const handleNewSession = async (content: string, modelId: string) => {
+  const handleNewSession = async (content: UserMessageContentBlock[], modelId: string) => {
     try {
       setSessionError(null);
-      const title = await sessionService.generateTitle(content);
+      // タイトル生成用にテキストを抽出
+      const textContent = extractTextFromContent(content);
+      const title = await sessionService.generateTitle(textContent);
 
       const request: SessionCreateRequest = {
         title: title ?? undefined,

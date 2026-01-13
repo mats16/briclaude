@@ -1,5 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { WsServerMessage, SDKMessage, SDKUserMessage, WsConnectedMessage } from '@repo/types';
+import type {
+  WsServerMessage,
+  SDKMessage,
+  SDKUserMessage,
+  WsConnectedMessage,
+  UserMessageContentBlock,
+} from '@repo/types';
 
 interface UseSessionWebSocketOptions {
   sessionId: string | null;
@@ -15,7 +21,7 @@ interface UseSessionWebSocketReturn {
   error: Error | null;
   reconnect: () => void;
   connect: () => void;
-  sendMessage: (content: string) => void;
+  sendMessage: (content: UserMessageContentBlock[]) => void;
 }
 
 const MAX_RECONNECT_ATTEMPTS = 5;
@@ -34,7 +40,7 @@ export function useSessionWebSocket({
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttempts = useRef(0);
-  const pendingMessagesRef = useRef<string[]>([]);
+  const pendingMessagesRef = useRef<UserMessageContentBlock[][]>([]);
 
   // stale closure 問題を回避するため、コールバックを ref で保持
   const onEventRef = useRef(onEvent);
@@ -80,7 +86,7 @@ export function useSessionWebSocket({
           // ペンディングメッセージを送信（サーバー準備完了後）
           while (pendingMessagesRef.current.length > 0) {
             const content = pendingMessagesRef.current.shift();
-            if (content && ws.readyState === WebSocket.OPEN) {
+            if (content && content.length > 0 && ws.readyState === WebSocket.OPEN) {
               const userMessage: SDKUserMessage = {
                 type: 'user',
                 uuid: crypto.randomUUID(),
@@ -170,7 +176,7 @@ export function useSessionWebSocket({
 
   // メッセージ送信関数（未接続の場合は透過的に接続）
   const sendMessage = useCallback(
-    (content: string) => {
+    (content: UserMessageContentBlock[]) => {
       if (!sessionId) return;
 
       // 接続済みの場合は直接送信

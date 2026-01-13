@@ -31,12 +31,20 @@
     "selectSession": "セッションを選択してください",
     "inputPlaceholder": "メッセージを入力...",
     "send": "送信",
+    "attachImage": "画像を添付",
+    "dropImageHere": "画像をここにドロップ",
     "openInCli": "CLIで開く",
     "emptyChat": "会話を開始",
     "renameSession": "名前を変更",
     "archiveSession": "アーカイブ",
     "renameSessionDescription": "このセッションの新しい名前を入力してください。",
     "sessionTitlePlaceholder": "セッション名"
+  },
+  "image": {
+    "unsupportedFormat": "{{fileName}} はサポートされていない画像形式です",
+    "exceedsMaxSize": "{{fileName}} が最大ファイルサイズ (20MB) を超えています",
+    "maxImagesAllowed": "最大 {{count}} 枚の画像まで添付できます",
+    "processingFailed": "画像の処理に失敗しました"
   },
   "user": {
     "settings": "設定",
