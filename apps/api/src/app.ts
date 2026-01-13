@@ -10,6 +10,7 @@ import userRoute from './routes/user.js';
 import userTokensRoute from './routes/user-tokens.js';
 import sessionRoute from './routes/session.js';
 import titleRoute from './routes/title.js';
+import workspaceRoute from './routes/workspace.js';
 
 export async function build() {
   const app = Fastify({
@@ -39,6 +40,7 @@ export async function build() {
   await app.register(userTokensRoute, { prefix: '/api' });
   await app.register(sessionRoute, { prefix: '/api' });
   await app.register(titleRoute, { prefix: '/api' });
+  await app.register(workspaceRoute, { prefix: '/api' });
 
   // APIルートのキャッシュ制御
   app.addHook('onSend', async (request, reply) => {
