@@ -21,9 +21,9 @@ const workspaceRoute: FastifyPluginAsync = async fastify => {
     prefix: '/workspace',
     rewritePrefix: '/api/2.0/workspace',
     replyOptions: {
-      rewriteRequestHeaders: (req, headers) => {
+      rewriteRequestHeaders: req => {
         return {
-          ...headers,
+          'content-type': 'application/json',
           authorization: req.patToken ? `Bearer ${req.patToken}` : '',
         };
       },
