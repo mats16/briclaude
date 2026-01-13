@@ -2,10 +2,48 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import type { ClientRequest } from 'http';
+import detectPort from 'detect-port';
+import fs from 'fs/promises';
 
-export default defineConfig(({ mode }) => {
+const PORT_FILE_PATH = path.join(__dirname, '../../.api-port');
+
+// APIポートをファイルから読み込み（リトライ機能付き）
+async function getApiPort(maxRetries = 10, retryDelay = 500): Promise<number> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const content = await fs.readFile(PORT_FILE_PATH, 'utf-8');
+      const port = parseInt(content.trim(), 10);
+      if (!isNaN(port)) {
+        console.log(`✓ API server port detected: ${port}`);
+        return port;
+      }
+    } catch (err) {
+      // ファイルがまだ存在しない場合は待機
+      if (i < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      }
+    }
+  }
+
+  // フォールバック
+  console.warn('⚠ Could not detect API port, falling back to 8000');
+  return 8000;
+}
+
+export default defineConfig(async ({ mode }) => {
   // Load env file from project root
   const env = loadEnv(mode, '../../', '');
+
+  // APIポートを取得
+  const apiPort = await getApiPort();
+
+  // Viteポートを検出
+  const desiredVitePort = 3000;
+  const vitePort = await detectPort(desiredVitePort);
+
+  if (desiredVitePort !== vitePort) {
+    console.log(`⚠ Port ${desiredVitePort} is in use, using ${vitePort} instead`);
+  }
 
   return {
     plugins: [react()],
@@ -15,13 +53,13 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      port: 3000,
+      port: vitePort,
       headers: {
         'Cache-Control': 'no-store',
       },
       proxy: {
         '/api': {
-          target: 'http://localhost:8000',
+          target: `http://localhost:${apiPort}`,
           changeOrigin: true,
           ws: true,
           rewriteWsOrigin: true,

@@ -41,6 +41,7 @@
     "@types/pg": "^8.11.10",
     "@types/ws": "^8.18.1",
     "@vitest/ui": "^4.0.16",
+    "detect-port": "^1.6.1",
     "drizzle-kit": "^1.0.0-beta.8",
     "tsx": "^4.19.2",
     "vitest": "^4.0.16"
