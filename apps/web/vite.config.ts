@@ -4,7 +4,9 @@ import path from 'path';
 import type { ClientRequest } from 'http';
 import detectPort from 'detect-port';
 import fs from 'fs/promises';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT_FILE_PATH = path.join(__dirname, '../../.api-port');
 
 // APIポートをファイルから読み込み（リトライ機能付き）
@@ -63,7 +65,8 @@ export default defineConfig(async ({ mode }) => {
           changeOrigin: true,
           ws: true,
           rewriteWsOrigin: true,
-          configure: (proxy, _options) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          configure: (proxy: any, _options: any) => {
             // Helper function to inject headers
             const injectHeaders = (proxyReq: ClientRequest) => {
               const token = env.DATABRICKS_TOKEN;
@@ -86,12 +89,14 @@ export default defineConfig(async ({ mode }) => {
             };
 
             // HTTP requests
-            proxy.on('proxyReq', (proxyReq, _req, _res) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            proxy.on('proxyReq', (proxyReq: any, _req: any, _res: any) => {
               injectHeaders(proxyReq);
             });
 
             // WebSocket upgrade requests
-            proxy.on('proxyReqWs', (proxyReq, _req, _socket, _options, _head) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            proxy.on('proxyReqWs', (proxyReq: any, _req: any, _socket: any, _options: any, _head: any) => {
               injectHeaders(proxyReq);
             });
           },

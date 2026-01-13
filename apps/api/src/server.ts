@@ -1,9 +1,12 @@
 import { build } from './app.js';
 import detectPort from 'detect-port';
 import fs from 'fs/promises';
+import fsSync from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-const PORT_FILE_PATH = path.join(process.cwd(), '../../.api-port');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PORT_FILE_PATH = path.join(__dirname, '../../../.api-port');
 
 const start = async () => {
   const app = await build();
@@ -32,11 +35,21 @@ const start = async () => {
         } catch {
           // ファイルが存在しない場合は無視
         }
+        process.exit(0);
+      };
+
+      // exitイベントでは同期処理のみ使用
+      const cleanupSync = () => {
+        try {
+          fsSync.unlinkSync(PORT_FILE_PATH);
+        } catch {
+          // ファイルが存在しない場合は無視
+        }
       };
 
       process.on('SIGINT', cleanup);
       process.on('SIGTERM', cleanup);
-      process.on('exit', cleanup);
+      process.on('exit', cleanupSync);
 
       await app.listen({ port: availablePort, host: '0.0.0.0' });
       console.log(`Server listening on http://localhost:${availablePort}`);
