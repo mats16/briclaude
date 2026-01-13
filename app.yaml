@@ -1,4 +1,4 @@
-command: ["npm", "run", "start", "--filter=@repo/backend"]
+command: ["npm", "run", "start", "--filter=@repo/api"]
 
 env:
   - name: USER_BASE_DIR

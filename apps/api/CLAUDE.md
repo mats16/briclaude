@@ -210,7 +210,7 @@ fastify.get('/example', async (request, reply) => {
 Serves React frontend directly from Fastify:
 
 - `/api/*` -> API endpoints
-- Other paths -> Static files from `frontend/dist`
+- Other paths -> Static files from `web/dist`
 - SPA fallback -> `index.html`
 
 ### Caching Strategy

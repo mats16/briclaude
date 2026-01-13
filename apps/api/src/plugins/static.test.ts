@@ -4,7 +4,7 @@ import fastifyStatic from '@fastify/static';
 import fs from 'fs';
 import path from 'path';
 
-const TEST_DIST_DIR = path.join(import.meta.dirname, '../../../frontend/dist-test');
+const TEST_DIST_DIR = path.join(import.meta.dirname, '../../../web/dist-test');
 
 describe('static plugin', () => {
   let app: FastifyInstance;
