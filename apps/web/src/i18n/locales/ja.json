@@ -57,6 +57,8 @@
     "settings": "設定",
     "language": "言語",
     "theme": "テーマ",
+    "claudeCode": "Claude Code",
+    "skills": "スキル",
     "databricksConsole": "Databricks Console",
     "loadError": "ユーザー情報の取得に失敗しました",
     "defaultName": "ユーザー"
@@ -114,6 +116,52 @@
     "loading": "読み込み中...",
     "empty": "このフォルダは空です",
     "error": "Workspaceの読み込みに失敗しました"
+  },
+  "skills": {
+    "title": "スキル管理",
+    "description": "カスタムスキルの追加・管理ができます",
+    "createNew": "新規作成",
+    "importFromGit": "インポート",
+    "fetchError": "スキル一覧の取得に失敗しました",
+    "createError": "スキルの作成に失敗しました",
+    "importError": "インポートに失敗しました",
+    "deleteError": "削除に失敗しました",
+    "deleteConfirm": "スキル「{{name}}」を削除しますか？",
+    "empty": "スキルがありません",
+    "backToHome": "ホームに戻る",
+    "createDialog": {
+      "title": "新規スキル作成",
+      "description": "カスタムスキルを作成します",
+      "name": "スキル名",
+      "namePlaceholder": "my-skill",
+      "version": "バージョン",
+      "versionPlaceholder": "1.0.0",
+      "skillDescription": "説明",
+      "descriptionPlaceholder": "スキルの説明を入力",
+      "content": "コンテンツ",
+      "contentPlaceholder": "スキルのプロンプトを入力...",
+      "submit": "作成"
+    },
+    "importDialog": {
+      "title": "Gitリポジトリからインポート",
+      "description": "Gitリポジトリからスキルをインポートします",
+      "repositoryUrl": "リポジトリURL",
+      "repositoryUrlPlaceholder": "https://github.com/user/repo.git",
+      "path": "インポートパス",
+      "pathPlaceholder": "skills/my-skill",
+      "branch": "ブランチ",
+      "branchPlaceholder": "main",
+      "submit": "インポート"
+    },
+    "previewDialog": {
+      "content": "コンテンツ",
+      "edit": "編集",
+      "save": "保存",
+      "cancel": "キャンセル",
+      "editing": "編集中"
+    },
+    "updateError": "スキルの更新に失敗しました",
+    "updateSuccess": "スキルを更新しました"
   },
   "welcome": {
     "title": "Claude Code へようこそ",

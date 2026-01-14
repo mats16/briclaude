@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { Globe, Check, Settings, AlertCircle, RefreshCw, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Globe,
+  Check,
+  Settings,
+  AlertCircle,
+  RefreshCw,
+  ExternalLink,
+  Terminal,
+  Sparkles,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { UserSettingsModal } from '@/components/settings/UserSettingsModal';
@@ -32,6 +42,7 @@ export function UserFooter({
   onRetry,
 }: UserFooterProps) {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const displayName = userName || t('user.defaultName');
@@ -91,6 +102,19 @@ export function UserFooter({
             <DropdownMenuLabel>
               <span className="truncate">{displayName}</span>
             </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Terminal className="h-4 w-4 mr-2" />
+                {t('user.claudeCode')}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem onClick={() => navigate('/skills')}>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  {t('user.skills')}
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
               <Settings className="h-4 w-4 mr-2" />

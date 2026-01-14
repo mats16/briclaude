@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { SessionResponse } from '@repo/types';
@@ -8,6 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { sessionService } from '@/services';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { MainArea } from '@/components/main/MainArea';
+import { SkillsContent } from '@/pages/SkillsPage';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 
@@ -16,7 +17,9 @@ const SIDEBAR_WIDTH = 300;
 export function AppLayout() {
   const { sessionId } = useParams<{ sessionId?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
+  const isSkillsPage = location.pathname === '/skills';
   const {
     sessions,
     isLoading: isSessionsLoading,
@@ -103,10 +106,14 @@ export function AppLayout() {
               <SidebarTrigger />
             </div>
             <div className="flex-1 min-h-0">
-              <MainArea
-                onSessionArchived={handleMainAreaArchive}
-                onSessionCreated={refetchSessions}
-              />
+              {isSkillsPage ? (
+                <SkillsContent />
+              ) : (
+                <MainArea
+                  onSessionArchived={handleMainAreaArchive}
+                  onSessionCreated={refetchSessions}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -138,12 +145,19 @@ export function AppLayout() {
 
         {/* Main Area */}
         <div className="flex-1 h-full min-w-0">
-          <MainArea
-            onSessionArchived={handleMainAreaArchive}
-            onSessionCreated={refetchSessions}
-            isSidebarOpen={isSidebarOpen}
-            onToggleSidebar={toggleSidebar}
-          />
+          {isSkillsPage ? (
+            <SkillsContent
+              isSidebarOpen={isSidebarOpen}
+              onToggleSidebar={toggleSidebar}
+            />
+          ) : (
+            <MainArea
+              onSessionArchived={handleMainAreaArchive}
+              onSessionCreated={refetchSessions}
+              isSidebarOpen={isSidebarOpen}
+              onToggleSidebar={toggleSidebar}
+            />
+          )}
         </div>
       </div>
     </SidebarProvider>
