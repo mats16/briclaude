@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export function useTypewriter(
   text: string,
@@ -7,6 +7,16 @@ export function useTypewriter(
 ): string {
   const [displayText, setDisplayText] = useState('');
   const [index, setIndex] = useState(0);
+  const prevTextRef = useRef(text);
+
+  // textが変更された場合にリセット
+  useEffect(() => {
+    if (prevTextRef.current !== text) {
+      prevTextRef.current = text;
+      setDisplayText('');
+      setIndex(0);
+    }
+  }, [text]);
 
   useEffect(() => {
     if (index < text.length) {
