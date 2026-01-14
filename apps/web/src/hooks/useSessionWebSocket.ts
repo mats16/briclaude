@@ -22,6 +22,7 @@ interface UseSessionWebSocketReturn {
   reconnect: () => void;
   connect: () => void;
   sendMessage: (content: UserMessageContentBlock[]) => void;
+  sendInterrupt: () => void;
 }
 
 const MAX_RECONNECT_ATTEMPTS = 5;
@@ -202,6 +203,23 @@ export function useSessionWebSocket({
     [sessionId, connect]
   );
 
+  // Interrupt 送信関数
+  const sendInterrupt = useCallback(() => {
+    if (!sessionId) return;
+
+    // 接続済みの場合のみ送信
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      const message = {
+        type: 'control_request',
+        request_id: crypto.randomUUID(),
+        request: {
+          subtype: 'interrupt',
+        },
+      };
+      wsRef.current.send(JSON.stringify(message));
+    }
+  }, [sessionId]);
+
   return {
     isConnected,
     isConnecting,
@@ -209,5 +227,6 @@ export function useSessionWebSocket({
     reconnect,
     connect,
     sendMessage,
+    sendInterrupt,
   };
 }

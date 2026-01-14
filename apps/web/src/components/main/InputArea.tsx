@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import useLocalStorageState from 'use-local-storage-state';
-import { Send, Image, Loader2 } from 'lucide-react';
+import { Send, Image, Loader2, StopCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -16,10 +16,12 @@ import type { UserMessageContentBlock } from '@repo/types';
 interface InputAreaProps {
   sessionId?: string;
   onSend?: (content: UserMessageContentBlock[]) => Promise<void> | void;
+  onInterrupt?: () => void;
   disabled?: boolean;
+  isAgentThinking?: boolean;
 }
 
-export function InputArea({ sessionId, onSend, disabled }: InputAreaProps) {
+export function InputArea({ sessionId, onSend, onInterrupt, disabled, isAgentThinking }: InputAreaProps) {
   const { t } = useTranslation();
   const storageKey = sessionId ? `chat-draft-${sessionId}` : 'chat-draft-temp';
   const [content, setContent] = useLocalStorageState(storageKey, {
@@ -95,6 +97,16 @@ export function InputArea({ sessionId, onSend, disabled }: InputAreaProps) {
     [content, hasImages, disabled, isSubmitting]
   );
 
+  // エージェント実行中かつ入力が空の場合は中断ボタンを表示
+  const showInterruptButton = useMemo(
+    () => isAgentThinking && !content.trim() && !hasImages,
+    [isAgentThinking, content, hasImages]
+  );
+
+  const handleInterrupt = useCallback(() => {
+    onInterrupt?.();
+  }, [onInterrupt]);
+
   return (
     <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
       <div ref={containerRef} className="relative w-full max-w-[735px] mx-auto pointer-events-auto">
@@ -147,18 +159,21 @@ export function InputArea({ sessionId, onSend, disabled }: InputAreaProps) {
                   <Button
                     size="icon"
                     className="h-8 w-8 shrink-0"
-                    onClick={handleSubmit}
-                    disabled={!canSubmit}
+                    onClick={showInterruptButton ? handleInterrupt : handleSubmit}
+                    disabled={showInterruptButton ? false : !canSubmit}
+                    variant={showInterruptButton ? 'destructive' : 'default'}
                   >
                     {isSubmitting ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : showInterruptButton ? (
+                      <StopCircle className="h-4 w-4" />
                     ) : (
                       <Send className="h-4 w-4" />
                     )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{t('main.send')}</p>
+                  <p>{showInterruptButton ? t('main.interrupt') : t('main.send')}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

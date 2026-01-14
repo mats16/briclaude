@@ -31,6 +31,7 @@
     "selectSession": "Select a session to start",
     "inputPlaceholder": "Type your message...",
     "send": "Send",
+    "interrupt": "Stop",
     "attachImage": "Attach image",
     "dropImageHere": "Drop image here",
     "openInCli": "Open in CLI",

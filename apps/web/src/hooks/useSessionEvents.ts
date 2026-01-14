@@ -13,6 +13,7 @@ interface UseSessionEventsReturn {
   isConnected: boolean;
   error: Error | null;
   sendMessage: (content: UserMessageContentBlock[]) => void;
+  sendInterrupt: () => void;
 }
 
 export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSessionEventsReturn {
@@ -68,7 +69,7 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
   }, []);
 
   // WebSocket 接続（shouldAutoConnect に基づいて自動接続を制御）
-  const { isConnected, sendMessage } = useSessionWebSocket({
+  const { isConnected, sendMessage, sendInterrupt } = useSessionWebSocket({
     sessionId,
     autoConnect: shouldAutoConnect,
     onEvent: handleEvent,
@@ -90,5 +91,6 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
     isConnected,
     error,
     sendMessage,
+    sendInterrupt,
   };
 }
