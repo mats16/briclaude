@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Circle, ToyBrick } from 'lucide-react';
+import { ToyBrick } from 'lucide-react';
 
 const BRICK_COLORS = ['#8B5CF6', '#EC4899', '#3B82F6'];
 
@@ -31,26 +31,23 @@ export function ThinkingIndicator() {
 
   return (
     <div className="py-3 mb-8">
-      <div className="flex items-start gap-1 py-1 text-sm text-foreground">
-        <Circle className="h-2 w-2 fill-current flex-shrink-0 mt-2" />
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-0.5">
-            {BRICK_COLORS.map((color, i) => (
-              <ToyBrick
-                key={i}
-                className="h-4 w-4 animate-wave"
-                style={{
-                  color,
-                  animationDelay: `${i * 0.12}s`,
-                }}
-              />
-            ))}
-          </div>
-          <span className="min-w-[85px] text-muted-foreground">
-            {text}
-            <span className="animate-pulse">|</span>
-          </span>
+      <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-0.5">
+          {BRICK_COLORS.map((color, i) => (
+            <ToyBrick
+              key={i}
+              className="h-4 w-4 animate-wave"
+              style={{
+                color,
+                animationDelay: `${i * 0.12}s`,
+              }}
+            />
+          ))}
         </div>
+        <span className="min-w-[85px] text-muted-foreground">
+          {text}
+          <span className="animate-pulse">|</span>
+        </span>
       </div>
     </div>
   );
