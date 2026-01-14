@@ -857,11 +857,8 @@ export async function executeAbort(
 
   if (!abortController) return;
 
-  // 1. abort を呼び出し
+  // 1. abort を呼び出し（AbortController の削除は processRemainingEvents の finally で行う）
   abortController.abort();
-
-  // AbortController を削除
-  sessionAbortControllers.delete(sessionIdStr);
 
   // 2. user メッセージを送信（画面表示用）
   const userMessage = {
