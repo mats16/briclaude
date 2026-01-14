@@ -1,10 +1,8 @@
-command: ["npm", "run", "start", "--filter=@repo/api"]
+command: ["npm", "run", "start", "--workspace=apps/api"]
 
 env:
   - name: USER_BASE_DIR
     value: /home/app/users
-  - name: SESSION_BASE_DIR
-    value: /home/app/sessions
   - name: ENCRYPTION_KEY
     valueFrom: encryption-key-secret
   - name: DATABASE_URL
