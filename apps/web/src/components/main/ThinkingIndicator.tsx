@@ -1,4 +1,5 @@
 import { ToyBrick } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useTypewriter } from '@/hooks/useTypewriter';
 
 const BRICK_COLORS = ['text-purple-500', 'text-pink-500', 'text-blue-500'];
@@ -7,7 +8,8 @@ const TYPEWRITER_SPEED_MS = 120;
 const TYPEWRITER_PAUSE_MS = 1500;
 
 export function ThinkingIndicator() {
-  const text = useTypewriter('Thinking…', TYPEWRITER_SPEED_MS, TYPEWRITER_PAUSE_MS);
+  const { t } = useTranslation();
+  const text = useTypewriter(t('main.thinking'), TYPEWRITER_SPEED_MS, TYPEWRITER_PAUSE_MS);
 
   return (
     <div className="py-3 mb-8" role="status" aria-live="polite">
