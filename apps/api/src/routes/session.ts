@@ -13,6 +13,8 @@ import type {
   SessionUpdateRequest,
   WsConnectedMessage,
   WsErrorMessage,
+  WsControlRequest,
+  WsControlResponse,
   SDKAuthStatusMessage,
   ApiError,
 } from '@repo/types';
@@ -24,6 +26,7 @@ import {
   updateSession,
   archiveSession,
   sendMessageToSession,
+  interruptSession,
 } from '../services/session.service.js';
 import { listSessionEvents, getSessionLastEventId } from '../services/session-events.service.js';
 import { wsManager } from '../services/websocket-manager.service.js';
@@ -314,7 +317,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
 
       request.log.info({ sessionId: session_id, userId: user.id }, 'WebSocket connected');
 
-      // クライアントからのメッセージ処理（ping/pong, user message）
+      // クライアントからのメッセージ処理（ping/pong, user message, control_request）
       socket.on('message', async (data: Buffer) => {
         try {
           const msg = JSON.parse(data.toString());
@@ -343,6 +346,24 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
                     : 'Unknown error',
               };
               socket.send(JSON.stringify(authStatusMsg));
+            }
+          } else if (msg.type === 'control_request') {
+            // control_request を受信 → abort 処理
+            const controlRequest = msg as WsControlRequest;
+
+            if (controlRequest.request.subtype === 'abort') {
+              const result = await interruptSession(
+                fastify,
+                user.id,
+                sessionId,
+                controlRequest.request_id
+              );
+
+              const response: WsControlResponse = {
+                type: 'control_response',
+                response: result.response,
+              };
+              socket.send(JSON.stringify(response));
             }
           }
         } catch {

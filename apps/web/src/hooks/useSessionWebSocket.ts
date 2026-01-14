@@ -4,6 +4,8 @@ import type {
   SDKMessage,
   SDKUserMessage,
   WsConnectedMessage,
+  WsControlRequest,
+  WsControlResponse,
   UserMessageContentBlock,
 } from '@repo/types';
 
@@ -22,6 +24,7 @@ interface UseSessionWebSocketReturn {
   reconnect: () => void;
   connect: () => void;
   sendMessage: (content: UserMessageContentBlock[]) => void;
+  abort: () => Promise<boolean>;
 }
 
 const MAX_RECONNECT_ATTEMPTS = 5;
@@ -41,6 +44,9 @@ export function useSessionWebSocket({
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttempts = useRef(0);
   const pendingMessagesRef = useRef<UserMessageContentBlock[][]>([]);
+  const pendingControlRequestsRef = useRef<
+    Map<string, { resolve: (success: boolean) => void; reject: (error: Error) => void }>
+  >(new Map());
 
   // stale closure 問題を回避するため、コールバックを ref で保持
   const onEventRef = useRef(onEvent);
@@ -110,6 +116,14 @@ export function useSessionWebSocket({
           onErrorRef.current?.(new Error(errorMessage));
         } else if (message.type === 'pong') {
           // Pong message - ignore
+        } else if (message.type === 'control_response') {
+          // WsControlResponse - pending リクエストを解決
+          const response = message as WsControlResponse;
+          const pending = pendingControlRequestsRef.current.get(response.response.request_id);
+          if (pending) {
+            pendingControlRequestsRef.current.delete(response.response.request_id);
+            pending.resolve(response.response.subtype === 'success');
+          }
         } else if ('session_id' in message) {
           // SDKMessage - ref 経由で最新のコールバックを呼び出す
           onEventRef.current?.(message as SDKMessage);
@@ -202,6 +216,38 @@ export function useSessionWebSocket({
     [sessionId, connect]
   );
 
+  // Agent を abort する
+  const abort = useCallback(async (): Promise<boolean> => {
+    if (!sessionId || wsRef.current?.readyState !== WebSocket.OPEN) {
+      return false;
+    }
+
+    const requestId = crypto.randomUUID();
+    const request: WsControlRequest = {
+      type: 'control_request',
+      request_id: requestId,
+      request: {
+        subtype: 'abort',
+      },
+    };
+
+    return new Promise<boolean>(resolve => {
+      pendingControlRequestsRef.current.set(requestId, {
+        resolve,
+        reject: () => resolve(false),
+      });
+      wsRef.current!.send(JSON.stringify(request));
+
+      // タイムアウト（10秒）
+      setTimeout(() => {
+        if (pendingControlRequestsRef.current.has(requestId)) {
+          pendingControlRequestsRef.current.delete(requestId);
+          resolve(false);
+        }
+      }, 10000);
+    });
+  }, [sessionId]);
+
   return {
     isConnected,
     isConnecting,
@@ -209,5 +255,6 @@ export function useSessionWebSocket({
     reconnect,
     connect,
     sendMessage,
+    abort,
   };
 }

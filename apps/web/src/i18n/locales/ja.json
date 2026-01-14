@@ -43,7 +43,8 @@
     "sessionTitlePlaceholder": "セッション名",
     "sessionNotFound": "セッションが見つかりませんでした",
     "sessionNotFoundDescription": "このセッションは削除されたか、存在しない可能性があります。",
-    "goHome": "ホームに戻る"
+    "goHome": "ホームに戻る",
+    "stop": "停止"
   },
   "image": {
     "unsupportedFormat": "{{fileName}} はサポートされていない画像形式です",

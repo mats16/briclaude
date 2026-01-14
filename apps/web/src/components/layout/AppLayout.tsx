@@ -103,7 +103,10 @@ export function AppLayout() {
               <SidebarTrigger />
             </div>
             <div className="flex-1 min-h-0">
-              <MainArea onSessionArchived={handleMainAreaArchive} onSessionCreated={refetchSessions} />
+              <MainArea
+                onSessionArchived={handleMainAreaArchive}
+                onSessionCreated={refetchSessions}
+              />
             </div>
           </div>
         </div>
