@@ -24,6 +24,7 @@ import {
   updateSession,
   archiveSession,
   sendMessageToSession,
+  interruptSession,
 } from '../services/session.service.js';
 import { listSessionEvents, getSessionLastEventId } from '../services/session-events.service.js';
 import { wsManager } from '../services/websocket-manager.service.js';
@@ -314,12 +315,44 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
 
       request.log.info({ sessionId: session_id, userId: user.id }, 'WebSocket connected');
 
-      // クライアントからのメッセージ処理（ping/pong, user message）
+      // クライアントからのメッセージ処理（ping/pong, interrupt, user message）
       socket.on('message', async (data: Buffer) => {
         try {
           const msg = JSON.parse(data.toString());
           if (msg.type === 'ping') {
             socket.send(JSON.stringify({ type: 'pong' }));
+          } else if (msg.type === 'control_request' && msg.request?.subtype === 'interrupt') {
+            // Interrupt リクエストを受信 → Query の interrupt() を呼び出し
+            try {
+              const success = await interruptSession(sessionId);
+              request.log.info(
+                { sessionId: sessionId.toString(), success },
+                'Interrupt request processed'
+              );
+              // 成功/失敗に関わらず、クライアントに応答を返す
+              socket.send(
+                JSON.stringify({
+                  type: 'control_response',
+                  request_id: msg.request_id,
+                  response: {
+                    subtype: success ? 'success' : 'error',
+                    error: success ? undefined : 'Query not found or interrupt failed',
+                  },
+                })
+              );
+            } catch (error) {
+              request.log.error(error, 'Failed to interrupt session');
+              socket.send(
+                JSON.stringify({
+                  type: 'control_response',
+                  request_id: msg.request_id,
+                  response: {
+                    subtype: 'error',
+                    error: error instanceof Error ? error.message : 'Unknown error',
+                  },
+                })
+              );
+            }
           } else if (msg.type === 'user') {
             // SDKUserMessage を受信 → セッションにメッセージ送信
             try {

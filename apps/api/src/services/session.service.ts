@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { eq, desc } from 'drizzle-orm';
 import {
   query,
+  type Query,
   type SDKMessage,
   type SDKSystemMessage,
   type SDKUserMessage,
@@ -29,6 +30,12 @@ import { wsManager } from './websocket-manager.service.js';
 import { SessionId } from '../models/session.model.js';
 import type { UserContext } from '../lib/user-context.js';
 import path from 'node:path';
+
+/**
+ * セッション ID ごとに Query オブジェクトを保持する Map
+ * interrupt() メソッドを呼び出すために使用
+ */
+const activeQueries = new Map<string, Query>();
 
 /**
  * 単一の SDKUserMessage を AsyncIterable として返す
@@ -407,16 +414,24 @@ export async function createSession(
       },
     });
 
-    // 8. init イベントまで待機（status を 'running' に UPDATE）
+    // 8. Query オブジェクトを保存（interrupt() を呼び出すため）
+    activeQueries.set(sessionId.toString(), response);
+
+    // 9. init イベントまで待機（status を 'running' に UPDATE）
     const { iterator } = await waitForInit(response, fastify, userId, sessionId);
 
-    // 9. バックグラウンド処理開始（await しない）
-    processRemainingEvents(iterator, fastify, userId, sessionId).catch(error => {
-      fastify.log.error(
-        { sessionId: sessionId.toString(), error },
-        'Background event processing failed'
-      );
-    });
+    // 10. バックグラウンド処理開始（await しない）
+    processRemainingEvents(iterator, fastify, userId, sessionId)
+      .catch(error => {
+        fastify.log.error(
+          { sessionId: sessionId.toString(), error },
+          'Background event processing failed'
+        );
+      })
+      .finally(() => {
+        // Query 完了後にクリーンアップ
+        activeQueries.delete(sessionId.toString());
+      });
   } catch (error) {
     // SDK呼び出し失敗時: sessions status を 'error' に更新
     fastify.log.error({ sessionId: sessionId.toString(), error }, 'SDK query failed');
@@ -735,14 +750,22 @@ export async function sendMessageToSession(
       },
     });
 
+    // Query オブジェクトを保存（interrupt() を呼び出すため）
+    activeQueries.set(sessionId.toString(), response);
+
     // イベント処理（resume の場合は init イベントがないので直接処理）
     const iterator = response[Symbol.asyncIterator]();
-    processRemainingEvents(iterator, fastify, userId, sessionId).catch(error => {
-      fastify.log.error(
-        { sessionId: sessionId.toString(), error },
-        'Background event processing failed'
-      );
-    });
+    processRemainingEvents(iterator, fastify, userId, sessionId)
+      .catch(error => {
+        fastify.log.error(
+          { sessionId: sessionId.toString(), error },
+          'Background event processing failed'
+        );
+      })
+      .finally(() => {
+        // Query 完了後にクリーンアップ
+        activeQueries.delete(sessionId.toString());
+      });
   } catch (error) {
     // SDK呼び出し失敗時: sessions status を 'error' に更新
     fastify.log.error({ sessionId: sessionId.toString(), error }, 'SDK resume query failed');
@@ -806,4 +829,26 @@ export async function archiveSession(
 
     return toSessionResponse(rows[0]);
   });
+}
+
+/**
+ * セッションの Query を中断する
+ * WebSocket で interrupt リクエストを受信した際に呼び出される
+ *
+ * @param sessionId - SessionId オブジェクト
+ * @returns 中断に成功した場合は true、Query が見つからない場合は false
+ */
+export async function interruptSession(sessionId: SessionId): Promise<boolean> {
+  const queryInstance = activeQueries.get(sessionId.toString());
+  if (!queryInstance) {
+    return false;
+  }
+
+  try {
+    await queryInstance.interrupt();
+    return true;
+  } catch (error) {
+    // interrupt() の呼び出しに失敗した場合でも false を返す
+    return false;
+  }
 }

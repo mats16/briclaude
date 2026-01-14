@@ -50,6 +50,17 @@ export interface WsPingMessage {
 }
 
 /**
+ * WebSocket Interrupt メッセージ（クライアント -> サーバー）
+ */
+export interface WsInterruptMessage {
+  type: 'control_request';
+  request_id: string;
+  request: {
+    subtype: 'interrupt';
+  };
+}
+
+/**
  * WebSocket クライアント -> サーバーメッセージ
  */
-export type WsClientMessage = WsPingMessage | SDKUserMessage;
+export type WsClientMessage = WsPingMessage | WsInterruptMessage | SDKUserMessage;
