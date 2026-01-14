@@ -7,6 +7,6 @@ export const workspaceService = {
    */
   async listWorkspace(path: string): Promise<WorkspaceListResponse> {
     const params = new URLSearchParams({ path });
-    return apiClient<WorkspaceListResponse>(`/api/workspace/list?${params}`);
+    return apiClient<WorkspaceListResponse>(`/api/databricks/workspace/list?${params}`);
   },
 };

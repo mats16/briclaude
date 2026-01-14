@@ -24,30 +24,30 @@ export interface WorkspaceObjectInfo {
   size?: number;
 }
 
-/** GET /api/workspace/list query parameters */
+/** GET /api/databricks/workspace/list query parameters */
 export interface WorkspaceListQuerystring {
   path: string;
 }
 
-/** GET /api/workspace/list response */
+/** GET /api/databricks/workspace/list response */
 export interface WorkspaceListResponse {
   objects?: WorkspaceObjectInfo[];
 }
 
-/** GET /api/workspace/get-status query parameters */
+/** GET /api/databricks/workspace/get-status query parameters */
 export interface WorkspaceGetStatusQuerystring {
   path: string;
 }
 
-/** GET /api/workspace/get-status response */
+/** GET /api/databricks/workspace/get-status response */
 export type WorkspaceGetStatusResponse = WorkspaceObjectInfo;
 
-/** POST /api/workspace/mkdirs request body */
+/** POST /api/databricks/workspace/mkdirs request body */
 export interface WorkspaceMkdirsRequest {
   path: string;
 }
 
-/** POST /api/workspace/mkdirs response - Empty object on success */
+/** POST /api/databricks/workspace/mkdirs response - Empty object on success */
 export type WorkspaceMkdirsResponse = Record<string, never>;
 
 // =====================================================
