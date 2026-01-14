@@ -13,6 +13,8 @@ import type {
   SessionUpdateRequest,
   WsConnectedMessage,
   WsErrorMessage,
+  WsControlRequest,
+  WsControlResponse,
   SDKAuthStatusMessage,
   ApiError,
 } from '@repo/types';
@@ -24,6 +26,8 @@ import {
   updateSession,
   archiveSession,
   sendMessageToSession,
+  canAbortSession,
+  executeAbort,
 } from '../services/session.service.js';
 import { listSessionEvents, getSessionLastEventId } from '../services/session-events.service.js';
 import { wsManager } from '../services/websocket-manager.service.js';
@@ -314,7 +318,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
 
       request.log.info({ sessionId: session_id, userId: user.id }, 'WebSocket connected');
 
-      // クライアントからのメッセージ処理（ping/pong, user message）
+      // クライアントからのメッセージ処理（ping/pong, user message, control_request）
       socket.on('message', async (data: Buffer) => {
         try {
           const msg = JSON.parse(data.toString());
@@ -343,6 +347,46 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
                     : 'Unknown error',
               };
               socket.send(JSON.stringify(authStatusMsg));
+            }
+          } else if (msg.type === 'control_request') {
+            // control_request を受信 → abort 処理
+            const controlRequest = msg as WsControlRequest;
+
+            if (controlRequest.request.subtype === 'abort') {
+              // 1. まず control_response を返す
+              if (canAbortSession(sessionId)) {
+                const response: WsControlResponse = {
+                  type: 'control_response',
+                  response: {
+                    subtype: 'success',
+                    request_id: controlRequest.request_id,
+                  },
+                };
+                socket.send(JSON.stringify(response));
+
+                // 2. abort 処理を非同期で実行（await しない）
+                executeAbort(fastify, user.id, sessionId).catch(err => {
+                  request.log.error(err, 'Failed to execute abort');
+                  // エラー発生時にクライアントに通知
+                  const errorMsg: WsErrorMessage = {
+                    type: 'error',
+                    code: 'ABORT_FAILED',
+                    message: err instanceof Error ? err.message : 'Failed to abort session',
+                  };
+                  socket.send(JSON.stringify(errorMsg));
+                });
+              } else {
+                // abort 不可能な場合はエラーを返す
+                const response: WsControlResponse = {
+                  type: 'control_response',
+                  response: {
+                    subtype: 'error',
+                    request_id: controlRequest.request_id,
+                    error: 'No active query for this session',
+                  },
+                };
+                socket.send(JSON.stringify(response));
+              }
             }
           }
         } catch {

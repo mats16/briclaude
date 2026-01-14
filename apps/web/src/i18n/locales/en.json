@@ -43,7 +43,8 @@
     "sessionTitlePlaceholder": "Session title",
     "sessionNotFound": "Session not found",
     "sessionNotFoundDescription": "This session may have been deleted or does not exist.",
-    "goHome": "Go to Home"
+    "goHome": "Go to Home",
+    "stop": "Stop"
   },
   "image": {
     "unsupportedFormat": "{{fileName}} is not a supported image format",

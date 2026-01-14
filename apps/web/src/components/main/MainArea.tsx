@@ -44,7 +44,7 @@ export function MainArea({
     sessionId: sessionId ?? null,
   });
 
-  const { events, isLoading, error, sendMessage } = useSessionEvents({
+  const { events, isLoading, error, sendMessage, abort } = useSessionEvents({
     sessionId: sessionId ?? null,
   });
 
@@ -167,6 +167,8 @@ export function MainArea({
       <InputArea
         sessionId={sessionId}
         onSend={handleSend}
+        onAbort={abort}
+        isAgentThinking={isAgentThinking}
         disabled={session?.session_status === 'archived'}
       />
     </div>

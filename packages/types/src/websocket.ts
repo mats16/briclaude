@@ -33,6 +33,47 @@ export interface WsPongMessage {
 }
 
 /**
+ * Abort リクエスト（クライアント -> サーバー）
+ */
+export interface WsAbortRequest {
+  subtype: 'abort';
+}
+
+/**
+ * Control リクエスト（クライアント -> サーバー）
+ */
+export interface WsControlRequest {
+  type: 'control_request';
+  request_id: string;
+  request: WsAbortRequest;
+}
+
+/**
+ * Control 成功レスポンス
+ */
+export interface WsControlSuccessResponse {
+  subtype: 'success';
+  request_id: string;
+}
+
+/**
+ * Control エラーレスポンス
+ */
+export interface WsControlErrorResponse {
+  subtype: 'error';
+  request_id: string;
+  error: string;
+}
+
+/**
+ * Control レスポンス（サーバー -> クライアント）
+ */
+export interface WsControlResponse {
+  type: 'control_response';
+  response: WsControlSuccessResponse | WsControlErrorResponse;
+}
+
+/**
  * WebSocket サーバー -> クライアントメッセージ
  */
 export type WsServerMessage =
@@ -40,7 +81,8 @@ export type WsServerMessage =
   | SDKMessage
   | SDKAuthStatusMessage
   | WsErrorMessage
-  | WsPongMessage;
+  | WsPongMessage
+  | WsControlResponse;
 
 /**
  * WebSocket Ping メッセージ（クライアント -> サーバー）
@@ -52,4 +94,4 @@ export interface WsPingMessage {
 /**
  * WebSocket クライアント -> サーバーメッセージ
  */
-export type WsClientMessage = WsPingMessage | SDKUserMessage;
+export type WsClientMessage = WsPingMessage | SDKUserMessage | WsControlRequest;

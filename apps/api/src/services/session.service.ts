@@ -3,6 +3,7 @@ import { eq, desc } from 'drizzle-orm';
 import {
   query,
   type SDKMessage,
+  type SDKResultMessage,
   type SDKSystemMessage,
   type SDKUserMessage,
 } from '@anthropic-ai/claude-agent-sdk';
@@ -29,6 +30,9 @@ import { wsManager } from './websocket-manager.service.js';
 import { SessionId } from '../models/session.model.js';
 import type { UserContext } from '../lib/user-context.js';
 import path from 'node:path';
+
+/** セッションID → AbortController のマッピング（abort 用） */
+const sessionAbortControllers = new Map<string, AbortController>();
 
 /**
  * 単一の SDKUserMessage を AsyncIterable として返す
@@ -222,6 +226,9 @@ async function processRemainingEvents(
     }
 
     throw error;
+  } finally {
+    // AbortController を削除（result イベント受信時 or エラー時）
+    sessionAbortControllers.delete(sessionId.toString());
   }
 }
 
@@ -361,9 +368,13 @@ export async function createSession(
     // outcomes に基づいて systemPrompt を構築
     const systemPromptConfig = buildSystemPromptConfig(session_context.outcomes);
 
+    // AbortController を作成（abort 用）
+    const abortController = new AbortController();
+
     const response = query({
       prompt,
       options: {
+        abortController,
         cwd: sessionContext.cwd,
         model: session_context.model,
         maxTurns: 100,
@@ -406,6 +417,9 @@ export async function createSession(
         },
       },
     });
+
+    // AbortController を登録（abort 用）
+    sessionAbortControllers.set(sessionId.toString(), abortController);
 
     // 8. init イベントまで待機（status を 'running' に UPDATE）
     const { iterator } = await waitForInit(response, fastify, userId, sessionId);
@@ -688,9 +702,13 @@ export async function sendMessageToSession(
     // outcomes に基づいて systemPrompt を構築
     const systemPromptConfig = buildSystemPromptConfig(sessionContext.outcomes);
 
+    // AbortController を作成（abort 用）
+    const abortController = new AbortController();
+
     const response = query({
       prompt,
       options: {
+        abortController,
         resume: sessionRow.sdkSessionId,
         cwd: sessionContext.cwd,
         model: sessionContext.model as 'opus' | 'sonnet' | 'haiku',
@@ -734,6 +752,9 @@ export async function sendMessageToSession(
         },
       },
     });
+
+    // AbortController を登録（abort 用）
+    sessionAbortControllers.set(sessionId.toString(), abortController);
 
     // イベント処理（resume の場合は init イベントがないので直接処理）
     const iterator = response[Symbol.asyncIterator]();
@@ -805,5 +826,65 @@ export async function archiveSession(
     }
 
     return toSessionResponse(rows[0]);
+  });
+}
+
+/**
+ * セッションが abort 可能かチェック
+ *
+ * @param sessionId - SessionId オブジェクト
+ * @returns abort 可能な場合は true
+ */
+export function canAbortSession(sessionId: SessionId): boolean {
+  return sessionAbortControllers.has(sessionId.toString());
+}
+
+/**
+ * Abort を実行（非同期）
+ * user メッセージと result イベントを送信し、セッション状態を idle に更新する
+ *
+ * @param fastify - Fastify インスタンス
+ * @param userId - ユーザーID
+ * @param sessionId - SessionId オブジェクト
+ */
+export async function executeAbort(
+  fastify: FastifyInstance,
+  userId: string,
+  sessionId: SessionId
+): Promise<void> {
+  const sessionIdStr = sessionId.toString();
+  const abortController = sessionAbortControllers.get(sessionIdStr);
+
+  if (!abortController) return;
+
+  // 1. abort を呼び出し（AbortController の削除は processRemainingEvents の finally で行う）
+  abortController.abort();
+
+  // 2. user メッセージを送信（画面表示用）
+  const userMessage = {
+    type: 'user',
+    uuid: crypto.randomUUID(),
+    session_id: sessionIdStr,
+    parent_tool_use_id: null,
+    message: {
+      role: 'user',
+      content: [{ type: 'text', text: '[Request aborted by user]' }],
+    },
+  } as SDKUserMessage;
+  saveAndBroadcastEvent(fastify, userId, sessionId, userMessage);
+
+  // 3. result イベントを送信
+  const resultMessage = {
+    type: 'result',
+    subtype: 'error_during_execution',
+    uuid: crypto.randomUUID(),
+    session_id: sessionIdStr,
+    is_error: false,
+  } as SDKResultMessage;
+  saveAndBroadcastEvent(fastify, userId, sessionId, resultMessage);
+
+  // 4. セッション状態を idle に更新
+  await fastify.withUserContext(userId, async tx => {
+    await tx.update(sessions).set({ status: 'idle' }).where(eq(sessions.id, sessionId.toUUID()));
   });
 }

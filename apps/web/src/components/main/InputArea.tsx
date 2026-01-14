@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import useLocalStorageState from 'use-local-storage-state';
-import { Send, Image, Loader2 } from 'lucide-react';
+import { Send, Image, Loader2, Square } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -16,16 +16,25 @@ import type { UserMessageContentBlock } from '@repo/types';
 interface InputAreaProps {
   sessionId?: string;
   onSend?: (content: UserMessageContentBlock[]) => Promise<void> | void;
+  onAbort?: () => Promise<boolean>;
+  isAgentThinking?: boolean;
   disabled?: boolean;
 }
 
-export function InputArea({ sessionId, onSend, disabled }: InputAreaProps) {
+export function InputArea({
+  sessionId,
+  onSend,
+  onAbort,
+  isAgentThinking = false,
+  disabled,
+}: InputAreaProps) {
   const { t } = useTranslation();
   const storageKey = sessionId ? `chat-draft-${sessionId}` : 'chat-draft-temp';
   const [content, setContent] = useLocalStorageState(storageKey, {
     defaultValue: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAborting, setIsAborting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -74,6 +83,17 @@ export function InputArea({ sessionId, onSend, disabled }: InputAreaProps) {
     }
   };
 
+  const handleAbort = async () => {
+    if (isAborting || !onAbort) return;
+
+    setIsAborting(true);
+    try {
+      await onAbort();
+    } finally {
+      setIsAborting(false);
+    }
+  };
+
   const handleImageButtonClick = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
@@ -94,6 +114,9 @@ export function InputArea({ sessionId, onSend, disabled }: InputAreaProps) {
     () => (content.trim() || hasImages) && !disabled && !isSubmitting,
     [content, hasImages, disabled, isSubmitting]
   );
+
+  // 停止ボタン表示条件：テキストがブランク かつ 画像もなし かつ thinking 中
+  const showStopButton = isAgentThinking && !content.trim() && !hasImages;
 
   return (
     <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
@@ -141,27 +164,52 @@ export function InputArea({ sessionId, onSend, disabled }: InputAreaProps) {
               </Tooltip>
             </TooltipProvider>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    onClick={handleSubmit}
-                    disabled={!canSubmit}
-                  >
-                    {isSubmitting ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('main.send')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {showStopButton ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={handleAbort}
+                      disabled={isAborting}
+                    >
+                      {isAborting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Square className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('main.stop')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={handleSubmit}
+                      disabled={!canSubmit}
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('main.send')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
         </div>
 
