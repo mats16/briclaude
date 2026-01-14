@@ -26,7 +26,8 @@ import {
   updateSession,
   archiveSession,
   sendMessageToSession,
-  interruptSession,
+  canInterruptSession,
+  executeAbort,
 } from '../services/session.service.js';
 import { listSessionEvents, getSessionLastEventId } from '../services/session-events.service.js';
 import { wsManager } from '../services/websocket-manager.service.js';
@@ -352,18 +353,33 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
             const controlRequest = msg as WsControlRequest;
 
             if (controlRequest.request.subtype === 'abort') {
-              const result = await interruptSession(
-                fastify,
-                user.id,
-                sessionId,
-                controlRequest.request_id
-              );
+              // 1. まず control_response を返す
+              if (canInterruptSession(sessionId)) {
+                const response: WsControlResponse = {
+                  type: 'control_response',
+                  response: {
+                    subtype: 'success',
+                    request_id: controlRequest.request_id,
+                  },
+                };
+                socket.send(JSON.stringify(response));
 
-              const response: WsControlResponse = {
-                type: 'control_response',
-                response: result.response,
-              };
-              socket.send(JSON.stringify(response));
+                // 2. abort 処理を非同期で実行（await しない）
+                executeAbort(fastify, user.id, sessionId).catch(err => {
+                  request.log.error(err, 'Failed to execute abort');
+                });
+              } else {
+                // abort 不可能な場合はエラーを返す
+                const response: WsControlResponse = {
+                  type: 'control_response',
+                  response: {
+                    subtype: 'error',
+                    request_id: controlRequest.request_id,
+                    error: 'No active query for this session',
+                  },
+                };
+                socket.send(JSON.stringify(response));
+              }
             }
           }
         } catch {

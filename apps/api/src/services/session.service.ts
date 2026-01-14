@@ -29,7 +29,6 @@ import { ensureDirectory, removeDirectory } from '../utils/directory.js';
 import { wsManager } from './websocket-manager.service.js';
 import { SessionId } from '../models/session.model.js';
 import type { UserContext } from '../lib/user-context.js';
-import type { WsControlSuccessResponse, WsControlErrorResponse } from '@repo/types';
 import path from 'node:path';
 
 /** セッションID → AbortController のマッピング（interrupt 用） */
@@ -831,51 +830,53 @@ export async function archiveSession(
 }
 
 /**
- * Interrupt 結果
+ * セッションが interrupt 可能かチェック
+ *
+ * @param sessionId - SessionId オブジェクト
+ * @returns abort 可能な場合は true
  */
-export interface InterruptResult {
-  success: boolean;
-  response: WsControlSuccessResponse | WsControlErrorResponse;
+export function canInterruptSession(sessionId: SessionId): boolean {
+  return sessionAbortControllers.has(sessionId.toString());
 }
 
 /**
- * セッションの Agent を interrupt する
- * abort 後に result イベントを送信し、セッション状態を idle に更新する
+ * Abort を実行（非同期）
+ * user メッセージと result イベントを送信し、セッション状態を idle に更新する
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
  * @param sessionId - SessionId オブジェクト
- * @param requestId - リクエストID（レスポンスに含める）
- * @returns Interrupt 結果
  */
-export async function interruptSession(
+export async function executeAbort(
   fastify: FastifyInstance,
   userId: string,
-  sessionId: SessionId,
-  requestId: string
-): Promise<InterruptResult> {
+  sessionId: SessionId
+): Promise<void> {
   const sessionIdStr = sessionId.toString();
   const abortController = sessionAbortControllers.get(sessionIdStr);
 
-  if (!abortController) {
-    return {
-      success: false,
-      response: {
-        subtype: 'error',
-        request_id: requestId,
-        error: 'No active query for this session',
-      },
-    };
-  }
+  if (!abortController) return;
 
-  // abort を呼び出し
+  // 1. abort を呼び出し
   abortController.abort();
 
-  // AbortController を削除（processRemainingEvents で削除されるが、念のため）
+  // AbortController を削除
   sessionAbortControllers.delete(sessionIdStr);
 
-  // result イベントを生成して送信・保存
-  // abort 時は最小限のフィールドで result イベントを生成
+  // 2. user メッセージを送信（画面表示用）
+  const userMessage = {
+    type: 'user',
+    uuid: crypto.randomUUID(),
+    session_id: sessionIdStr,
+    parent_tool_use_id: null,
+    message: {
+      role: 'user',
+      content: [{ type: 'text', text: '[Request aborted by user]' }],
+    },
+  } as SDKUserMessage;
+  saveAndBroadcastEvent(fastify, userId, sessionId, userMessage);
+
+  // 3. result イベントを送信
   const resultMessage = {
     type: 'result',
     subtype: 'error_during_execution',
@@ -883,19 +884,10 @@ export async function interruptSession(
     session_id: sessionIdStr,
     is_error: false,
   } as SDKResultMessage;
-
   saveAndBroadcastEvent(fastify, userId, sessionId, resultMessage);
 
-  // セッション状態を idle に更新
+  // 4. セッション状態を idle に更新
   await fastify.withUserContext(userId, async tx => {
     await tx.update(sessions).set({ status: 'idle' }).where(eq(sessions.id, sessionId.toUUID()));
   });
-
-  return {
-    success: true,
-    response: {
-      subtype: 'success',
-      request_id: requestId,
-    },
-  };
 }
