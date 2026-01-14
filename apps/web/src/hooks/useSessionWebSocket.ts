@@ -28,6 +28,7 @@ interface UseSessionWebSocketReturn {
 }
 
 const MAX_RECONNECT_ATTEMPTS = 5;
+const CONTROL_REQUEST_TIMEOUT_MS = 10_000;
 
 export function useSessionWebSocket({
   sessionId,
@@ -142,6 +143,12 @@ export function useSessionWebSocket({
       setIsConnecting(false);
       wsRef.current = null;
 
+      // 切断時に pending control requests をクリーンアップ
+      pendingControlRequestsRef.current.forEach(pending => {
+        pending.reject(new Error('WebSocket disconnected'));
+      });
+      pendingControlRequestsRef.current.clear();
+
       // 異常終了時のみ再接続を試みる
       if (!event.wasClean && reconnectAttempts.current < MAX_RECONNECT_ATTEMPTS) {
         reconnectAttempts.current++;
@@ -238,13 +245,13 @@ export function useSessionWebSocket({
       });
       wsRef.current!.send(JSON.stringify(request));
 
-      // タイムアウト（10秒）
+      // タイムアウト
       setTimeout(() => {
         if (pendingControlRequestsRef.current.has(requestId)) {
           pendingControlRequestsRef.current.delete(requestId);
           resolve(false);
         }
-      }, 10000);
+      }, CONTROL_REQUEST_TIMEOUT_MS);
     });
   }, [sessionId]);
 

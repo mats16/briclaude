@@ -367,6 +367,13 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
                 // 2. abort 処理を非同期で実行（await しない）
                 executeAbort(fastify, user.id, sessionId).catch(err => {
                   request.log.error(err, 'Failed to execute abort');
+                  // エラー発生時にクライアントに通知
+                  const errorMsg: WsErrorMessage = {
+                    type: 'error',
+                    code: 'ABORT_FAILED',
+                    message: err instanceof Error ? err.message : 'Failed to abort session',
+                  };
+                  socket.send(JSON.stringify(errorMsg));
                 });
               } else {
                 // abort 不可能な場合はエラーを返す

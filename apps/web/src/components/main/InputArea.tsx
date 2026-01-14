@@ -34,7 +34,7 @@ export function InputArea({
     defaultValue: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAborting, setIsInterrupting] = useState(false);
+  const [isAborting, setIsAborting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -86,11 +86,11 @@ export function InputArea({
   const handleAbort = async () => {
     if (isAborting || !onAbort) return;
 
-    setIsInterrupting(true);
+    setIsAborting(true);
     try {
       await onAbort();
     } finally {
-      setIsInterrupting(false);
+      setIsAborting(false);
     }
   };
 
