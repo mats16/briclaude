@@ -41,16 +41,11 @@ const schema = {
       description:
         'AES-256-GCM encryption key (64 hex chars). Must be valid hexadecimal characters only.',
     },
-    // User and session directories (optional)
+    // User directories (optional)
     USER_BASE_DIR: {
       type: 'string',
       default: path.join(__dirname, '../../../../tmp/users'), // -> project root tmp/users
       description: 'The base directory for user directories (default: ./tmp/users).',
-    },
-    SESSION_BASE_DIR: {
-      type: 'string',
-      default: './tmp/sessions',
-      description: 'The base directory for working directories (default: ./tmp/sessions).',
     },
     // Warehouse IDs (optional)
     SQL_WAREHOUSE_ID: {
@@ -137,8 +132,6 @@ declare module 'fastify' {
       ENCRYPTION_KEY: string;
       /** The base directory for user directories (e.g. /home/app/users). */
       USER_BASE_DIR: string;
-      /** The base directory for working directories (e.g. /home/app/ws). */
-      SESSION_BASE_DIR: string;
       /** The SQL Warehouse ID for the app. */
       SQL_WAREHOUSE_ID: string;
       /** The name of the running app. */
