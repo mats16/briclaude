@@ -31,7 +31,7 @@ import { SessionId } from '../models/session.model.js';
 import type { UserContext } from '../lib/user-context.js';
 import path from 'node:path';
 
-/** セッションID → AbortController のマッピング（interrupt 用） */
+/** セッションID → AbortController のマッピング（abort 用） */
 const sessionAbortControllers = new Map<string, AbortController>();
 
 /**
@@ -368,7 +368,7 @@ export async function createSession(
     // outcomes に基づいて systemPrompt を構築
     const systemPromptConfig = buildSystemPromptConfig(session_context.outcomes);
 
-    // AbortController を作成（interrupt 用）
+    // AbortController を作成（abort 用）
     const abortController = new AbortController();
 
     const response = query({
@@ -418,7 +418,7 @@ export async function createSession(
       },
     });
 
-    // AbortController を登録（interrupt 用）
+    // AbortController を登録（abort 用）
     sessionAbortControllers.set(sessionId.toString(), abortController);
 
     // 8. init イベントまで待機（status を 'running' に UPDATE）
@@ -702,7 +702,7 @@ export async function sendMessageToSession(
     // outcomes に基づいて systemPrompt を構築
     const systemPromptConfig = buildSystemPromptConfig(sessionContext.outcomes);
 
-    // AbortController を作成（interrupt 用）
+    // AbortController を作成（abort 用）
     const abortController = new AbortController();
 
     const response = query({
@@ -753,7 +753,7 @@ export async function sendMessageToSession(
       },
     });
 
-    // AbortController を登録（interrupt 用）
+    // AbortController を登録（abort 用）
     sessionAbortControllers.set(sessionId.toString(), abortController);
 
     // イベント処理（resume の場合は init イベントがないので直接処理）
@@ -830,12 +830,12 @@ export async function archiveSession(
 }
 
 /**
- * セッションが interrupt 可能かチェック
+ * セッションが abort 可能かチェック
  *
  * @param sessionId - SessionId オブジェクト
  * @returns abort 可能な場合は true
  */
-export function canInterruptSession(sessionId: SessionId): boolean {
+export function canAbortSession(sessionId: SessionId): boolean {
   return sessionAbortControllers.has(sessionId.toString());
 }
 

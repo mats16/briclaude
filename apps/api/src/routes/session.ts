@@ -26,7 +26,7 @@ import {
   updateSession,
   archiveSession,
   sendMessageToSession,
-  canInterruptSession,
+  canAbortSession,
   executeAbort,
 } from '../services/session.service.js';
 import { listSessionEvents, getSessionLastEventId } from '../services/session-events.service.js';
@@ -354,7 +354,7 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
 
             if (controlRequest.request.subtype === 'abort') {
               // 1. まず control_response を返す
-              if (canInterruptSession(sessionId)) {
+              if (canAbortSession(sessionId)) {
                 const response: WsControlResponse = {
                   type: 'control_response',
                   response: {
