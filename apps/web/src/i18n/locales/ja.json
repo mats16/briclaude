@@ -38,7 +38,7 @@
     "openInCli": "CLIで開く",
     "openWorkspace": "Workspace を開く",
     "emptyChat": "会話を開始",
-    "renameSession": "Rename session",
+    "renameSession": "セッション名を変更",
     "archiveSession": "アーカイブ",
     "archiveSessionError": "セッションのアーカイブに失敗しました",
     "sessionTitlePlaceholder": "セッション名",
