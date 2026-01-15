@@ -31,7 +31,7 @@ export function LoadingSpinner({ size = 'md', speed = 'normal' }: LoadingSpinner
   const radius = ORBIT_RADIUS_PX[size];
 
   return (
-    <div className={`relative ${container}`}>
+    <div className={`relative ${container}`} aria-hidden="true">
       <div
         className="absolute inset-0 animate-spin"
         style={{ animationDuration: ANIMATION_DURATION[speed] }}
@@ -68,9 +68,13 @@ export function LoadingScreen({
   fullScreen = true,
 }: LoadingScreenProps) {
   const content = (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-4" role="status" aria-live="polite">
       <LoadingSpinner size={size} speed={speed} />
-      {text && <p className="text-gray-400 text-sm">{text}</p>}
+      {text ? (
+        <p className="text-gray-400 text-sm">{text}</p>
+      ) : (
+        <span className="sr-only">Loading...</span>
+      )}
     </div>
   );
 
