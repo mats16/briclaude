@@ -1,60 +1,11 @@
 import { FastifyPluginAsync } from 'fastify';
-import type {
-  GitHubContentItem,
-  AppTemplate,
-  AppTemplatesResponse,
-  AppTemplateCloneRequest,
-  AppTemplateCloneResponse,
-} from '@repo/types';
+import type { AppTemplateCloneRequest, AppTemplateCloneResponse } from '@repo/types';
 import { createUserContext } from '../lib/user-context.js';
 
-const GITHUB_REPO_OWNER = 'databricks';
-const GITHUB_REPO_NAME = 'app-templates';
-const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/contents`;
-const GITHUB_REPO_URL = `https://github.com/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}`;
+const GITHUB_REPO_URL = 'https://github.com/databricks/app-templates';
 
 const appTemplatesRoute: FastifyPluginAsync = async fastify => {
   const databricksHost = fastify.config.DATABRICKS_HOST;
-
-  // GET /app-templates - List available templates
-  fastify.get<{
-    Reply: AppTemplatesResponse;
-  }>('/app-templates', async (_request, reply) => {
-    try {
-      // Fetch repository contents from GitHub API
-      const response = await fetch(GITHUB_API_URL, {
-        headers: {
-          Accept: 'application/vnd.github.v3+json',
-          'User-Agent': 'Briclaude-App',
-        },
-      });
-
-      if (!response.ok) {
-        fastify.log.error(`GitHub API error: ${response.status} ${response.statusText}`);
-        return reply.status(response.status).send({
-          templates: [],
-        });
-      }
-
-      const contents = (await response.json()) as GitHubContentItem[];
-
-      // Filter directories only (each directory is a template)
-      const templates: AppTemplate[] = contents
-        .filter(item => item.type === 'dir' && !item.name.startsWith('.'))
-        .map(item => ({
-          name: item.name,
-          url: item.html_url,
-          description: formatTemplateName(item.name),
-        }));
-
-      return reply.send({ templates });
-    } catch (err) {
-      fastify.log.error({ err }, 'Failed to fetch app templates');
-      return reply.status(500).send({
-        templates: [],
-      });
-    }
-  });
 
   // POST /app-templates/clone - Clone a template to workspace
   fastify.post<{
@@ -131,15 +82,5 @@ const appTemplatesRoute: FastifyPluginAsync = async fastify => {
     return reply.status(201).send(data);
   });
 };
-
-/**
- * Convert kebab-case template name to human-readable format
- */
-function formatTemplateName(name: string): string {
-  return name
-    .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
 
 export default appTemplatesRoute;

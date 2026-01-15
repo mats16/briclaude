@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { jobsService, appTemplatesService } from '@/services';
 import { useUser } from '@/hooks/useUser';
-import type { JobRun, AppTemplate } from '@repo/types';
+import type { JobRun } from '@repo/types';
 
 export type QuickstartType = 'lakeflow' | 'unityCatalog' | 'databricksApps';
 
@@ -34,6 +34,24 @@ interface QuickstartModalProps {
   onFillPrompt?: (prompt: string) => void;
   onStartSession?: (prompt: string, workspacePath: string) => void;
 }
+
+/** GitHub API content item */
+interface GitHubContent {
+  name: string;
+  path: string;
+  html_url: string;
+  type: 'file' | 'dir';
+}
+
+/** App template for display */
+interface AppTemplate {
+  name: string;
+  url: string;
+  description: string;
+}
+
+const GITHUB_TEMPLATES_API_URL =
+  'https://api.github.com/repos/databricks/app-templates/contents';
 
 function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
@@ -55,6 +73,16 @@ function formatTimestamp(ts: number): string {
   }
   // それ以外は日付
   return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+/**
+ * Convert kebab-case template name to human-readable format
+ */
+function formatTemplateName(name: string): string {
+  return name
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 }
 
 function FailedJobRunItem({
@@ -308,8 +336,21 @@ function DatabricksAppsContent({
     setIsLoading(true);
     setHasError(false);
     try {
-      const response = await appTemplatesService.getTemplates();
-      setTemplates(response.templates);
+      // Fetch directly from GitHub API
+      const response = await fetch(GITHUB_TEMPLATES_API_URL);
+      if (!response.ok) throw new Error('Failed to fetch');
+      const data: GitHubContent[] = await response.json();
+
+      // Filter directories only (each directory is a template)
+      const templateList: AppTemplate[] = data
+        .filter(item => item.type === 'dir' && !item.name.startsWith('.'))
+        .map(item => ({
+          name: item.name,
+          url: item.html_url,
+          description: formatTemplateName(item.name),
+        }));
+
+      setTemplates(templateList);
     } catch (err) {
       console.error('Failed to fetch app templates:', err);
       setHasError(true);
