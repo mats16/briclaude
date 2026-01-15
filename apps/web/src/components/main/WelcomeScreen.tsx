@@ -298,7 +298,13 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
         open={selectedQuickstart !== null}
         onOpenChange={open => !open && setSelectedQuickstart(null)}
         quickstartType={selectedQuickstart}
-        onFillPrompt={setContent}
+        onFillPrompt={(prompt, workspacePath) => {
+          setContent(prompt);
+          if (workspacePath) {
+            setSelectedWorkspace(workspacePath);
+            addRecentWorkspace(workspacePath);
+          }
+        }}
       />
     </div>
   );

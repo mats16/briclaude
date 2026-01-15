@@ -33,7 +33,7 @@ interface QuickstartModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   quickstartType: QuickstartType | null;
-  onFillPrompt?: (prompt: string) => void;
+  onFillPrompt?: (prompt: string, workspacePath?: string) => void;
 }
 
 /** GitHub API content item */
@@ -324,7 +324,7 @@ function DatabricksAppsContent({
   onFillPrompt,
   onClose,
 }: {
-  onFillPrompt?: (prompt: string) => void;
+  onFillPrompt?: (prompt: string, workspacePath?: string) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -386,13 +386,13 @@ function DatabricksAppsContent({
         templateName: selectedTemplate.name,
       });
 
-      // Clone successful - fill prompt
+      // Clone successful - fill prompt and workspace path
       const prompt = t('quickstart.databricksApps.presetPrompt', {
         templateName: selectedTemplate.name,
         path: response.path,
       });
 
-      onFillPrompt(prompt);
+      onFillPrompt(prompt, response.path);
       onClose();
     } catch (err) {
       console.error('Failed to clone template:', err);
