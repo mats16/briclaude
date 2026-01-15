@@ -10,6 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuAction,
   SidebarMenuSkeleton,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -38,7 +39,21 @@ export function SessionGroup({
   isLoading = false,
 }: SessionGroupProps) {
   const { t, i18n } = useTranslation();
+  const { state } = useSidebar();
+  const isCollapsed = state === 'collapsed';
   const [filter, setFilter] = useState<SessionFilter>('active');
+
+  const filteredSessions = useMemo(() => {
+    switch (filter) {
+      case 'active':
+        return sessions.filter(session => session.session_status !== 'archived');
+      case 'archived':
+        return sessions.filter(session => session.session_status === 'archived');
+      case 'all':
+      default:
+        return sessions;
+    }
+  }, [sessions, filter]);
 
   const formatRelativeTime = (dateString: string): string => {
     const date = new Date(dateString);
@@ -59,17 +74,10 @@ export function SessionGroup({
     });
   };
 
-  const filteredSessions = useMemo(() => {
-    switch (filter) {
-      case 'active':
-        return sessions.filter(session => session.session_status !== 'archived');
-      case 'archived':
-        return sessions.filter(session => session.session_status === 'archived');
-      case 'all':
-      default:
-        return sessions;
-    }
-  }, [sessions, filter]);
+  // Hide session list when sidebar is collapsed
+  if (isCollapsed) {
+    return null;
+  }
 
   return (
     <SidebarGroup className="flex-1 overflow-hidden p-0">

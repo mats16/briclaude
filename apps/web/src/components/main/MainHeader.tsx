@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { SidebarToggleButton } from '@/components/layout/SidebarToggleButton';
 import { useUser } from '@/hooks/useUser';
 
 interface MainHeaderProps {
@@ -27,8 +26,6 @@ interface MainHeaderProps {
   workspacePath?: string | null;
   onTitleUpdate?: (newTitle: string) => Promise<void>;
   onArchive?: () => Promise<void>;
-  isSidebarOpen?: boolean;
-  onToggleSidebar?: () => void;
 }
 
 export function MainHeader({
@@ -37,8 +34,6 @@ export function MainHeader({
   workspacePath,
   onTitleUpdate,
   onArchive,
-  isSidebarOpen = true,
-  onToggleSidebar,
 }: MainHeaderProps) {
   const { t } = useTranslation();
   const { databricksHost } = useUser();
@@ -70,11 +65,8 @@ export function MainHeader({
 
   return (
     <>
-      <div className="flex items-center justify-between h-[50px] px-2 border-b border-border">
+      <div className="flex items-center justify-between h-[50px] px-4 border-b border-border">
         <div className="flex items-center gap-2 min-w-0">
-          {onToggleSidebar && (
-            <SidebarToggleButton isOpen={isSidebarOpen} onToggle={onToggleSidebar} />
-          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-1 font-medium text-foreground">

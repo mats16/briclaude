@@ -1,10 +1,12 @@
 {
   "app": {
-    "title": "Claude Code on Databricks",
+    "title": "Briclaude",
     "badge": "Unofficial"
   },
   "sidebar": {
     "newSession": "New Session",
+    "openSidebar": "Open sidebar",
+    "closeSidebar": "Close sidebar",
     "newSessionPlaceholder": "Start a new session...",
     "attachImage": "Attach image",
     "moreOptions": "More options",
@@ -171,7 +173,8 @@
     "updateSuccess": "Skill updated successfully"
   },
   "welcome": {
-    "title": "Welcome to Claude Code",
+    "heading": "Claude Code on Databricks",
+    "title": "Welcome to Briclaude",
     "subtitle": "Accelerate your Databricks development with AI Agent.\nStart with a quickstart below or type a message.",
     "comingSoon": "This feature is coming soon",
     "quickstarts": {

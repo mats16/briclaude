@@ -60,12 +60,7 @@ interface GitHubContent {
   type: 'file' | 'dir';
 }
 
-interface SkillsContentProps {
-  isSidebarOpen?: boolean;
-  onToggleSidebar?: () => void;
-}
-
-export function SkillsContent({ isSidebarOpen, onToggleSidebar }: SkillsContentProps) {
+export function SkillsContent() {
   const { t } = useTranslation();
   const [skills, setSkills] = useState<SkillInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -305,9 +300,6 @@ export function SkillsContent({ isSidebarOpen, onToggleSidebar }: SkillsContentP
     }
   };
 
-  // サイドバートグルボタンを表示するかどうか
-  const showSidebarToggle = isSidebarOpen !== undefined && onToggleSidebar !== undefined;
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -320,29 +312,9 @@ export function SkillsContent({ isSidebarOpen, onToggleSidebar }: SkillsContentP
     <div className="h-full flex flex-col">
       {/* ヘッダー */}
       <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
-        <div className="flex items-center gap-3">
-          {showSidebarToggle && !isSidebarOpen && (
-            <Button variant="ghost" size="icon" onClick={onToggleSidebar}>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-                <line x1="9" x2="9" y1="3" y2="21" />
-              </svg>
-            </Button>
-          )}
-          <div>
-            <h1 className="text-xl font-bold">{t('skills.title')}</h1>
-            <p className="text-sm text-muted-foreground">{t('skills.description')}</p>
-          </div>
+        <div>
+          <h1 className="text-xl font-bold">{t('skills.title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('skills.description')}</p>
         </div>
         <div className="flex gap-2">
           {/* Gitインポートダイアログ */}

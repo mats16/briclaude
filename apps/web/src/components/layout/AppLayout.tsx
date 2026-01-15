@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -10,9 +10,8 @@ import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { MainArea } from '@/components/main/MainArea';
 import { SkillsContent } from '@/pages/SkillsPage';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { cn } from '@/lib/utils';
-
-const SIDEBAR_WIDTH = 300;
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { SIDEBAR_WIDTH, SIDEBAR_WIDTH_ICON } from '@/constants';
 
 export function AppLayout() {
   const { sessionId } = useParams<{ sessionId?: string }>();
@@ -28,19 +27,6 @@ export function AppLayout() {
     getSession,
   } = useSessions();
   const isMobile = useIsMobile();
-
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-    const saved = localStorage.getItem('sidebar-open');
-    return saved !== 'false';
-  });
-
-  const toggleSidebar = useCallback(() => {
-    setIsSidebarOpen(prev => {
-      const newValue = !prev;
-      localStorage.setItem('sidebar-open', String(newValue));
-      return newValue;
-    });
-  }, []);
 
   const handleSelectSession = useCallback(
     (selectedSessionId: string) => {
@@ -98,65 +84,59 @@ export function AppLayout() {
   // Desktop: We manage open state manually with isSidebarOpen/toggleSidebar for smooth animation
   if (isMobile) {
     return (
-      <SidebarProvider defaultOpen={false}>
-        <div className="flex h-screen w-screen overflow-hidden bg-background">
-          <AppSidebar {...sidebarProps} collapsible="offcanvas" />
-          <div className="flex-1 h-full min-w-0 flex flex-col">
-            <div className="flex items-center gap-2 p-2 border-b border-border shrink-0">
-              <SidebarTrigger />
-            </div>
-            <div className="flex-1 min-h-0">
-              {isSkillsPage ? (
-                <SkillsContent />
-              ) : (
-                <MainArea
-                  onSessionArchived={handleMainAreaArchive}
-                  onSessionCreated={refetchSessions}
-                />
-              )}
+      <TooltipProvider>
+        <SidebarProvider defaultOpen={false}>
+          <div className="flex h-screen w-screen overflow-hidden bg-background">
+            <AppSidebar {...sidebarProps} collapsible="offcanvas" />
+            <div className="flex-1 h-full min-w-0 flex flex-col">
+              <div className="flex items-center gap-2 p-2 border-b border-border shrink-0">
+                <SidebarTrigger />
+              </div>
+              <div className="flex-1 min-h-0">
+                {isSkillsPage ? (
+                  <SkillsContent />
+                ) : (
+                  <MainArea
+                    onSessionArchived={handleMainAreaArchive}
+                    onSessionCreated={refetchSessions}
+                  />
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </SidebarProvider>
+        </SidebarProvider>
+      </TooltipProvider>
     );
   }
 
   return (
-    <SidebarProvider
-      defaultOpen={true}
-      style={
-        {
-          '--sidebar-width': `${SIDEBAR_WIDTH}px`,
-        } as React.CSSProperties
-      }
-    >
-      <div className="flex h-screen w-screen overflow-hidden bg-background">
-        {/* Sidebar */}
-        <div
-          className={cn(
-            'h-full shrink-0 transition-all duration-300 ease-in-out overflow-hidden',
-            isSidebarOpen ? 'w-[300px]' : 'w-0'
-          )}
-        >
-          <div className="w-[300px] h-full">
-            <AppSidebar {...sidebarProps} />
+    <TooltipProvider>
+      <SidebarProvider
+        defaultOpen={true}
+        style={
+          {
+            '--sidebar-width': `${SIDEBAR_WIDTH}px`,
+            '--sidebar-width-icon': `${SIDEBAR_WIDTH_ICON}px`,
+          } as React.CSSProperties
+        }
+      >
+        <div className="flex h-screen w-screen overflow-hidden bg-background">
+          {/* Sidebar */}
+          <AppSidebar {...sidebarProps} collapsible="icon" />
+
+          {/* Main Area */}
+          <div className="flex-1 h-full min-w-0">
+            {isSkillsPage ? (
+              <SkillsContent />
+            ) : (
+              <MainArea
+                onSessionArchived={handleMainAreaArchive}
+                onSessionCreated={refetchSessions}
+              />
+            )}
           </div>
         </div>
-
-        {/* Main Area */}
-        <div className="flex-1 h-full min-w-0">
-          {isSkillsPage ? (
-            <SkillsContent isSidebarOpen={isSidebarOpen} onToggleSidebar={toggleSidebar} />
-          ) : (
-            <MainArea
-              onSessionArchived={handleMainAreaArchive}
-              onSessionCreated={refetchSessions}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={toggleSidebar}
-            />
-          )}
-        </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </TooltipProvider>
   );
 }
