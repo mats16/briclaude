@@ -11,7 +11,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -122,7 +121,6 @@ export function MainHeader({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('main.renameSession')}</DialogTitle>
-            <DialogDescription>{t('main.renameSessionDescription')}</DialogDescription>
           </DialogHeader>
           <Input
             value={newTitle}
