@@ -7,7 +7,6 @@ import {
   AlertCircle,
   RefreshCw,
   ExternalLink,
-  Terminal,
   Sparkles,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -227,18 +226,13 @@ export function UserFooter({
               <span className="truncate">{displayName}</span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <Terminal className="h-4 w-4 mr-2" />
-                {t('user.claudeCode')}
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                <DropdownMenuItem onClick={() => navigate('/skills')}>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  {t('user.skills')}
-                </DropdownMenuItem>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
+            <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+              {t('user.claudeCode')}
+            </DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => navigate('/skills')}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              {t('user.skills')}
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
               <Settings className="h-4 w-4 mr-2" />
