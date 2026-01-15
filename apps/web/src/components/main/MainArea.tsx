@@ -10,7 +10,6 @@ import { SessionNotFound } from './SessionNotFound';
 import { useSessionEvents } from '@/hooks/useSessionEvents';
 import { useSession } from '@/hooks/useSession';
 import { sessionService } from '@/services/session.service';
-import { SidebarToggleButton } from '@/components/layout/SidebarToggleButton';
 import { extractTextFromContent } from '@/lib/content-builder';
 
 interface MainAreaProps {
@@ -18,8 +17,6 @@ interface MainAreaProps {
   onSendMessage?: (content: UserMessageContentBlock[]) => void;
   onSessionArchived?: (sessionId: string) => void;
   onSessionCreated?: () => void;
-  isSidebarOpen?: boolean;
-  onToggleSidebar?: () => void;
 }
 
 export function MainArea({
@@ -27,8 +24,6 @@ export function MainArea({
   onSendMessage,
   onSessionArchived,
   onSessionCreated,
-  isSidebarOpen = true,
-  onToggleSidebar,
 }: MainAreaProps) {
   const { sessionId } = useParams<{ sessionId?: string }>();
   const navigate = useNavigate();
@@ -125,12 +120,6 @@ export function MainArea({
   if (!sessionId) {
     return (
       <div className="relative z-0 flex flex-col w-full h-full min-w-0 overflow-hidden bg-background">
-        {/* Simple header with toggle button only */}
-        <div className="flex items-center h-[50px] px-2 border-b border-border shrink-0">
-          {onToggleSidebar && (
-            <SidebarToggleButton isOpen={isSidebarOpen} onToggle={onToggleSidebar} />
-          )}
-        </div>
         <WelcomeScreen onNewSession={handleNewSession} sessionError={createSessionError} />
       </div>
     );
@@ -138,13 +127,7 @@ export function MainArea({
 
   // セッションが見つからない場合
   if (!isSessionLoading && sessionLoadError) {
-    return (
-      <SessionNotFound
-        isSidebarOpen={isSidebarOpen}
-        onToggleSidebar={onToggleSidebar}
-        onGoHome={() => navigate('/')}
-      />
-    );
+    return <SessionNotFound onGoHome={() => navigate('/')} />;
   }
 
   return (
@@ -155,8 +138,6 @@ export function MainArea({
         workspacePath={workspacePath}
         onTitleUpdate={handleTitleUpdate}
         onArchive={handleArchive}
-        isSidebarOpen={isSidebarOpen}
-        onToggleSidebar={onToggleSidebar}
       />
       <MessageArea
         events={events}

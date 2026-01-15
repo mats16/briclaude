@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -10,9 +10,9 @@ import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { MainArea } from '@/components/main/MainArea';
 import { SkillsContent } from '@/pages/SkillsPage';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { cn } from '@/lib/utils';
 
 const SIDEBAR_WIDTH = 300;
+const SIDEBAR_WIDTH_ICON = 48;
 
 export function AppLayout() {
   const { sessionId } = useParams<{ sessionId?: string }>();
@@ -28,19 +28,6 @@ export function AppLayout() {
     getSession,
   } = useSessions();
   const isMobile = useIsMobile();
-
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-    const saved = localStorage.getItem('sidebar-open');
-    return saved !== 'false';
-  });
-
-  const toggleSidebar = useCallback(() => {
-    setIsSidebarOpen(prev => {
-      const newValue = !prev;
-      localStorage.setItem('sidebar-open', String(newValue));
-      return newValue;
-    });
-  }, []);
 
   const handleSelectSession = useCallback(
     (selectedSessionId: string) => {
@@ -127,32 +114,22 @@ export function AppLayout() {
       style={
         {
           '--sidebar-width': `${SIDEBAR_WIDTH}px`,
+          '--sidebar-width-icon': `${SIDEBAR_WIDTH_ICON}px`,
         } as React.CSSProperties
       }
     >
       <div className="flex h-screen w-screen overflow-hidden bg-background">
         {/* Sidebar */}
-        <div
-          className={cn(
-            'h-full shrink-0 transition-all duration-300 ease-in-out overflow-hidden',
-            isSidebarOpen ? 'w-[300px]' : 'w-0'
-          )}
-        >
-          <div className="w-[300px] h-full">
-            <AppSidebar {...sidebarProps} />
-          </div>
-        </div>
+        <AppSidebar {...sidebarProps} collapsible="icon" />
 
         {/* Main Area */}
         <div className="flex-1 h-full min-w-0">
           {isSkillsPage ? (
-            <SkillsContent isSidebarOpen={isSidebarOpen} onToggleSidebar={toggleSidebar} />
+            <SkillsContent />
           ) : (
             <MainArea
               onSessionArchived={handleMainAreaArchive}
               onSessionCreated={refetchSessions}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={toggleSidebar}
             />
           )}
         </div>

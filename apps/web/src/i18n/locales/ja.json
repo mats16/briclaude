@@ -1,10 +1,12 @@
 {
   "app": {
-    "title": "Claude Code on Databricks",
+    "title": "Briclaude",
     "badge": "Unofficial"
   },
   "sidebar": {
     "newSession": "新規セッション",
+    "openSidebar": "サイドバーを開く",
+    "closeSidebar": "サイドバーを閉じる",
     "newSessionPlaceholder": "新しいセッションを開始...",
     "attachImage": "画像を添付",
     "moreOptions": "その他のオプション",
@@ -171,7 +173,7 @@
     "updateSuccess": "スキルを更新しました"
   },
   "welcome": {
-    "title": "Claude Code へようこそ",
+    "title": "Briclaude へようこそ",
     "subtitle": "AI Agent で Databricks での開発を加速しましょう。\n下のクイックスタートか、メッセージを入力から始めてください。",
     "comingSoon": "この機能は近日公開予定です",
     "quickstarts": {
