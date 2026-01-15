@@ -1,5 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
+/**
+ * テキストをタイプライター風に表示するカスタムフック
+ * @param text - 表示するテキスト
+ * @param speed - 1文字あたりの表示速度(ミリ秒)
+ * @param pauseTime - テキスト表示完了後の一時停止時間(ミリ秒)
+ * @returns 現在表示中のテキスト
+ */
 export function useTypewriter(
   text: string,
   speed = 120,
@@ -7,16 +14,6 @@ export function useTypewriter(
 ): string {
   const [displayText, setDisplayText] = useState('');
   const [index, setIndex] = useState(0);
-  const prevTextRef = useRef(text);
-
-  // textが変更された場合にリセット
-  useEffect(() => {
-    if (prevTextRef.current !== text) {
-      prevTextRef.current = text;
-      setDisplayText('');
-      setIndex(0);
-    }
-  }, [text]);
 
   useEffect(() => {
     if (index < text.length) {
