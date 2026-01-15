@@ -687,3 +687,13 @@ export async function updateSkill(
     throw error;
   }
 }
+
+// テスト用エクスポート（内部関数のユニットテスト用）
+export const __testing = {
+  parseSkillFile,
+  generateSkillFileContent,
+  extractAuthorFromGitUrl,
+  validateBranchName,
+  validatePathWithinBase,
+  validateSkillName,
+};
