@@ -125,11 +125,23 @@ export function createDatabricksAppsInstruction(
   const appName = namedOutcomes[0]?.name;
 
   return `
-## Databricks Apps Deployment Requirements
+## Databricks Apps Deployment Requirements (Auto-Deploy Enabled)
 
-You are expected to deploy your application as a Databricks App with the following pre-assigned name:
+**IMPORTANT: Automatic app deployment is ENABLED for this session.**
+
+You MUST deploy your application as a Databricks App. The following app name has been pre-assigned:
 
 ${appList}
+
+### CRITICAL: Create the App IMMEDIATELY
+
+**DO THIS FIRST** before any other work. App creation takes ~2 minutes, so start it NOW:
+
+\`\`\`bash
+databricks apps create ${appName} --no-wait
+\`\`\`
+
+The \`--no-wait\` flag allows you to continue working while the app is being provisioned.
 
 ### Important Instructions:
 
@@ -139,32 +151,24 @@ ${appList}
    - Ensure your application has a valid \`app.yaml\` configuration file in the root directory
    - The \`app.yaml\` defines the app's runtime configuration (command, environment variables, etc.)
 
-3. **CREATE THE APP EARLY** (if it doesn't exist):
-   App creation takes approximately 2 minutes before deployment becomes available.
-   **Run this command at the start of your session** to avoid waiting later:
-   \`\`\`bash
-   databricks apps create ${appName} --no-wait
-   \`\`\`
-   The \`--no-wait\` flag allows you to continue working while the app is being provisioned.
-
-4. **SYNC FILES TO WORKSPACE** (required before deploy):
+3. **SYNC FILES TO WORKSPACE** (required before deploy):
    The \`databricks apps deploy\` command expects a **Workspace path**, not a local path.
    You must first sync your files to the Databricks Workspace:
    \`\`\`bash
    databricks sync --exclude .claude/settings.local.json . "<workspace_path>"
    \`\`\`
 
-5. **DEPLOY THE APP** using the Workspace path:
+4. **DEPLOY THE APP** using the Workspace path:
    \`\`\`bash
    databricks apps deploy ${appName} --source-code-path "<workspace_path>"
    \`\`\`
 
-6. **VERIFY DEPLOYMENT**:
+5. **VERIFY DEPLOYMENT**:
    \`\`\`bash
    databricks apps get ${appName}
    \`\`\`
 
-7. **NEVER** create or deploy to a different app name without explicit permission
+6. **NEVER** create or deploy to a different app name without explicit permission
 
 ### Environment Variables:
 
@@ -188,6 +192,10 @@ The following environment variables are already available:
 command:
   - python
   - app.py
+
+env:
+  - name: "CATALOG_NAME"
+    value: "main"
 \`\`\`
 
 **Note**: Databricks Apps automatically provides the \`DATABRICKS_APP_PORT\` environment variable. Your application should listen on the port specified by this variable.

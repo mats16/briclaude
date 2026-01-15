@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Rocket, Notebook, Settings, Logs } from 'lucide-react';
+import { Rocket, FolderCode, Settings, Logs } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DatabricksApp } from '@repo/types';
 
@@ -121,7 +121,7 @@ export function FloatingButtons({
                 className="flex items-center gap-1 hover:opacity-70"
                 onClick={handleOpenWorkspace}
               >
-                <Notebook className="h-4 w-4 text-foreground" />
+                <FolderCode className="h-4 w-4 text-foreground" />
                 <span className="text-sm font-medium">{t('databricksApp.workspace')}</span>
               </button>
             </div>
