@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Briclaude",
+    "title": "aaa",
     "badge": "Unofficial"
   },
   "sidebar": {
@@ -174,7 +174,7 @@
   },
   "welcome": {
     "heading": "Claude Code on Databricks",
-    "title": "Briclaude へようこそ",
+    "title": "aaa へようこそ",
     "subtitle": "AI Agent で Databricks での開発を加速しましょう。\n下のクイックスタートか、メッセージを入力から始めてください。",
     "comingSoon": "この機能は近日公開予定です",
     "quickstarts": {
