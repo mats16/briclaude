@@ -7,6 +7,7 @@ import {
   Clock,
   Loader2,
   RefreshCw,
+  Bug,
 } from 'lucide-react';
 import {
   Dialog,
@@ -19,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { jobsService } from '@/services';
 import { useUser } from '@/hooks/useUser';
-import type { JobRun, UserMessageContentBlock } from '@repo/types';
+import type { JobRun } from '@repo/types';
 
 export type QuickstartType = 'lakeflow' | 'unityCatalog' | 'databricksApps';
 
@@ -27,11 +28,7 @@ interface QuickstartModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   quickstartType: QuickstartType | null;
-  onStartSession?: (
-    content: UserMessageContentBlock[],
-    modelId: string,
-    workspacePath: string | null
-  ) => Promise<void> | void;
+  onFillPrompt?: (prompt: string) => void;
 }
 
 function formatDuration(ms: number): string {
@@ -106,10 +103,10 @@ function FailedJobRunItem({
 }
 
 function LakeflowContent({
-  onStartSession,
+  onFillPrompt,
   onClose,
 }: {
-  onStartSession?: QuickstartModalProps['onStartSession'];
+  onFillPrompt?: (prompt: string) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -117,7 +114,6 @@ function LakeflowContent({
   const [failedRuns, setFailedRuns] = useState<JobRun[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isStarting, setIsStarting] = useState(false);
 
   const fetchFailedRuns = async () => {
     if (!hasPat) return;
@@ -145,26 +141,18 @@ function LakeflowContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasPat]);
 
-  const handleJobClick = async (run: JobRun) => {
-    if (!onStartSession) return;
+  const handleJobClick = (run: JobRun) => {
+    if (!onFillPrompt) return;
 
-    setIsStarting(true);
-    try {
-      const prompt = t('quickstart.lakeflow.presetPrompt', {
-        jobId: run.job_id,
-        runId: run.run_id,
-        runName: run.run_name || `Run ${run.run_id}`,
-        errorMessage: run.state?.state_message || 'Unknown error',
-      });
+    const prompt = t('quickstart.lakeflow.presetPrompt', {
+      jobId: run.job_id,
+      runId: run.run_id,
+      runName: run.run_name || `Run ${run.run_id}`,
+      errorMessage: run.state?.state_message || 'Unknown error',
+    });
 
-      const content: UserMessageContentBlock[] = [{ type: 'text', text: prompt }];
-      await onStartSession(content, 'sonnet', null);
-      onClose();
-    } catch (err) {
-      console.error('Failed to start session:', err);
-    } finally {
-      setIsStarting(false);
-    }
+    onFillPrompt(prompt);
+    onClose();
   };
 
   if (!hasPat) {
@@ -228,7 +216,6 @@ function LakeflowContent({
               key={run.run_id}
               run={run}
               onClick={() => handleJobClick(run)}
-              disabled={isStarting}
             />
           ))}
         </div>
@@ -254,7 +241,7 @@ export function QuickstartModal({
   open,
   onOpenChange,
   quickstartType,
-  onStartSession,
+  onFillPrompt,
 }: QuickstartModalProps) {
   const { t } = useTranslation();
 
@@ -269,12 +256,15 @@ export function QuickstartModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{t(titleKey)}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Bug className="h-5 w-5" />
+            <span>Quickstart: {t(titleKey)}</span>
+          </DialogTitle>
           <DialogDescription>{t(modalDescKey)}</DialogDescription>
         </DialogHeader>
 
         {quickstartType === 'lakeflow' ? (
-          <LakeflowContent onStartSession={onStartSession} onClose={handleClose} />
+          <LakeflowContent onFillPrompt={onFillPrompt} onClose={handleClose} />
         ) : (
           <ComingSoonContent />
         )}
