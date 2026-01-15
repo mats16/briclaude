@@ -207,10 +207,11 @@
       "fetchError": "テンプレートの取得に失敗しました",
       "noTemplates": "利用可能なテンプレートがありません",
       "templatesCount": "{{count}} 件のテンプレート",
-      "cloneTemplate": "{{name}} テンプレートを使用",
+      "selectTemplate": "{{name}} テンプレートを選択",
       "cloneError": "テンプレートのクローンに失敗しました",
-      "cloneInfo": "テンプレートを選択すると、Workspace にクローンされ新規セッションが開始されます。",
+      "cloneInfo": "テンプレートを選択し、クローンボタンを押してください。",
       "viewOnGithub": "GitHub で表示",
+      "clone": "クローン",
       "presetPrompt": "{{templateName}} テンプレートを {{path}} にクローンしました。\n\nこのテンプレートをベースに Databricks App を開発してください。"
     }
   }

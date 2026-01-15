@@ -299,12 +299,6 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
         onOpenChange={open => !open && setSelectedQuickstart(null)}
         quickstartType={selectedQuickstart}
         onFillPrompt={setContent}
-        onStartSession={async (prompt, workspacePath) => {
-          // Start session with cloned template workspace
-          const messageContent = buildMessageContent(prompt, []);
-          addRecentWorkspace(workspacePath);
-          await onNewSession?.(messageContent, selectedModel.id, workspacePath);
-        }}
       />
     </div>
   );

@@ -11,6 +11,8 @@ import {
   Rocket,
   FileSearch,
   FolderGit2,
+  Check,
+  Download,
 } from 'lucide-react';
 import {
   Dialog,
@@ -32,7 +34,6 @@ interface QuickstartModalProps {
   onOpenChange: (open: boolean) => void;
   quickstartType: QuickstartType | null;
   onFillPrompt?: (prompt: string) => void;
-  onStartSession?: (prompt: string, workspacePath: string) => void;
 }
 
 /** GitHub API content item */
@@ -267,61 +268,63 @@ function LakeflowContent({
 
 function AppTemplateItem({
   template,
+  selected,
   onClick,
   disabled,
-  isCloning,
 }: {
   template: AppTemplate;
+  selected: boolean;
   onClick: () => void;
   disabled?: boolean;
-  isCloning?: boolean;
 }) {
   const { t } = useTranslation();
 
   return (
     <button
       type="button"
-      className="w-full text-left p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      className={`w-full text-left p-3 rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+        selected
+          ? 'border-primary bg-primary/5'
+          : 'border-border hover:bg-accent/50'
+      }`}
       onClick={onClick}
-      disabled={disabled || isCloning}
-      aria-label={t('quickstart.databricksApps.cloneTemplate', { name: template.name })}
+      disabled={disabled}
+      aria-label={t('quickstart.databricksApps.selectTemplate', { name: template.name })}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <FolderGit2 className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
+            {selected ? (
+              <Check className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
+            ) : (
+              <FolderGit2 className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
+            )}
             <span className="font-medium truncate">{template.name}</span>
           </div>
           {template.description && (
             <p className="text-sm text-muted-foreground mt-1">{template.description}</p>
           )}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {isCloning ? (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden="true" />
-          ) : (
-            <a
-              href={template.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
-              className="text-muted-foreground hover:text-foreground"
-              aria-label={t('quickstart.databricksApps.viewOnGithub')}
-            >
-              <ExternalLink className="h-4 w-4" aria-hidden="true" />
-            </a>
-          )}
-        </div>
+        <a
+          href={template.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={e => e.stopPropagation()}
+          className="text-muted-foreground hover:text-foreground shrink-0"
+          aria-label={t('quickstart.databricksApps.viewOnGithub')}
+        >
+          <ExternalLink className="h-4 w-4" aria-hidden="true" />
+        </a>
       </div>
     </button>
   );
 }
 
 function DatabricksAppsContent({
-  onStartSession,
+  onFillPrompt,
   onClose,
 }: {
-  onStartSession?: (prompt: string, workspacePath: string) => void;
+  onFillPrompt?: (prompt: string) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -329,7 +332,8 @@ function DatabricksAppsContent({
   const [templates, setTemplates] = useState<AppTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const [cloningTemplate, setCloningTemplate] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<AppTemplate | null>(null);
+  const [isCloning, setIsCloning] = useState(false);
   const [cloneError, setCloneError] = useState<string | null>(null);
 
   const fetchTemplates = useCallback(async () => {
@@ -363,29 +367,38 @@ function DatabricksAppsContent({
     fetchTemplates();
   }, [fetchTemplates]);
 
-  const handleTemplateClick = async (template: AppTemplate) => {
-    if (!onStartSession || !hasPat) return;
+  const handleTemplateSelect = (template: AppTemplate) => {
+    if (selectedTemplate?.name === template.name) {
+      setSelectedTemplate(null);
+    } else {
+      setSelectedTemplate(template);
+    }
+    setCloneError(null);
+  };
 
-    setCloningTemplate(template.name);
+  const handleClone = async () => {
+    if (!selectedTemplate || !onFillPrompt || !hasPat) return;
+
+    setIsCloning(true);
     setCloneError(null);
     try {
       const response = await appTemplatesService.cloneTemplate({
-        templateName: template.name,
+        templateName: selectedTemplate.name,
       });
 
-      // Clone successful - start new session with the workspace path
+      // Clone successful - fill prompt
       const prompt = t('quickstart.databricksApps.presetPrompt', {
-        templateName: template.name,
+        templateName: selectedTemplate.name,
         path: response.path,
       });
 
-      onStartSession(prompt, response.path);
+      onFillPrompt(prompt);
       onClose();
     } catch (err) {
       console.error('Failed to clone template:', err);
       setCloneError(t('quickstart.databricksApps.cloneError'));
     } finally {
-      setCloningTemplate(null);
+      setIsCloning(false);
     }
   };
 
@@ -443,7 +456,7 @@ function DatabricksAppsContent({
           variant="ghost"
           size="sm"
           onClick={fetchTemplates}
-          disabled={isLoading || cloningTemplate !== null}
+          disabled={isLoading || isCloning}
           aria-label={t('common.retry')}
         >
           <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
@@ -460,16 +473,30 @@ function DatabricksAppsContent({
             <AppTemplateItem
               key={template.name}
               template={template}
-              onClick={() => handleTemplateClick(template)}
-              disabled={cloningTemplate !== null}
-              isCloning={cloningTemplate === template.name}
+              selected={selectedTemplate?.name === template.name}
+              onClick={() => handleTemplateSelect(template)}
+              disabled={isCloning}
             />
           ))}
         </div>
       </ScrollArea>
-      <p className="text-xs text-muted-foreground">
-        {t('quickstart.databricksApps.cloneInfo')}
-      </p>
+      <div className="flex items-center justify-between pt-2 border-t">
+        <p className="text-xs text-muted-foreground">
+          {t('quickstart.databricksApps.cloneInfo')}
+        </p>
+        <Button
+          onClick={handleClone}
+          disabled={!selectedTemplate || isCloning}
+          size="sm"
+        >
+          {isCloning ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
+          ) : (
+            <Download className="h-4 w-4 mr-2" aria-hidden="true" />
+          )}
+          {t('quickstart.databricksApps.clone')}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -498,7 +525,6 @@ export function QuickstartModal({
   onOpenChange,
   quickstartType,
   onFillPrompt,
-  onStartSession,
 }: QuickstartModalProps) {
   const { t } = useTranslation();
 
@@ -515,7 +541,7 @@ export function QuickstartModal({
       case 'lakeflow':
         return <LakeflowContent onFillPrompt={onFillPrompt} onClose={handleClose} />;
       case 'databricksApps':
-        return <DatabricksAppsContent onStartSession={onStartSession} onClose={handleClose} />;
+        return <DatabricksAppsContent onFillPrompt={onFillPrompt} onClose={handleClose} />;
       default:
         return <ComingSoonContent />;
     }
