@@ -22,7 +22,8 @@ export function FloatingButtons({
 }: FloatingButtonsProps) {
   const { t } = useTranslation();
   const [appInfo, setAppInfo] = useState<DatabricksApp | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // fetchAppInfo の最新版を保持する ref（interval 内で常に最新を参照するため）
+  const fetchAppInfoRef = useRef<() => Promise<void>>(undefined);
 
   const fetchAppInfo = useCallback(async () => {
     if (!showAppButton) return;
@@ -39,23 +40,26 @@ export function FloatingButtons({
     }
   }, [sessionId, showAppButton]);
 
-  // 初回マウント時にアプリ情報を取得 + 5秒おきにポーリング
+  // fetchAppInfo が更新されたら ref も更新
   useEffect(() => {
-    if (showAppButton) {
-      fetchAppInfo();
+    fetchAppInfoRef.current = fetchAppInfo;
+  }, [fetchAppInfo]);
 
-      // 5秒おきにポーリング
-      intervalRef.current = setInterval(() => {
-        fetchAppInfo();
-      }, 5000);
+  // 初回マウント時にアプリ情報を取得 + 5秒おきにポーリング
+  // showAppButton の変更時のみ interval を再設定（sessionId 変更時は ref 経由で最新を参照）
+  useEffect(() => {
+    if (!showAppButton) return;
 
-      return () => {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-        }
-      };
-    }
-  }, [fetchAppInfo, showAppButton]);
+    // 初回取得
+    fetchAppInfoRef.current?.();
+
+    // 5秒おきにポーリング
+    const intervalId = setInterval(() => {
+      fetchAppInfoRef.current?.();
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [showAppButton]);
 
   const appState: AppStateType = appInfo?.app_status?.state ?? 'UNKNOWN';
 
