@@ -26,8 +26,7 @@ const jobsRoute: FastifyPluginAsync = async fastify => {
     if (limit !== undefined) url.searchParams.set('limit', String(limit));
     if (offset !== undefined) url.searchParams.set('offset', String(offset));
     if (name !== undefined) url.searchParams.set('name', name);
-    if (expand_tasks !== undefined)
-      url.searchParams.set('expand_tasks', String(expand_tasks));
+    if (expand_tasks !== undefined) url.searchParams.set('expand_tasks', String(expand_tasks));
 
     const response = await fetch(url.toString(), {
       method: 'GET',
@@ -73,17 +72,14 @@ const jobsRoute: FastifyPluginAsync = async fastify => {
     if (job_id !== undefined) url.searchParams.set('job_id', String(job_id));
     if (limit !== undefined) url.searchParams.set('limit', String(limit));
     if (offset !== undefined) url.searchParams.set('offset', String(offset));
-    if (active_only !== undefined)
-      url.searchParams.set('active_only', String(active_only));
+    if (active_only !== undefined) url.searchParams.set('active_only', String(active_only));
     if (completed_only !== undefined)
       url.searchParams.set('completed_only', String(completed_only));
     if (run_type !== undefined) url.searchParams.set('run_type', run_type);
-    if (expand_tasks !== undefined)
-      url.searchParams.set('expand_tasks', String(expand_tasks));
+    if (expand_tasks !== undefined) url.searchParams.set('expand_tasks', String(expand_tasks));
     if (start_time_from !== undefined)
       url.searchParams.set('start_time_from', String(start_time_from));
-    if (start_time_to !== undefined)
-      url.searchParams.set('start_time_to', String(start_time_to));
+    if (start_time_to !== undefined) url.searchParams.set('start_time_to', String(start_time_to));
 
     const response = await fetch(url.toString(), {
       method: 'GET',

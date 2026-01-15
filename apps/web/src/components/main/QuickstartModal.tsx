@@ -33,7 +33,7 @@ interface QuickstartModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   quickstartType: QuickstartType | null;
-  onFillPrompt?: (prompt: string, workspacePath?: string) => void;
+  onFillPrompt?: (prompt: string, workspacePath?: string, enableDatabricksApps?: boolean) => void;
 }
 
 /** GitHub API content item */
@@ -51,8 +51,7 @@ interface AppTemplate {
   description: string;
 }
 
-const GITHUB_TEMPLATES_API_URL =
-  'https://api.github.com/repos/databricks/app-templates/contents';
+const GITHUB_TEMPLATES_API_URL = 'https://api.github.com/repos/databricks/app-templates/contents';
 
 function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
@@ -283,9 +282,7 @@ function AppTemplateItem({
     <button
       type="button"
       className={`w-full text-left p-3 rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-        selected
-          ? 'border-primary bg-primary/5'
-          : 'border-border hover:bg-accent/50'
+        selected ? 'border-primary bg-primary/5' : 'border-border hover:bg-accent/50'
       }`}
       onClick={onClick}
       disabled={disabled}
@@ -326,7 +323,7 @@ function DatabricksAppsContent({
   onFillPrompt,
   onClose,
 }: {
-  onFillPrompt?: (prompt: string, workspacePath?: string) => void;
+  onFillPrompt?: (prompt: string, workspacePath?: string, enableDatabricksApps?: boolean) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -393,17 +390,19 @@ function DatabricksAppsContent({
         provider: 'gitHub',
         path: workspacePath,
         sparse_checkout: {
-          patterns: [`/${selectedTemplate.name}`],
+          patterns: [selectedTemplate.name],
         },
       });
 
       // Clone successful - fill prompt and workspace path
+      // sparse_checkout でテンプレートのみクローンしているので、実際のパスは <repo_path>/<template_name>
+      const templatePath = `${response.path}/${selectedTemplate.name}`;
       const prompt = t('quickstart.databricksApps.presetPrompt', {
         templateName: selectedTemplate.name,
-        path: response.path,
+        path: templatePath,
       });
 
-      onFillPrompt(prompt, response.path);
+      onFillPrompt(prompt, templatePath, true);
       onClose();
     } catch (err) {
       console.error('Failed to clone template:', err);
@@ -492,18 +491,12 @@ function DatabricksAppsContent({
         </div>
       </ScrollArea>
       <div className="flex items-center justify-between pt-2 border-t">
-        <p className="text-xs text-muted-foreground">
-          {t('quickstart.databricksApps.cloneInfo')}
-        </p>
+        <p className="text-xs text-muted-foreground">{t('quickstart.databricksApps.cloneInfo')}</p>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button
-            onClick={handleClone}
-            disabled={!selectedTemplate || isCloning}
-            size="sm"
-          >
+          <Button onClick={handleClone} disabled={!selectedTemplate || isCloning} size="sm">
             {isCloning ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
             ) : (

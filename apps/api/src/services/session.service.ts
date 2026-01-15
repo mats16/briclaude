@@ -20,6 +20,8 @@ import type {
   SessionUpdateRequest,
   CodedError,
   DatabricksWorkspaceSource,
+  DatabricksAppsOutcome,
+  SessionOutcome,
 } from '@repo/types';
 import { ClaudeSettings } from '../models/claude-settings.model.js';
 import { buildSystemPromptConfig } from '../utils/system-prompt.helper.js';
@@ -290,13 +292,24 @@ export async function createSession(
   }
 
   // 5. context オブジェクトの構築
+  // outcomes に databricks_apps がある場合、name を付与
+  const processedOutcomes: SessionOutcome[] = session_context.outcomes.map(outcome => {
+    if (outcome.type === 'databricks_apps') {
+      return {
+        ...outcome,
+        name: `app-${sessionId.getSuffix()}`,
+      } as DatabricksAppsOutcome;
+    }
+    return outcome;
+  });
+
   const sessionContext: SessionContextResponse = {
     allowed_tools: [],
     disallowed_tools: [],
     cwd,
     model: session_context.model,
     sources: session_context.sources,
-    outcomes: session_context.outcomes,
+    outcomes: processedOutcomes,
   };
 
   // 5. タイムスタンプを設定（レスポンス用）
@@ -793,6 +806,7 @@ export async function archiveSession(
 ): Promise<SessionResponse | null> {
   // user_home を取得（ベースディレクトリとして使用）
   const { userHome } = ctx;
+  const databricksHost = fastify.config.DATABRICKS_HOST;
 
   return fastify.withUserContext(userId, async tx => {
     // 1. セッション情報を取得（cwd を取得するため）
@@ -824,6 +838,52 @@ export async function archiveSession(
           'Failed to remove working directory'
         );
       });
+    }
+
+    // 4. Databricks App を削除（databricks_apps outcome がある場合、トランザクション外で非同期実行）
+    const appsOutcome = context?.outcomes?.find(
+      (o): o is DatabricksAppsOutcome => o.type === 'databricks_apps' && !!o.name
+    );
+    if (appsOutcome?.name) {
+      const appName = appsOutcome.name;
+      ctx
+        .getPat()
+        .then(pat => {
+          if (!pat) {
+            fastify.log.warn(
+              { sessionId: sessionId.toString(), appName },
+              'Cannot delete Databricks App: PAT not available'
+            );
+            return;
+          }
+          const url = new URL(`/api/2.0/apps/${appName}`, `https://${databricksHost}`);
+          return fetch(url.toString(), {
+            method: 'DELETE',
+            headers: {
+              'content-type': 'application/json',
+              authorization: `Bearer ${pat}`,
+            },
+          });
+        })
+        .then(response => {
+          if (response && !response.ok) {
+            fastify.log.warn(
+              { sessionId: sessionId.toString(), appName, status: response.status },
+              'Failed to delete Databricks App'
+            );
+          } else if (response) {
+            fastify.log.info(
+              { sessionId: sessionId.toString(), appName },
+              'Databricks App deleted successfully'
+            );
+          }
+        })
+        .catch(error => {
+          fastify.log.error(
+            { sessionId: sessionId.toString(), appName, error },
+            'Error deleting Databricks App'
+          );
+        });
     }
 
     return toSessionResponse(rows[0]);

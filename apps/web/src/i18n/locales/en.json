@@ -176,6 +176,7 @@
     "title": "Welcome to Briclaude",
     "subtitle": "Accelerate your Databricks development with AI Agent.\nStart with a quickstart below or type a message.",
     "comingSoon": "This feature is coming soon",
+    "databricksAppsToggle": "Enable automatic deployment to Databricks Apps",
     "quickstarts": {
       "lakeflow": {
         "title": "Investigate Lakeflow Jobs Errors",
@@ -211,7 +212,18 @@
       "cloneInfo": "Select a template and click Clone.",
       "viewOnGithub": "View on GitHub",
       "clone": "Clone",
-      "presetPrompt": "Cloned {{templateName}} template. Please help me develop a Databricks Apps based on this template.\n\nFirst, please explain the structure of this template."
+      "presetPrompt": "Cloned {{templateName}} template. Please proceed with developing Databricks Apps based on this template.\n\nFirst, perform the initial deployment. Also, please explain the configuration of this template."
     }
+  },
+  "databricksApp": {
+    "title": "Databricks Apps",
+    "notCreated": "App has not been created yet",
+    "fetchError": "Failed to fetch app info",
+    "status": "Status",
+    "openApp": "Open App",
+    "openConsole": "Open Console",
+    "app": "App",
+    "logs": "Logs",
+    "workspace": "Workspace"
   }
 }

@@ -1,12 +1,19 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { SessionCreateRequest, UserMessageContentBlock } from '@repo/types';
+import type {
+  SessionCreateRequest,
+  UserMessageContentBlock,
+  SessionOutcome,
+  DatabricksAppsOutcome,
+  DatabricksWorkspaceSource,
+} from '@repo/types';
 import { MainHeader } from './MainHeader';
 import { MessageArea } from './MessageArea';
 import { InputArea } from './InputArea';
 import { WelcomeScreen } from './WelcomeScreen';
 import { SessionNotFound } from './SessionNotFound';
+import { FloatingButtons } from './FloatingButtons';
 import { useSessionEvents } from '@/hooks/useSessionEvents';
 import { useSession } from '@/hooks/useSession';
 import { sessionService } from '@/services/session.service';
@@ -58,6 +65,26 @@ export function MainArea({
     return workspaceSource?.path ?? null;
   }, [session?.session_context?.sources]);
 
+  // session_context.outcomes から databricks_apps を取得
+  const databricksAppsOutcome = useMemo(() => {
+    const outcomes = session?.session_context?.outcomes;
+    if (!outcomes) return null;
+    return outcomes.find((o): o is DatabricksAppsOutcome => o.type === 'databricks_apps') ?? null;
+  }, [session?.session_context?.outcomes]);
+
+  // session_context.outcomes から databricks_workspace を取得
+  const databricksWorkspaceOutcome = useMemo(() => {
+    const outcomes = session?.session_context?.outcomes;
+    if (!outcomes) return null;
+    return (
+      outcomes.find((o): o is DatabricksWorkspaceSource => o.type === 'databricks_workspace') ??
+      null
+    );
+  }, [session?.session_context?.outcomes]);
+
+  // フローティングボタンを表示するかどうか
+  const hasFloatingButtons = !!databricksAppsOutcome || !!databricksWorkspaceOutcome;
+
   const handleSend = (content: UserMessageContentBlock[]) => {
     onSendMessage?.(content);
     sendMessage(content);
@@ -75,13 +102,23 @@ export function MainArea({
   const handleNewSession = async (
     content: UserMessageContentBlock[],
     modelId: string,
-    workspacePath: string | null
+    workspacePath: string | null,
+    enableDatabricksApps: boolean
   ) => {
     try {
       setCreateSessionError(null);
       // タイトル生成用にテキストを抽出
       const textContent = extractTextFromContent(content);
       const title = await sessionService.generateTitle(textContent);
+
+      // outcomes の構築
+      const outcomes: SessionOutcome[] = [];
+      if (workspacePath) {
+        outcomes.push({ type: 'databricks_workspace', path: workspacePath });
+      }
+      if (enableDatabricksApps) {
+        outcomes.push({ type: 'databricks_apps' });
+      }
 
       const request: SessionCreateRequest = {
         title: title ?? undefined,
@@ -103,7 +140,7 @@ export function MainArea({
         session_context: {
           model: modelId as 'opus' | 'sonnet' | 'haiku',
           sources: workspacePath ? [{ type: 'databricks_workspace', path: workspacePath }] : [],
-          outcomes: workspacePath ? [{ type: 'databricks_workspace', path: workspacePath }] : [],
+          outcomes: outcomes,
         },
       };
 
@@ -144,6 +181,7 @@ export function MainArea({
         isLoading={isLoading}
         error={error}
         isAgentThinking={isAgentThinking}
+        hasFloatingButton={hasFloatingButtons}
       />
       <InputArea
         sessionId={sessionId}
@@ -152,6 +190,14 @@ export function MainArea({
         isAgentThinking={isAgentThinking}
         disabled={session?.session_status === 'archived'}
       />
+      {hasFloatingButtons && (
+        <FloatingButtons
+          sessionId={sessionId}
+          showAppButton={!!databricksAppsOutcome}
+          showWorkspaceButton={!!databricksWorkspaceOutcome}
+          workspacePath={databricksWorkspaceOutcome?.path}
+        />
+      )}
     </div>
   );
 }

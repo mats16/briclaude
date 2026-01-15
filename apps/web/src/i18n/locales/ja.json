@@ -176,6 +176,7 @@
     "title": "Briclaude へようこそ",
     "subtitle": "AI Agent で Databricks での開発を加速しましょう。\n下のクイックスタートか、メッセージを入力から始めてください。",
     "comingSoon": "この機能は近日公開予定です",
+    "databricksAppsToggle": "Databricks Apps への自動デプロイを有効化",
     "quickstarts": {
       "lakeflow": {
         "title": "Lakeflow Jobs のエラー調査",
@@ -211,7 +212,18 @@
       "cloneInfo": "テンプレートを選択し、クローンボタンを押してください。",
       "viewOnGithub": "GitHub で表示",
       "clone": "クローン",
-      "presetPrompt": "{{templateName}} テンプレートをクローンしました。このテンプレートをベースに Databricks Apps を開発してください。\n\nまずはこのテンプレートの構成について解説して下さい。"
+      "presetPrompt": "{{templateName}} テンプレートをクローンしました。このテンプレートをベースに Databricks Apps の開発を進めてください。\n\nまずは初回デプロイを行なって下さい。また、このテンプレートの構成について解説して下さい。"
     }
+  },
+  "databricksApp": {
+    "title": "Databricks Apps",
+    "notCreated": "App はまだ作成されていません",
+    "fetchError": "App 情報の取得に失敗しました",
+    "status": "ステータス",
+    "openApp": "App を開く",
+    "openConsole": "Console を開く",
+    "app": "アプリ",
+    "logs": "ログ",
+    "workspace": "ワークスペース"
   }
 }

@@ -49,6 +49,9 @@ export default defineConfig(async ({ mode }) => {
 
   return {
     plugins: [react()],
+    define: {
+      'import.meta.env.DATABRICKS_HOST': JSON.stringify(env.DATABRICKS_HOST || ''),
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
