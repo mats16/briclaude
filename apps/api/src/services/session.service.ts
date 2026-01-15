@@ -86,7 +86,7 @@ function saveAndBroadcastEvent(
   sessionId: SessionId,
   message: SDKMessage,
   options: { skipDbSave?: boolean } = {}
-): void {
+): Promise<void> {
   const eventUuid = 'uuid' in message ? (message.uuid as string) : crypto.randomUUID();
   const eventSubtype = 'subtype' in message ? (message.subtype as string | undefined) : undefined;
 
@@ -95,9 +95,9 @@ function saveAndBroadcastEvent(
 
   // DB に保存（skipDbSave が false の場合のみ）
   if (!options.skipDbSave) {
-    fastify
+    return fastify
       .withUserContext(userId, async tx => {
-        return insertSessionEventInTx(tx, {
+        await insertSessionEventInTx(tx, {
           uuid: eventUuid,
           sessionId: sessionId.toUUID(),
           type: message.type,
@@ -112,6 +112,7 @@ function saveAndBroadcastEvent(
         );
       });
   }
+  return Promise.resolve();
 }
 
 /**
@@ -860,7 +861,7 @@ export async function executeAbort(
   // 1. abort を呼び出し（AbortController の削除は processRemainingEvents の finally で行う）
   abortController.abort();
 
-  // 2. user メッセージを送信（画面表示用）
+  // 2. user メッセージを送信（画面表示用）- DB 保存完了を待機して順序を保証
   const userMessage = {
     type: 'user',
     uuid: crypto.randomUUID(),
@@ -871,9 +872,9 @@ export async function executeAbort(
       content: [{ type: 'text', text: '[Request aborted by user]' }],
     },
   } as SDKUserMessage;
-  saveAndBroadcastEvent(fastify, userId, sessionId, userMessage);
+  await saveAndBroadcastEvent(fastify, userId, sessionId, userMessage);
 
-  // 3. result イベントを送信
+  // 3. result イベントを送信（user メッセージの後に送信されることが保証される）
   const resultMessage = {
     type: 'result',
     subtype: 'error_during_execution',
@@ -881,7 +882,7 @@ export async function executeAbort(
     session_id: sessionIdStr,
     is_error: false,
   } as SDKResultMessage;
-  saveAndBroadcastEvent(fastify, userId, sessionId, resultMessage);
+  await saveAndBroadcastEvent(fastify, userId, sessionId, resultMessage);
 
   // 4. セッション状態を idle に更新
   await fastify.withUserContext(userId, async tx => {
