@@ -57,6 +57,8 @@
     "settings": "Settings",
     "language": "Language",
     "theme": "Theme",
+    "claudeCode": "Claude Code",
+    "skills": "Skills",
     "databricksConsole": "Databricks Console",
     "loadError": "Failed to load user",
     "defaultName": "User"
@@ -114,6 +116,59 @@
     "loading": "Loading...",
     "empty": "This folder is empty",
     "error": "Failed to load workspace"
+  },
+  "skills": {
+    "title": "Skill Management",
+    "description": "Add and manage custom skills",
+    "createNew": "Create New",
+    "importFromGit": "Import",
+    "fetchError": "Failed to fetch skills",
+    "createError": "Failed to create skill",
+    "importError": "Failed to import",
+    "deleteError": "Failed to delete",
+    "deleteConfirm": "Are you sure you want to delete \"{{name}}\"?",
+    "empty": "No skills yet",
+    "backToHome": "Back to Home",
+    "createDialog": {
+      "title": "Create New Skill",
+      "description": "Create a custom skill",
+      "name": "Skill Name",
+      "namePlaceholder": "my-skill",
+      "version": "Version",
+      "versionPlaceholder": "1.0.0",
+      "skillDescription": "Description",
+      "descriptionPlaceholder": "Enter skill description",
+      "content": "Content",
+      "contentPlaceholder": "Enter skill prompt...",
+      "submit": "Create"
+    },
+    "importDialog": {
+      "title": "Import skills",
+      "description": "Import skills from a Git repository",
+      "repositoryUrl": "Repository URL",
+      "repositoryUrlPlaceholder": "https://github.com/user/repo",
+      "selectOrEnterRepo": "Select or enter repository URL...",
+      "enterCustomUrl": "Enter a custom URL above",
+      "presets": "Presets",
+      "path": "Path",
+      "pathPlaceholder": "skills",
+      "branch": "Branch",
+      "branchPlaceholder": "main",
+      "fetchSkills": "Fetch Skills",
+      "selectSkill": "Select a Skill",
+      "invalidUrl": "Invalid Repository URL",
+      "fetchError": "Failed to fetch skills",
+      "submit": "Import"
+    },
+    "previewDialog": {
+      "content": "Content",
+      "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "editing": "Editing"
+    },
+    "updateError": "Failed to update skill",
+    "updateSuccess": "Skill updated successfully"
   },
   "welcome": {
     "title": "Welcome to Claude Code",

@@ -11,6 +11,7 @@ import userTokensRoute from './routes/user-tokens.js';
 import sessionRoute from './routes/session.js';
 import titleRoute from './routes/title.js';
 import workspaceRoute from './routes/workspace.js';
+import userSkillsRoute from './routes/user-skills.js';
 
 export async function build() {
   const app = Fastify({
@@ -41,6 +42,7 @@ export async function build() {
   await app.register(sessionRoute, { prefix: '/api' });
   await app.register(titleRoute, { prefix: '/api' });
   await app.register(workspaceRoute, { prefix: '/api/databricks' });
+  await app.register(userSkillsRoute, { prefix: '/api' });
 
   // APIルートのキャッシュ制御
   app.addHook('onSend', async (request, reply) => {

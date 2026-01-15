@@ -35,6 +35,7 @@ function AppContent() {
   return (
     <Routes>
       <Route path="/" element={<AppLayout />} />
+      <Route path="/skills" element={<AppLayout />} />
       <Route path="/:sessionId" element={<AppLayout />} />
     </Routes>
   );
