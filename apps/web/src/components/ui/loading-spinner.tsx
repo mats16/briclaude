@@ -1,4 +1,3 @@
-import React from 'react';
 import { ToyBrick } from 'lucide-react';
 
 interface LoadingSpinnerProps {
@@ -6,10 +5,7 @@ interface LoadingSpinnerProps {
   speed?: 'slow' | 'normal' | 'fast';
 }
 
-const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
-  size = 'md',
-  speed = 'normal',
-}) => {
+export function LoadingSpinner({ size = 'md', speed = 'normal' }: LoadingSpinnerProps) {
   const sizes = {
     sm: { container: 'w-12 h-12', icon: 'w-4 h-4', radius: 16 },
     md: { container: 'w-20 h-20', icon: 'w-5 h-5', radius: 28 },
@@ -47,7 +43,7 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
       </div>
     </div>
   );
-};
+}
 
 interface LoadingScreenProps {
   size?: 'sm' | 'md' | 'lg';
@@ -56,12 +52,12 @@ interface LoadingScreenProps {
   fullScreen?: boolean;
 }
 
-const LoadingScreen: React.FC<LoadingScreenProps> = ({
+export function LoadingScreen({
   size = 'md',
   speed = 'normal',
   text,
   fullScreen = true,
-}) => {
+}: LoadingScreenProps) {
   const content = (
     <div className="flex flex-col items-center gap-4">
       <LoadingSpinner size={size} speed={speed} />
@@ -78,7 +74,4 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
   }
 
   return content;
-};
-
-export { LoadingSpinner, LoadingScreen };
-export default LoadingScreen;
+}
