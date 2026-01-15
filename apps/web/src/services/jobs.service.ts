@@ -16,7 +16,9 @@ export const jobsService = {
     params.set('completed_only', 'true');
 
     if (options.job_id !== undefined) params.set('job_id', String(options.job_id));
-    if (options.limit !== undefined) params.set('limit', String(options.limit));
+    // Databricks API limit is max 25 for job runs
+    const limit = options.limit !== undefined ? Math.min(options.limit, 25) : 25;
+    params.set('limit', String(limit));
     if (options.offset !== undefined) params.set('offset', String(options.offset));
     if (options.run_type !== undefined) params.set('run_type', options.run_type);
     if (options.expand_tasks !== undefined) params.set('expand_tasks', String(options.expand_tasks));

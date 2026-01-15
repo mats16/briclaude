@@ -37,7 +37,7 @@ export interface JobsListResponse {
 export interface JobRunsListQuerystring {
   /** Filter by job ID */
   job_id?: number;
-  /** Maximum number of runs to return (default: 25, max: 100) */
+  /** Maximum number of runs to return (default: 25, max: 25) */
   limit?: number;
   /** Offset for pagination */
   offset?: number;

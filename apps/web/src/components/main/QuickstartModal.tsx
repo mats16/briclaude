@@ -125,10 +125,10 @@ function LakeflowContent({
     setIsLoading(true);
     setError(null);
     try {
-      // 直近7日間の失敗したジョブを取得
+      // 直近7日間の失敗したジョブを取得 (Databricks API max limit is 25)
       const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
       const response = await jobsService.getFailedJobRuns({
-        limit: 100,
+        limit: 25,
         start_time_from: sevenDaysAgo,
       });
       setFailedRuns(response.runs ?? []);
