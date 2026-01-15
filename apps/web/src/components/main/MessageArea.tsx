@@ -4,15 +4,23 @@ import { EventItem } from './EventItem';
 import { ThinkingIndicator } from './ThinkingIndicator';
 import { LoadingScreen } from '@/components/ui/loading-spinner';
 import { extractToolResults, groupChildEvents } from '@/lib/message-utils';
+import { cn } from '@/lib/utils';
 
 interface MessageAreaProps {
   events: SDKMessage[];
   isLoading?: boolean;
   error?: Error | null;
   isAgentThinking?: boolean;
+  hasFloatingButton?: boolean;
 }
 
-export function MessageArea({ events, isLoading, error, isAgentThinking }: MessageAreaProps) {
+export function MessageArea({
+  events,
+  isLoading,
+  error,
+  isAgentThinking,
+  hasFloatingButton,
+}: MessageAreaProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // tool_result を事前に抽出してマップ化
@@ -54,7 +62,7 @@ export function MessageArea({ events, isLoading, error, isAgentThinking }: Messa
 
   return (
     <div className="flex-1 overflow-y-auto px-4">
-      <div className="w-full max-w-[735px] mx-auto pb-24">
+      <div className={cn('w-full max-w-[735px] mx-auto', hasFloatingButton ? 'pb-36' : 'pb-24')}>
         {topLevelEvents.map((event, index) => (
           <EventItem
             key={'uuid' in event ? (event.uuid as string) : `event-${index}`}

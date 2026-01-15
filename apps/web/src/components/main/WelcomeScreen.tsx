@@ -334,11 +334,14 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
         open={selectedQuickstart !== null}
         onOpenChange={open => !open && setSelectedQuickstart(null)}
         quickstartType={selectedQuickstart}
-        onFillPrompt={(prompt, workspacePath) => {
+        onFillPrompt={(prompt, workspacePath, enableApps) => {
           setContent(prompt);
           if (workspacePath) {
             setSelectedWorkspace(workspacePath);
             addRecentWorkspace(workspacePath);
+          }
+          if (enableApps) {
+            setEnableDatabricksApps(true);
           }
         }}
       />

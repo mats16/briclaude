@@ -33,7 +33,7 @@ interface QuickstartModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   quickstartType: QuickstartType | null;
-  onFillPrompt?: (prompt: string, workspacePath?: string) => void;
+  onFillPrompt?: (prompt: string, workspacePath?: string, enableDatabricksApps?: boolean) => void;
 }
 
 /** GitHub API content item */
@@ -323,7 +323,7 @@ function DatabricksAppsContent({
   onFillPrompt,
   onClose,
 }: {
-  onFillPrompt?: (prompt: string, workspacePath?: string) => void;
+  onFillPrompt?: (prompt: string, workspacePath?: string, enableDatabricksApps?: boolean) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -390,17 +390,19 @@ function DatabricksAppsContent({
         provider: 'gitHub',
         path: workspacePath,
         sparse_checkout: {
-          patterns: [`/${selectedTemplate.name}`],
+          patterns: [selectedTemplate.name],
         },
       });
 
       // Clone successful - fill prompt and workspace path
+      // sparse_checkout でテンプレートのみクローンしているので、実際のパスは <repo_path>/<template_name>
+      const templatePath = `${response.path}/${selectedTemplate.name}`;
       const prompt = t('quickstart.databricksApps.presetPrompt', {
         templateName: selectedTemplate.name,
-        path: response.path,
+        path: templatePath,
       });
 
-      onFillPrompt(prompt, response.path);
+      onFillPrompt(prompt, templatePath, true);
       onClose();
     } catch (err) {
       console.error('Failed to clone template:', err);
