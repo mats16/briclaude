@@ -1,11 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import {
-  Globe,
-  Check,
-  Settings,
-  ExternalLink,
-  Sparkles,
-} from 'lucide-react';
+import { Globe, Check, Settings, ExternalLink, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
