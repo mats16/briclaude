@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { SDKMessage } from '@repo/types';
 import { EventItem } from './EventItem';
 import { ThinkingIndicator } from './ThinkingIndicator';
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingScreen } from '@/components/ui/loading-spinner';
 import { extractToolResults, groupChildEvents } from '@/lib/message-utils';
 
 interface MessageAreaProps {
@@ -46,12 +46,8 @@ export function MessageArea({ events, isLoading, error, isAgentThinking }: Messa
 
   if (isLoading && events.length === 0) {
     return (
-      <div className="flex-1 overflow-y-auto px-4">
-        <div className="w-full max-w-[735px] mx-auto pb-24 space-y-4">
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </div>
+      <div className="flex-1 flex items-center justify-center">
+        <LoadingScreen fullScreen={false} />
       </div>
     );
   }

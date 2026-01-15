@@ -1,8 +1,8 @@
 import { ToyBrick } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTypewriter } from '@/hooks/useTypewriter';
+import { BRICK_COLORS } from '@/constants';
 
-const BRICK_COLORS = ['text-purple-500', 'text-pink-500', 'text-blue-500'];
 const ANIMATION_DELAY_MS = 120;
 const TYPEWRITER_SPEED_MS = 120;
 const TYPEWRITER_PAUSE_MS = 1500;
