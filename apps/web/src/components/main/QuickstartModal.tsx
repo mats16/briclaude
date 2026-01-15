@@ -117,13 +117,13 @@ function LakeflowContent({
   const { hasPat } = useUser();
   const [failedRuns, setFailedRuns] = useState<JobRun[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [hasError, setHasError] = useState(false);
 
   const fetchFailedRuns = useCallback(async () => {
     if (!hasPat) return;
 
     setIsLoading(true);
-    setError(null);
+    setHasError(false);
     try {
       // 直近7日間の失敗したジョブを取得 (Databricks API max limit is 25)
       const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -134,11 +134,11 @@ function LakeflowContent({
       setFailedRuns(response.runs ?? []);
     } catch (err) {
       console.error('Failed to fetch failed job runs:', err);
-      setError(t('quickstart.lakeflow.fetchError'));
+      setHasError(true);
     } finally {
       setIsLoading(false);
     }
-  }, [hasPat, t]);
+  }, [hasPat]);
 
   useEffect(() => {
     fetchFailedRuns();
@@ -176,11 +176,11 @@ function LakeflowContent({
     );
   }
 
-  if (error) {
+  if (hasError) {
     return (
       <div className="flex flex-col items-center py-8">
         <AlertCircle className="h-8 w-8 text-destructive mb-4" aria-hidden="true" />
-        <p className="text-sm text-destructive mb-4">{error}</p>
+        <p className="text-sm text-destructive mb-4">{t('quickstart.lakeflow.fetchError')}</p>
         <Button variant="outline" size="sm" onClick={fetchFailedRuns}>
           <RefreshCw className="h-4 w-4 mr-2" aria-hidden="true" />
           {t('common.retry')}
@@ -221,7 +221,11 @@ function LakeflowContent({
       <ScrollArea className="max-h-[300px]">
         <div className="flex flex-col gap-2 pr-4">
           {failedRuns.map(run => (
-            <FailedJobRunItem key={run.run_id} run={run} onClick={() => handleJobClick(run)} />
+            <FailedJobRunItem
+              key={`${run.job_id}-${run.run_id}`}
+              run={run}
+              onClick={() => handleJobClick(run)}
+            />
           ))}
         </div>
       </ScrollArea>
