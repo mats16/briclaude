@@ -7,11 +7,7 @@ import { useState, useEffect } from 'react';
  * @param pauseTime - テキスト表示完了後の一時停止時間(ミリ秒)
  * @returns 現在表示中のテキスト
  */
-export function useTypewriter(
-  text: string,
-  speed = 120,
-  pauseTime = 1500
-): string {
+export function useTypewriter(text: string, speed = 120, pauseTime = 1500): string {
   const [displayText, setDisplayText] = useState('');
   const [index, setIndex] = useState(0);
 
