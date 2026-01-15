@@ -484,18 +484,23 @@ function DatabricksAppsContent({
         <p className="text-xs text-muted-foreground">
           {t('quickstart.databricksApps.cloneInfo')}
         </p>
-        <Button
-          onClick={handleClone}
-          disabled={!selectedTemplate || isCloning}
-          size="sm"
-        >
-          {isCloning ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
-          ) : (
-            <Download className="h-4 w-4 mr-2" aria-hidden="true" />
-          )}
-          {t('quickstart.databricksApps.clone')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            onClick={handleClone}
+            disabled={!selectedTemplate || isCloning}
+            size="sm"
+          >
+            {isCloning ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" aria-hidden="true" />
+            )}
+            {t('quickstart.databricksApps.clone')}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -560,11 +565,13 @@ export function QuickstartModal({
 
         {renderContent()}
 
-        <div className="flex justify-end">
-          <Button variant="outline" onClick={handleClose}>
-            {t('common.cancel')}
-          </Button>
-        </div>
+        {quickstartType !== 'databricksApps' && (
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={handleClose}>
+              {t('common.cancel')}
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
