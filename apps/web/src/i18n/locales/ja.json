@@ -44,7 +44,8 @@
     "sessionNotFound": "セッションが見つかりませんでした",
     "sessionNotFoundDescription": "このセッションは削除されたか、存在しない可能性があります。",
     "goHome": "ホームに戻る",
-    "stop": "停止"
+    "stop": "停止",
+    "thinking": "Thinking…"
   },
   "image": {
     "unsupportedFormat": "{{fileName}} はサポートされていない画像形式です",

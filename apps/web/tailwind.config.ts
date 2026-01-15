@@ -7,15 +7,13 @@ const config: Config = {
   theme: {
     extend: {
       keyframes: {
-        squish: {
-          '0%, 100%': { transform: 'scale(1, 1)' },
-          '25%': { transform: 'scale(1.1, 0.9)' },
-          '50%': { transform: 'scale(0.9, 1.1)' },
-          '75%': { transform: 'scale(1.05, 0.95)' },
+        wave: {
+          '0%, 100%': { transform: 'translateY(2px)' },
+          '50%': { transform: 'translateY(-2px)' },
         },
       },
       animation: {
-        squish: 'squish 1s ease-in-out infinite',
+        wave: 'wave 0.8s ease-in-out infinite',
       },
       borderRadius: {
         lg: 'var(--radius)',
