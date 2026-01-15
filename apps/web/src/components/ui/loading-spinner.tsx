@@ -1,35 +1,44 @@
 import { ToyBrick } from 'lucide-react';
 
+const BRICK_COLORS = ['text-purple-500', 'text-pink-500', 'text-blue-500'];
+const BRICK_DEGREES = [0, 120, 240];
+
+const ORBIT_RADIUS_PX = {
+  sm: 16,
+  md: 28,
+  lg: 40,
+} as const;
+
+const SPINNER_SIZES = {
+  sm: { container: 'w-12 h-12', icon: 'w-4 h-4' },
+  md: { container: 'w-20 h-20', icon: 'w-5 h-5' },
+  lg: { container: 'w-28 h-28', icon: 'w-7 h-7' },
+} as const;
+
+const ANIMATION_DURATION = {
+  slow: '3s',
+  normal: '2s',
+  fast: '1.2s',
+} as const;
+
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
   speed?: 'slow' | 'normal' | 'fast';
 }
 
 export function LoadingSpinner({ size = 'md', speed = 'normal' }: LoadingSpinnerProps) {
-  const sizes = {
-    sm: { container: 'w-12 h-12', icon: 'w-4 h-4', radius: 16 },
-    md: { container: 'w-20 h-20', icon: 'w-5 h-5', radius: 28 },
-    lg: { container: 'w-28 h-28', icon: 'w-7 h-7', radius: 40 },
-  };
-
-  const speeds = {
-    slow: '3s',
-    normal: '2s',
-    fast: '1.2s',
-  };
-
-  const colors = ['text-purple-500', 'text-pink-500', 'text-blue-500'];
-  const { container, icon, radius } = sizes[size];
+  const { container, icon } = SPINNER_SIZES[size];
+  const radius = ORBIT_RADIUS_PX[size];
 
   return (
     <div className={`relative ${container}`}>
       <div
         className="absolute inset-0 animate-spin"
-        style={{ animationDuration: speeds[speed] }}
+        style={{ animationDuration: ANIMATION_DURATION[speed] }}
       >
-        {[0, 120, 240].map((deg, i) => (
+        {BRICK_DEGREES.map((deg, i) => (
           <div
-            key={i}
+            key={deg}
             className="absolute"
             style={{
               left: '50%',
@@ -37,7 +46,7 @@ export function LoadingSpinner({ size = 'md', speed = 'normal' }: LoadingSpinner
               transform: `rotate(${deg}deg) translateY(-${radius}px) rotate(-${deg}deg)`,
             }}
           >
-            <ToyBrick className={`${icon} -ml-2.5 -mt-2.5 ${colors[i]}`} />
+            <ToyBrick className={`${icon} -ml-2.5 -mt-2.5 ${BRICK_COLORS[i]}`} />
           </div>
         ))}
       </div>
