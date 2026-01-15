@@ -212,7 +212,7 @@
       "cloneInfo": "テンプレートを選択し、クローンボタンを押してください。",
       "viewOnGithub": "GitHub で表示",
       "clone": "クローン",
-      "presetPrompt": "{{templateName}} テンプレートをクローンしました。このテンプレートをベースに Databricks App を開発してください。\n\nまずはこのテンプレートの構成について解説して下さい。"
+      "presetPrompt": "{{templateName}} テンプレートをクローンしました。このテンプレートをベースに Databricks Apps を開発してください。\n\nまずはこのテンプレートの構成について解説して下さい。"
     }
   }
 }
