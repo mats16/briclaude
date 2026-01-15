@@ -4,3 +4,4 @@ export { sessionService } from './session.service';
 export { tokenService } from './token.service';
 export { workspaceService } from './workspace.service';
 export { skillService } from './skill.service';
+export { jobsService } from './jobs.service';
