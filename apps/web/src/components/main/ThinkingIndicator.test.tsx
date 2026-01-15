@@ -83,9 +83,9 @@ describe('ThinkingIndicator', () => {
     const { container } = renderWithI18n(<ThinkingIndicator />);
 
     const icons = container.querySelectorAll('svg');
-    expect((icons[0] as HTMLElement).style.animationDelay).toBe('0ms');
-    expect((icons[1] as HTMLElement).style.animationDelay).toBe('120ms');
-    expect((icons[2] as HTMLElement).style.animationDelay).toBe('240ms');
+    expect((icons[0] as SVGSVGElement).style.animationDelay).toBe('0ms');
+    expect((icons[1] as SVGSVGElement).style.animationDelay).toBe('120ms');
+    expect((icons[2] as SVGSVGElement).style.animationDelay).toBe('240ms');
   });
 
   it('タイプライターエフェクトで文字が表示される', () => {
