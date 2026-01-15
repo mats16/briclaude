@@ -177,6 +177,7 @@
     "title": "Briclaude へようこそ",
     "subtitle": "AI Agent で Databricks での開発を加速しましょう。\n下のクイックスタートか、メッセージを入力から始めてください。",
     "comingSoon": "この機能は近日公開予定です",
+    "databricksAppsToggle": "Databricks Apps を有効化",
     "quickstarts": {
       "lakeflow": {
         "title": "Lakeflow Jobs のエラー調査",

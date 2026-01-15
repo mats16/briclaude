@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { SessionCreateRequest, UserMessageContentBlock } from '@repo/types';
+import type { SessionCreateRequest, UserMessageContentBlock, SessionOutcome } from '@repo/types';
 import { MainHeader } from './MainHeader';
 import { MessageArea } from './MessageArea';
 import { InputArea } from './InputArea';
@@ -75,13 +75,23 @@ export function MainArea({
   const handleNewSession = async (
     content: UserMessageContentBlock[],
     modelId: string,
-    workspacePath: string | null
+    workspacePath: string | null,
+    enableDatabricksApps: boolean
   ) => {
     try {
       setCreateSessionError(null);
       // タイトル生成用にテキストを抽出
       const textContent = extractTextFromContent(content);
       const title = await sessionService.generateTitle(textContent);
+
+      // outcomes の構築
+      const outcomes: SessionOutcome[] = [];
+      if (workspacePath) {
+        outcomes.push({ type: 'databricks_workspace', path: workspacePath });
+      }
+      if (enableDatabricksApps) {
+        outcomes.push({ type: 'databricks_apps' });
+      }
 
       const request: SessionCreateRequest = {
         title: title ?? undefined,
@@ -103,7 +113,7 @@ export function MainArea({
         session_context: {
           model: modelId as 'opus' | 'sonnet' | 'haiku',
           sources: workspacePath ? [{ type: 'databricks_workspace', path: workspacePath }] : [],
-          outcomes: workspacePath ? [{ type: 'databricks_workspace', path: workspacePath }] : [],
+          outcomes: outcomes,
         },
       };
 

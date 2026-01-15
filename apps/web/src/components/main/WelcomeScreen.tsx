@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import useLocalStorageState from 'use-local-storage-state';
 import { useTranslation } from 'react-i18next';
 import { Send, Image, ChevronDown, Check, Loader2, Bug, FileSearch, Rocket } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -28,7 +29,8 @@ interface WelcomeScreenProps {
   onNewSession?: (
     content: UserMessageContentBlock[],
     modelId: string,
-    workspacePath: string | null
+    workspacePath: string | null,
+    enableDatabricksApps: boolean
   ) => Promise<void> | void;
   sessionError?: string | null;
 }
@@ -42,6 +44,7 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
   });
   const [selectedModel, setSelectedModel] = useState(DEFAULT_SESSION_MODEL);
   const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(null);
+  const [enableDatabricksApps, setEnableDatabricksApps] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -81,7 +84,12 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
       if (selectedWorkspace) {
         addRecentWorkspace(selectedWorkspace);
       }
-      await onNewSession?.(messageContent, selectedModel.id, selectedWorkspace);
+      await onNewSession?.(
+        messageContent,
+        selectedModel.id,
+        selectedWorkspace,
+        enableDatabricksApps
+      );
       setContent('');
       clearImages();
     } finally {
@@ -181,28 +189,56 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
             rows={2}
           />
           <div className="flex items-center justify-between shrink-0 mt-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    onClick={handleImageButtonClick}
-                    disabled={isSubmitting || isProcessing}
-                  >
-                    {isProcessing ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Image className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('sidebar.attachImage')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <div className="flex items-center gap-1">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={handleImageButtonClick}
+                      disabled={isSubmitting || isProcessing}
+                    >
+                      {isProcessing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Image className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('sidebar.attachImage')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn('h-8 w-8 shrink-0', enableDatabricksApps && 'bg-red-500/10')}
+                      onClick={() => setEnableDatabricksApps(prev => !prev)}
+                      disabled={isSubmitting}
+                    >
+                      <Rocket
+                        className={cn(
+                          'h-4 w-4',
+                          enableDatabricksApps
+                            ? 'text-red-500 stroke-[2.5]'
+                            : 'text-muted-foreground'
+                        )}
+                      />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('welcome.databricksAppsToggle')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
 
             <div className="flex items-center gap-2">
               <DropdownMenu>
