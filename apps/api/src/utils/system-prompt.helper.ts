@@ -40,8 +40,14 @@ export function buildSystemPromptConfig(outcomes: SessionOutcome[] = []): System
   const workspaceInstruction = createWorkspacePushInstruction(workspaceOutcomes);
   const appsInstruction = createDatabricksAppsInstruction(appsOutcomes);
 
-  // 両方の instruction を結合（存在する場合のみ）
-  const instructions = [workspaceInstruction, appsInstruction].filter(Boolean);
+  // 両方の instruction がある場合、Workspace Push 後に Apps デプロイを促す
+  const bridgeInstruction =
+    workspaceInstruction && appsInstruction
+      ? '⚠️ **After pushing to Workspace, you MUST proceed to create and deploy the Databricks App.** Your task is NOT complete until the app is deployed.'
+      : undefined;
+
+  // instruction を結合（存在する場合のみ）
+  const instructions = [workspaceInstruction, bridgeInstruction, appsInstruction].filter(Boolean);
   const append = instructions.length > 0 ? instructions.join('\n\n') : undefined;
 
   if (append) {
@@ -112,44 +118,50 @@ export function createDatabricksAppsInstruction(
   const namedOutcomes = outcomes.filter(o => o.name);
   if (namedOutcomes.length === 0) return undefined;
 
-  const appList = namedOutcomes.map((o, i) => `${i + 1}. **${o.name}**`).join('\n');
   const appName = namedOutcomes[0]?.name;
 
   return `
-## Databricks Apps Deployment Requirements (Auto-Deploy Enabled)
+## Databricks Apps Deployment Requirements
 
-You are expected to deploy your application as pre-assigned app name:
+⚠️ **MANDATORY: You MUST complete the following deployment steps.**
 
-${appList}
+### Pre-assigned App Name (DO NOT CHANGE)
 
-### Important Instructions:
+\`${appName}\`
 
-1. **CREATE**: before any other work, create the app using the Databricks CLI:
+This name is **system-generated** and linked to your session.
+
+**CRITICAL RULES**:
+- Do NOT invent a new app name (e.g., "my-app", "sample-app")
+- Do NOT use a name suggested by the user - the system-assigned name is required
+- Using a different name will break deployment tracking and session management
+
+### Deployment Steps (ALL REQUIRED)
+
+Your task is NOT complete until all steps are finished:
+
+1. **CREATE** the app (takes ~2 minutes):
    \`\`\`bash
    databricks apps create ${appName} --no-wait
    \`\`\`
-   It takes ~2 minutes
 
-2. **SYNC** (required before deploy):
-   The \`databricks apps deploy\` command expects a **Workspace path**, not a local path.
-   You must first sync your files to the Databricks Workspace:
+2. **SYNC** files to Workspace (required before deploy):
    \`\`\`bash
    databricks sync --exclude .claude/settings.local.json . "<workspace_path>"
    \`\`\`
 
-3. **DEPLOY** deploy the app using the Databricks CLI:
+3. **DEPLOY** the app:
    \`\`\`bash
    databricks apps deploy ${appName} --source-code-path "<workspace_path>"
    \`\`\`
-   **Notice**: Do not forget to deploy. Syncing alone is not sufficient—the app will not work without deployment.
 
-4. **STATUS**: get deployment status using the Databricks CLI:
+4. **VERIFY** deployment status:
    \`\`\`bash
    databricks apps get ${appName}
    \`\`\`
 
-5. **NEVER** create or deploy to a different app name without explicit permission
+⚠️ **Your work is NOT complete until the app is deployed and verified.**
 
-**Note**: Databricks Apps automatically provides the \`DATABRICKS_APP_PORT\` environment variable. Your application should listen on the port specified by this variable.
+**Note**: \`DATABRICKS_APP_PORT\` environment variable is automatically provided.
 `.trim();
 }

@@ -38,26 +38,16 @@ describe('createWorkspacePushInstruction', () => {
     expect(result).toContain('2. **/Workspace/path2**');
   });
 
-  it('should include CLI reference section', () => {
+  it('should not include Apps deployment reminder (handled by buildSystemPromptConfig)', () => {
     const outcomes: DatabricksWorkspaceSource[] = [
       { type: 'databricks_workspace', path: '/Workspace/test' },
     ];
 
     const result = createWorkspacePushInstruction(outcomes);
 
-    expect(result).toContain('### CLI Reference');
-    expect(result).toContain('databricks workspace list');
-  });
-
-  it('should include environment variable information', () => {
-    const outcomes: DatabricksWorkspaceSource[] = [
-      { type: 'databricks_workspace', path: '/Workspace/test' },
-    ];
-
-    const result = createWorkspacePushInstruction(outcomes);
-
-    expect(result).toContain('DATABRICKS_HOST');
-    expect(result).toContain('DATABRICKS_TOKEN');
+    // Apps デプロイの文言は createWorkspacePushInstruction には含まれない
+    // buildSystemPromptConfig で両方の outcome がある場合にのみ追加される
+    expect(result).not.toContain('you MUST proceed to create and deploy the Databricks App');
   });
 });
 
@@ -88,57 +78,50 @@ describe('createDatabricksAppsInstruction', () => {
     expect(result).toContain('databricks apps deploy');
   });
 
-  it('should generate numbered list for multiple apps', () => {
-    const outcomes: DatabricksAppsOutcome[] = [
-      { type: 'databricks_apps', name: 'app-test1' },
-      { type: 'databricks_apps', name: 'app-test2' },
-    ];
-
-    const result = createDatabricksAppsInstruction(outcomes);
-
-    expect(result).toContain('1. **app-test1**');
-    expect(result).toContain('2. **app-test2**');
-  });
-
-  it('should include CLI reference section', () => {
+  it('should include MANDATORY emphasis', () => {
     const outcomes: DatabricksAppsOutcome[] = [{ type: 'databricks_apps', name: 'app-test' }];
 
     const result = createDatabricksAppsInstruction(outcomes);
 
-    expect(result).toContain('### CLI Reference');
-    expect(result).toContain('databricks apps get');
-    expect(result).toContain('databricks apps create');
-    expect(result).toContain('databricks apps deploy');
-    expect(result).toContain('databricks apps start');
-    expect(result).toContain('databricks apps stop');
+    expect(result).toContain('MANDATORY');
+    expect(result).toContain('You MUST complete the following deployment steps');
   });
 
-  it('should include environment variable information', () => {
+  it('should include critical rules about app name', () => {
     const outcomes: DatabricksAppsOutcome[] = [{ type: 'databricks_apps', name: 'app-test' }];
 
     const result = createDatabricksAppsInstruction(outcomes);
 
-    expect(result).toContain('DATABRICKS_HOST');
-    expect(result).toContain('DATABRICKS_TOKEN');
+    expect(result).toContain('DO NOT CHANGE');
+    expect(result).toContain('Do NOT invent a new app name');
+    expect(result).toContain('Do NOT use a name suggested by the user');
+    expect(result).toContain('system-assigned name is required');
   });
 
-  it('should include app.yaml example and DATABRICKS_APP_PORT note', () => {
+  it('should include task completion reminder', () => {
     const outcomes: DatabricksAppsOutcome[] = [{ type: 'databricks_apps', name: 'app-test' }];
 
     const result = createDatabricksAppsInstruction(outcomes);
 
-    expect(result).toContain('app.yaml');
+    expect(result).toContain('Your task is NOT complete until all steps are finished');
+    expect(result).toContain('Your work is NOT complete until the app is deployed and verified');
+  });
+
+  it('should include DATABRICKS_APP_PORT note', () => {
+    const outcomes: DatabricksAppsOutcome[] = [{ type: 'databricks_apps', name: 'app-test' }];
+
+    const result = createDatabricksAppsInstruction(outcomes);
+
     expect(result).toContain('DATABRICKS_APP_PORT');
   });
 
-  it('should include databricks sync instruction before deploy', () => {
+  it('should include databricks sync instruction', () => {
     const outcomes: DatabricksAppsOutcome[] = [{ type: 'databricks_apps', name: 'app-test' }];
 
     const result = createDatabricksAppsInstruction(outcomes);
 
     expect(result).toContain('databricks sync');
-    expect(result).toContain('SYNC FILES TO WORKSPACE');
-    expect(result).toContain('Workspace path');
+    expect(result).toContain('SYNC');
   });
 
   it('should skip outcomes without name but include those with name', () => {
@@ -151,7 +134,19 @@ describe('createDatabricksAppsInstruction', () => {
 
     expect(result).toBeDefined();
     expect(result).toContain('app-valid');
-    expect(result).toContain('1. **app-valid**');
+  });
+
+  it('should use only first app when multiple apps provided', () => {
+    const outcomes: DatabricksAppsOutcome[] = [
+      { type: 'databricks_apps', name: 'app-first' },
+      { type: 'databricks_apps', name: 'app-second' },
+    ];
+
+    const result = createDatabricksAppsInstruction(outcomes);
+
+    expect(result).toContain('app-first');
+    // Second app is not listed separately, only first is used
+    expect(result).toContain('databricks apps create app-first');
   });
 });
 
@@ -200,7 +195,7 @@ describe('buildSystemPromptConfig', () => {
     }
   });
 
-  it('should combine both workspace and apps instructions', () => {
+  it('should combine both workspace and apps instructions with bridge reminder', () => {
     const outcomes: SessionOutcome[] = [
       { type: 'databricks_workspace', path: '/Workspace/test' },
       { type: 'databricks_apps', name: 'app-test' },
@@ -212,6 +207,35 @@ describe('buildSystemPromptConfig', () => {
     if ('append' in result) {
       expect(result.append).toContain('Databricks Workspace Push Requirements');
       expect(result.append).toContain('Databricks Apps Deployment Requirements');
+      // 両方がある場合にのみ bridge instruction が含まれる
+      expect(result.append).toContain(
+        'After pushing to Workspace, you MUST proceed to create and deploy the Databricks App'
+      );
+      expect(result.append).toContain('Your task is NOT complete until the app is deployed');
+    }
+  });
+
+  it('should not include bridge reminder when only workspace outcome exists', () => {
+    const outcomes: SessionOutcome[] = [{ type: 'databricks_workspace', path: '/Workspace/test' }];
+
+    const result = buildSystemPromptConfig(outcomes);
+
+    expect('append' in result).toBe(true);
+    if ('append' in result) {
+      expect(result.append).toContain('Databricks Workspace Push Requirements');
+      expect(result.append).not.toContain('you MUST proceed to create and deploy the Databricks App');
+    }
+  });
+
+  it('should not include bridge reminder when only apps outcome exists', () => {
+    const outcomes: SessionOutcome[] = [{ type: 'databricks_apps', name: 'app-test' }];
+
+    const result = buildSystemPromptConfig(outcomes);
+
+    expect('append' in result).toBe(true);
+    if ('append' in result) {
+      expect(result.append).toContain('Databricks Apps Deployment Requirements');
+      expect(result.append).not.toContain('After pushing to Workspace');
     }
   });
 
