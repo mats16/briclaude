@@ -338,7 +338,7 @@ function DatabricksAppsContent({
   const [isCloning, setIsCloning] = useState(false);
   const [cloneError, setCloneError] = useState<string | null>(null);
 
-  const fetchTemplates = useCallback(async () => {
+  const fetchTemplates = async () => {
     setIsLoading(true);
     setHasError(false);
     try {
@@ -363,11 +363,11 @@ function DatabricksAppsContent({
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     fetchTemplates();
-  }, [fetchTemplates]);
+  }, []);
 
   const handleTemplateSelect = (template: AppTemplate) => {
     if (selectedTemplate?.name === template.name) {
