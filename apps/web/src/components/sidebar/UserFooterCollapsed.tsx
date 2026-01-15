@@ -43,6 +43,7 @@ export function UserFooterCollapsed({
           <TooltipTrigger asChild>
             <button
               onClick={() => navigate('/skills')}
+              aria-label={t('user.skills')}
               className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
             >
               <Sparkles className="h-4 w-4" />
@@ -54,6 +55,7 @@ export function UserFooterCollapsed({
           <TooltipTrigger asChild>
             <button
               onClick={onSettingsOpen}
+              aria-label={t('user.settings')}
               className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
             >
               <Settings className="h-4 w-4" />
@@ -65,55 +67,53 @@ export function UserFooterCollapsed({
 
       {/* User avatar */}
       <div className="h-[50px] flex items-center justify-center border-t border-border shrink-0">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="rounded-full hover:ring-2 hover:ring-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all">
-                  <Avatar className="h-8 w-8 cursor-pointer">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="center" side="right" className="w-72">
-                <DropdownMenuLabel>
-                  <span className="truncate">{displayName}</span>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Globe className="h-4 w-4 mr-2" />
-                    {t('user.language')}
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    <DropdownMenuItem onClick={() => changeLanguage('en')}>
-                      {i18n.language === 'en' && <Check className="h-4 w-4 mr-2" />}
-                      <span className={i18n.language !== 'en' ? 'ml-6' : ''}>English</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => changeLanguage('ja')}>
-                      {i18n.language === 'ja' && <Check className="h-4 w-4 mr-2" />}
-                      <span className={i18n.language !== 'ja' ? 'ml-6' : ''}>日本語</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <a
-                    href={databricksHost ? `https://${databricksHost}` : '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    {t('user.databricksConsole')}
-                  </a>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              aria-label={displayName}
+              className="rounded-full hover:ring-2 hover:ring-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all"
+            >
+              <Avatar className="h-8 w-8 cursor-pointer">
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" side="right" className="w-72">
+            <DropdownMenuLabel>
+              <span className="truncate">{displayName}</span>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Globe className="h-4 w-4 mr-2" />
+                {t('user.language')}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem onClick={() => changeLanguage('en')}>
+                  {i18n.language === 'en' && <Check className="h-4 w-4 mr-2" />}
+                  <span className={i18n.language !== 'en' ? 'ml-6' : ''}>English</span>
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </TooltipTrigger>
-          <TooltipContent side="right">{displayName}</TooltipContent>
-        </Tooltip>
+                <DropdownMenuItem onClick={() => changeLanguage('ja')}>
+                  {i18n.language === 'ja' && <Check className="h-4 w-4 mr-2" />}
+                  <span className={i18n.language !== 'ja' ? 'ml-6' : ''}>日本語</span>
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <a
+                href={databricksHost ? `https://${databricksHost}` : '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                {t('user.databricksConsole')}
+              </a>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </>
   );

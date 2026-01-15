@@ -44,6 +44,9 @@ export function SessionGroup({
   const [filter, setFilter] = useState<SessionFilter>('active');
 
   const filteredSessions = useMemo(() => {
+    // Skip filtering when collapsed since sessions won't be rendered
+    if (isCollapsed) return [];
+
     switch (filter) {
       case 'active':
         return sessions.filter(session => session.session_status !== 'archived');
@@ -53,7 +56,7 @@ export function SessionGroup({
       default:
         return sessions;
     }
-  }, [sessions, filter]);
+  }, [sessions, filter, isCollapsed]);
 
   const formatRelativeTime = (dateString: string): string => {
     const date = new Date(dateString);

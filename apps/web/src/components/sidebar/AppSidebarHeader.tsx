@@ -25,6 +25,7 @@ export function AppSidebarHeader() {
             <TooltipTrigger asChild>
               <button
                 onClick={toggleSidebar}
+                aria-label={t('sidebar.openSidebar')}
                 className="group relative flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
               >
                 <ToyBrick className="h-5 w-5 shrink-0 group-hover:hidden" />
@@ -47,6 +48,7 @@ export function AppSidebarHeader() {
                   variant="ghost"
                   size="icon"
                   onClick={toggleSidebar}
+                  aria-label={t('sidebar.closeSidebar')}
                   className="h-8 w-8 shrink-0"
                 >
                   <PanelLeftClose className="h-4 w-4" />
@@ -64,6 +66,7 @@ export function AppSidebarHeader() {
           <TooltipTrigger asChild>
             <Link
               to="/"
+              aria-label={t('sidebar.newSession')}
               className="flex items-center justify-center mx-auto mb-2 h-8 w-8 rounded-lg border border-border bg-card hover:bg-accent transition-colors"
             >
               <PlusCircle className="h-4 w-4" />
