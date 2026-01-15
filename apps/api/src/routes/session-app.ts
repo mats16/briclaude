@@ -67,14 +67,14 @@ const sessionAppRoute: FastifyPluginAsync = async fastify => {
       });
     }
 
-    // 4. PAT を取得
+    // 4. SP トークンを取得
     const ctx = createUserContext(fastify, request);
-    const pat = await ctx.getPat();
+    const accessToken = await ctx.getSpAccessToken();
 
-    if (!pat) {
+    if (!accessToken) {
       return reply.status(401).send({
         error: 'Unauthorized',
-        message: 'PAT is not registered',
+        message: 'Service Principal token is not available',
         statusCode: 401,
       });
     }
@@ -87,7 +87,7 @@ const sessionAppRoute: FastifyPluginAsync = async fastify => {
       method: 'GET',
       headers: {
         'content-type': 'application/json',
-        authorization: `Bearer ${pat}`,
+        authorization: `Bearer ${accessToken}`,
       },
     });
 
