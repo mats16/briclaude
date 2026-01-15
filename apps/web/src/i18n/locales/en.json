@@ -202,6 +202,16 @@
       "failedJobsCount": "{{count}} failed job(s)",
       "presetPrompt": "Job ID: {{jobId}}, Run ID: {{runId}} has failed.\n\nPlease investigate the root cause of this job failure and suggest solutions.",
       "investigateJob": "Investigate {{runName}}"
+    },
+    "databricksApps": {
+      "fetchError": "Failed to fetch templates",
+      "noTemplates": "No templates available",
+      "templatesCount": "{{count}} template(s)",
+      "cloneTemplate": "Use {{name}} template",
+      "cloneError": "Failed to clone template",
+      "cloneInfo": "Select a template to clone it to your Workspace and start a new session.",
+      "viewOnGithub": "View on GitHub",
+      "presetPrompt": "Cloned {{templateName}} template to {{path}}.\n\nPlease help me develop a Databricks App based on this template."
     }
   }
 }

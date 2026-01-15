@@ -202,6 +202,16 @@
       "failedJobsCount": "{{count}} 件の失敗したジョブ",
       "presetPrompt": "Job ID: {{jobId}}, Run ID: {{runId}} が失敗しました。\n\nこのジョブの失敗原因を調査し、解決策を提案してください。",
       "investigateJob": "{{runName}} を調査"
+    },
+    "databricksApps": {
+      "fetchError": "テンプレートの取得に失敗しました",
+      "noTemplates": "利用可能なテンプレートがありません",
+      "templatesCount": "{{count}} 件のテンプレート",
+      "cloneTemplate": "{{name}} テンプレートを使用",
+      "cloneError": "テンプレートのクローンに失敗しました",
+      "cloneInfo": "テンプレートを選択すると、Workspace にクローンされ新規セッションが開始されます。",
+      "viewOnGithub": "GitHub で表示",
+      "presetPrompt": "{{templateName}} テンプレートを {{path}} にクローンしました。\n\nこのテンプレートをベースに Databricks App を開発してください。"
     }
   }
 }

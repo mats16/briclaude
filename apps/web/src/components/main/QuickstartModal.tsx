@@ -8,6 +8,9 @@ import {
   Loader2,
   RefreshCw,
   Bug,
+  Rocket,
+  FileSearch,
+  FolderGit2,
 } from 'lucide-react';
 import {
   Dialog,
@@ -18,9 +21,9 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { jobsService } from '@/services';
+import { jobsService, appTemplatesService } from '@/services';
 import { useUser } from '@/hooks/useUser';
-import type { JobRun } from '@repo/types';
+import type { JobRun, AppTemplate } from '@repo/types';
 
 export type QuickstartType = 'lakeflow' | 'unityCatalog' | 'databricksApps';
 
@@ -29,6 +32,7 @@ interface QuickstartModalProps {
   onOpenChange: (open: boolean) => void;
   quickstartType: QuickstartType | null;
   onFillPrompt?: (prompt: string) => void;
+  onStartSession?: (prompt: string, workspacePath: string) => void;
 }
 
 function formatDuration(ms: number): string {
@@ -233,6 +237,202 @@ function LakeflowContent({
   );
 }
 
+function AppTemplateItem({
+  template,
+  onClick,
+  disabled,
+  isCloning,
+}: {
+  template: AppTemplate;
+  onClick: () => void;
+  disabled?: boolean;
+  isCloning?: boolean;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <button
+      type="button"
+      className="w-full text-left p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      onClick={onClick}
+      disabled={disabled || isCloning}
+      aria-label={t('quickstart.databricksApps.cloneTemplate', { name: template.name })}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <FolderGit2 className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
+            <span className="font-medium truncate">{template.name}</span>
+          </div>
+          {template.description && (
+            <p className="text-sm text-muted-foreground mt-1">{template.description}</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {isCloning ? (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden="true" />
+          ) : (
+            <a
+              href={template.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              className="text-muted-foreground hover:text-foreground"
+              aria-label={t('quickstart.databricksApps.viewOnGithub')}
+            >
+              <ExternalLink className="h-4 w-4" aria-hidden="true" />
+            </a>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function DatabricksAppsContent({
+  onStartSession,
+  onClose,
+}: {
+  onStartSession?: (prompt: string, workspacePath: string) => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const { hasPat } = useUser();
+  const [templates, setTemplates] = useState<AppTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [cloningTemplate, setCloningTemplate] = useState<string | null>(null);
+  const [cloneError, setCloneError] = useState<string | null>(null);
+
+  const fetchTemplates = useCallback(async () => {
+    setIsLoading(true);
+    setHasError(false);
+    try {
+      const response = await appTemplatesService.getTemplates();
+      setTemplates(response.templates);
+    } catch (err) {
+      console.error('Failed to fetch app templates:', err);
+      setHasError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTemplates();
+  }, [fetchTemplates]);
+
+  const handleTemplateClick = async (template: AppTemplate) => {
+    if (!onStartSession || !hasPat) return;
+
+    setCloningTemplate(template.name);
+    setCloneError(null);
+    try {
+      const response = await appTemplatesService.cloneTemplate({
+        templateName: template.name,
+      });
+
+      // Clone successful - start new session with the workspace path
+      const prompt = t('quickstart.databricksApps.presetPrompt', {
+        templateName: template.name,
+        path: response.path,
+      });
+
+      onStartSession(prompt, response.path);
+      onClose();
+    } catch (err) {
+      console.error('Failed to clone template:', err);
+      setCloneError(t('quickstart.databricksApps.cloneError'));
+    } finally {
+      setCloningTemplate(null);
+    }
+  };
+
+  if (!hasPat) {
+    return (
+      <div className="flex flex-col items-center py-8">
+        <AlertCircle className="h-8 w-8 text-muted-foreground mb-4" aria-hidden="true" />
+        <p className="text-sm text-muted-foreground text-center">{t('workspace.patRequired')}</p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center py-8">
+        <Loader2 className="h-8 w-8 text-muted-foreground animate-spin mb-4" aria-hidden="true" />
+        <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+      </div>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <div className="flex flex-col items-center py-8">
+        <AlertCircle className="h-8 w-8 text-destructive mb-4" aria-hidden="true" />
+        <p className="text-sm text-destructive mb-4">{t('quickstart.databricksApps.fetchError')}</p>
+        <Button variant="outline" size="sm" onClick={fetchTemplates}>
+          <RefreshCw className="h-4 w-4 mr-2" aria-hidden="true" />
+          {t('common.retry')}
+        </Button>
+      </div>
+    );
+  }
+
+  if (templates.length === 0) {
+    return (
+      <div className="flex flex-col items-center py-8">
+        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+          <Rocket className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+        </div>
+        <p className="text-sm text-muted-foreground text-center">
+          {t('quickstart.databricksApps.noTemplates')}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {t('quickstart.databricksApps.templatesCount', { count: templates.length })}
+        </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={fetchTemplates}
+          disabled={isLoading || cloningTemplate !== null}
+          aria-label={t('common.retry')}
+        >
+          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
+        </Button>
+      </div>
+      {cloneError && (
+        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+          <p className="text-sm text-destructive">{cloneError}</p>
+        </div>
+      )}
+      <ScrollArea className="max-h-[300px]">
+        <div className="flex flex-col gap-2 pr-4">
+          {templates.map(template => (
+            <AppTemplateItem
+              key={template.name}
+              template={template}
+              onClick={() => handleTemplateClick(template)}
+              disabled={cloningTemplate !== null}
+              isCloning={cloningTemplate === template.name}
+            />
+          ))}
+        </div>
+      </ScrollArea>
+      <p className="text-xs text-muted-foreground">
+        {t('quickstart.databricksApps.cloneInfo')}
+      </p>
+    </div>
+  );
+}
+
 function ComingSoonContent() {
   const { t } = useTranslation();
 
@@ -246,11 +446,18 @@ function ComingSoonContent() {
   );
 }
 
+const QUICKSTART_ICONS: Record<QuickstartType, React.ElementType> = {
+  lakeflow: Bug,
+  unityCatalog: FileSearch,
+  databricksApps: Rocket,
+};
+
 export function QuickstartModal({
   open,
   onOpenChange,
   quickstartType,
   onFillPrompt,
+  onStartSession,
 }: QuickstartModalProps) {
   const { t } = useTranslation();
 
@@ -258,25 +465,33 @@ export function QuickstartModal({
 
   const titleKey = `welcome.quickstarts.${quickstartType}.title`;
   const modalDescKey = `welcome.quickstarts.${quickstartType}.modalDescription`;
+  const Icon = QUICKSTART_ICONS[quickstartType];
 
   const handleClose = () => onOpenChange(false);
+
+  const renderContent = () => {
+    switch (quickstartType) {
+      case 'lakeflow':
+        return <LakeflowContent onFillPrompt={onFillPrompt} onClose={handleClose} />;
+      case 'databricksApps':
+        return <DatabricksAppsContent onStartSession={onStartSession} onClose={handleClose} />;
+      default:
+        return <ComingSoonContent />;
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[90vw] max-w-4xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Bug className="h-5 w-5" aria-hidden="true" />
+            <Icon className="h-5 w-5" aria-hidden="true" />
             <span>Quickstart: {t(titleKey)}</span>
           </DialogTitle>
           <DialogDescription>{t(modalDescKey)}</DialogDescription>
         </DialogHeader>
 
-        {quickstartType === 'lakeflow' ? (
-          <LakeflowContent onFillPrompt={onFillPrompt} onClose={handleClose} />
-        ) : (
-          <ComingSoonContent />
-        )}
+        {renderContent()}
 
         <div className="flex justify-end">
           <Button variant="outline" onClick={handleClose}>

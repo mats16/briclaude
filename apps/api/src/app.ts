@@ -14,6 +14,7 @@ import workspaceRoute from './routes/workspace.js';
 import reposRoute from './routes/repos.js';
 import jobsRoute from './routes/jobs.js';
 import userSkillsRoute from './routes/user-skills.js';
+import appTemplatesRoute from './routes/app-templates.js';
 
 export async function build() {
   const app = Fastify({
@@ -46,6 +47,7 @@ export async function build() {
   await app.register(workspaceRoute, { prefix: '/api/databricks' });
   await app.register(reposRoute, { prefix: '/api/databricks' });
   await app.register(jobsRoute, { prefix: '/api/databricks' });
+  await app.register(appTemplatesRoute, { prefix: '/api/databricks' });
   await app.register(userSkillsRoute, { prefix: '/api' });
 
   // APIルートのキャッシュ制御
