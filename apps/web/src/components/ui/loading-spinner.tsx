@@ -1,6 +1,6 @@
 import { ToyBrick } from 'lucide-react';
+import { BRICK_COLORS } from '@/constants';
 
-const BRICK_COLORS = ['text-purple-500', 'text-pink-500', 'text-blue-500'];
 const BRICK_DEGREES = [0, 120, 240];
 
 const ORBIT_RADIUS_PX = {
@@ -46,7 +46,10 @@ export function LoadingSpinner({ size = 'md', speed = 'normal' }: LoadingSpinner
               transform: `rotate(${deg}deg) translateY(-${radius}px) rotate(-${deg}deg)`,
             }}
           >
-            <ToyBrick className={`${icon} -ml-2.5 -mt-2.5 ${BRICK_COLORS[i]}`} />
+            <ToyBrick
+              className={`${icon} ${BRICK_COLORS[i]}`}
+              style={{ transform: 'translate(-50%, -50%)' }}
+            />
           </div>
         ))}
       </div>
