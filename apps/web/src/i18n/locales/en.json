@@ -173,6 +173,7 @@
     "updateSuccess": "Skill updated successfully"
   },
   "welcome": {
+    "heading": "Claude Code on Databricks",
     "title": "Welcome to Briclaude",
     "subtitle": "Accelerate your Databricks development with AI Agent.\nStart with a quickstart below or type a message.",
     "comingSoon": "This feature is coming soon",

@@ -137,6 +137,11 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8">
+      {/* Title */}
+      <div className="w-full max-w-3xl mb-6 text-center">
+        <h1 className="text-2xl font-semibold text-foreground">{t('welcome.heading')}</h1>
+      </div>
+
       {/* Workspace Selector */}
       <div className="w-full max-w-3xl mb-4">
         <TooltipProvider>
