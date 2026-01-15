@@ -212,7 +212,7 @@
       "cloneInfo": "Select a template and click Clone.",
       "viewOnGithub": "View on GitHub",
       "clone": "Clone",
-      "presetPrompt": "Cloned {{templateName}} template to {{path}}.\n\nPlease help me develop a Databricks App based on this template."
+      "presetPrompt": "Cloned {{templateName}} template. Please help me develop a Databricks App based on this template.\n\nFirst, please explain the structure of this template."
     }
   }
 }
