@@ -200,7 +200,7 @@
       "fetchError": "失敗したジョブの取得に失敗しました",
       "noFailedJobs": "直近7日間で失敗したジョブはありません",
       "failedJobsCount": "{{count}} 件の失敗したジョブ",
-      "presetPrompt": "Databricks Lakeflow Job「{{runName}}」(Job ID: {{jobId}}, Run ID: {{runId}}) が失敗しました。\n\nエラーメッセージ:\n{{errorMessage}}\n\nこのジョブの失敗原因を調査し、解決策を提案してください。Databricks Jobs API を使用してジョブの詳細やログを取得し、根本原因を分析してください。"
+      "presetPrompt": "Job ID: {{jobId}}, Run ID: {{runId}} が失敗しました。\n\nこのジョブの失敗原因を調査し、解決策を提案してください。"
     }
   }
 }
