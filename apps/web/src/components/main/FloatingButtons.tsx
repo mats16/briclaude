@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Rocket, FolderCode, Settings, Logs } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { APP_STATUS_POLLING_INTERVAL_MS } from '@/constants';
 import type { DatabricksApp } from '@repo/types';
 
 interface FloatingButtonsProps {
@@ -53,10 +54,9 @@ export function FloatingButtons({
     // 初回取得
     fetchAppInfoRef.current?.();
 
-    // 5秒おきにポーリング
     const intervalId = setInterval(() => {
       fetchAppInfoRef.current?.();
-    }, 5000);
+    }, APP_STATUS_POLLING_INTERVAL_MS);
 
     return () => clearInterval(intervalId);
   }, [showAppButton]);

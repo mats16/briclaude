@@ -8,6 +8,11 @@ import type {
   WsControlResponse,
   UserMessageContentBlock,
 } from '@repo/types';
+import {
+  WEBSOCKET_PING_INTERVAL_MS,
+  WEBSOCKET_RECONNECT_BASE_DELAY_MS,
+  WEBSOCKET_RECONNECT_MAX_DELAY_MS,
+} from '@/constants';
 
 interface UseSessionWebSocketOptions {
   sessionId: string | null;
@@ -152,7 +157,10 @@ export function useSessionWebSocket({
       // 異常終了時のみ再接続を試みる
       if (!event.wasClean && reconnectAttempts.current < MAX_RECONNECT_ATTEMPTS) {
         reconnectAttempts.current++;
-        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+        const delay = Math.min(
+          WEBSOCKET_RECONNECT_BASE_DELAY_MS * Math.pow(2, reconnectAttempts.current),
+          WEBSOCKET_RECONNECT_MAX_DELAY_MS
+        );
         reconnectTimeoutRef.current = setTimeout(connect, delay);
       }
     };
@@ -190,7 +198,7 @@ export function useSessionWebSocket({
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({ type: 'ping' }));
       }
-    }, 30000);
+    }, WEBSOCKET_PING_INTERVAL_MS);
 
     return () => clearInterval(pingInterval);
   }, [isConnected]);
