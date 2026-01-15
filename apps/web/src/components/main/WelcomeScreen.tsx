@@ -298,6 +298,7 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
         open={selectedQuickstart !== null}
         onOpenChange={open => !open && setSelectedQuickstart(null)}
         quickstartType={selectedQuickstart}
+        onFillPrompt={setContent}
       />
     </div>
   );

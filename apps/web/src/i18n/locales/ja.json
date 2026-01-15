@@ -194,5 +194,14 @@
         "modalDescription": "Databricks Apps プラットフォームを活用したウェブアプリケーションの開発をサポートします。"
       }
     }
+  },
+  "quickstart": {
+    "lakeflow": {
+      "fetchError": "失敗したジョブの取得に失敗しました",
+      "noFailedJobs": "直近7日間で失敗したジョブはありません",
+      "failedJobsCount": "{{count}} 件の失敗したジョブ",
+      "presetPrompt": "Job ID: {{jobId}}, Run ID: {{runId}} が失敗しました。\n\nこのジョブの失敗原因を調査し、解決策を提案してください。",
+      "investigateJob": "{{runName}} を調査"
+    }
   }
 }
