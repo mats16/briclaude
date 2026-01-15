@@ -1,11 +1,23 @@
-import { apiClient } from './api-client';
+import { apiClient, ApiClientError } from './api-client';
 import type { JobRunsListResponse, JobRunsListQuerystring } from '@repo/types';
+
+export class JobsServiceError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode?: number,
+    public readonly cause?: unknown
+  ) {
+    super(message);
+    this.name = 'JobsServiceError';
+  }
+}
 
 export const jobsService = {
   /**
    * Get failed job runs
    * @param options Query options
    * @returns List of failed job runs
+   * @throws {JobsServiceError} When the API call fails
    */
   async getFailedJobRuns(
     options: Omit<JobRunsListQuerystring, 'completed_only'> = {}
@@ -27,15 +39,26 @@ export const jobsService = {
     if (options.start_time_to !== undefined)
       params.set('start_time_to', String(options.start_time_to));
 
-    const response = await apiClient<JobRunsListResponse>(
-      `/api/databricks/jobs/runs/list?${params.toString()}`
-    );
+    try {
+      const response = await apiClient<JobRunsListResponse>(
+        `/api/databricks/jobs/runs/list?${params.toString()}`
+      );
 
-    // Filter to only FAILED runs on client side
-    // (Databricks API doesn't support filtering by result_state)
-    return {
-      ...response,
-      runs: response.runs?.filter(run => run.state?.result_state === 'FAILED') ?? [],
-    };
+      // Filter to only FAILED runs on client side
+      // (Databricks API doesn't support filtering by result_state)
+      return {
+        ...response,
+        runs: response.runs?.filter(run => run.state?.result_state === 'FAILED') ?? [],
+      };
+    } catch (error) {
+      if (error instanceof ApiClientError) {
+        throw new JobsServiceError(
+          `Failed to fetch job runs: ${error.message}`,
+          error.statusCode,
+          error
+        );
+      }
+      throw new JobsServiceError('Failed to fetch job runs: Unknown error', undefined, error);
+    }
   },
 };

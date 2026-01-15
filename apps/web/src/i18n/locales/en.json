@@ -200,7 +200,8 @@
       "fetchError": "Failed to fetch failed jobs",
       "noFailedJobs": "No failed jobs in the last 7 days",
       "failedJobsCount": "{{count}} failed job(s)",
-      "presetPrompt": "Job ID: {{jobId}}, Run ID: {{runId}} has failed.\n\nPlease investigate the root cause of this job failure and suggest solutions."
+      "presetPrompt": "Job ID: {{jobId}}, Run ID: {{runId}} has failed.\n\nPlease investigate the root cause of this job failure and suggest solutions.",
+      "investigateJob": "Investigate {{runName}}"
     }
   }
 }

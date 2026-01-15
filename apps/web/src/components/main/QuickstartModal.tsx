@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Construction,
@@ -62,8 +62,9 @@ function FailedJobRunItem({
   onClick: () => void;
   disabled?: boolean;
 }) {
+  const { t } = useTranslation();
   const duration = run.execution_duration ?? 0;
-  const startTime = run.start_time ?? Date.now();
+  const runName = run.run_name || `Run ${run.run_id}`;
 
   return (
     <button
@@ -71,12 +72,13 @@ function FailedJobRunItem({
       className="w-full text-left p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       onClick={onClick}
       disabled={disabled}
+      aria-label={t('quickstart.lakeflow.investigateJob', { runName })}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
-            <span className="font-medium truncate">{run.run_name || `Run ${run.run_id}`}</span>
+            <AlertCircle className="h-4 w-4 text-destructive shrink-0" aria-hidden="true" />
+            <span className="font-medium truncate">{runName}</span>
           </div>
           {run.state?.state_message && (
             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
@@ -85,16 +87,18 @@ function FailedJobRunItem({
           )}
         </div>
         <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground shrink-0">
-          <span className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            {formatTimestamp(startTime)}
-          </span>
+          {run.start_time && (
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" aria-hidden="true" />
+              {formatTimestamp(run.start_time)}
+            </span>
+          )}
           {duration > 0 && <span>{formatDuration(duration)}</span>}
         </div>
       </div>
       {run.run_page_url && (
         <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-          <ExternalLink className="h-3 w-3" />
+          <ExternalLink className="h-3 w-3" aria-hidden="true" />
           <span className="truncate">Job ID: {run.job_id}</span>
         </div>
       )}
@@ -115,7 +119,7 @@ function LakeflowContent({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchFailedRuns = async () => {
+  const fetchFailedRuns = useCallback(async () => {
     if (!hasPat) return;
 
     setIsLoading(true);
@@ -134,12 +138,11 @@ function LakeflowContent({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [hasPat, t]);
 
   useEffect(() => {
     fetchFailedRuns();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasPat]);
+  }, [fetchFailedRuns]);
 
   const handleJobClick = (run: JobRun) => {
     if (!onFillPrompt) return;
@@ -158,7 +161,7 @@ function LakeflowContent({
   if (!hasPat) {
     return (
       <div className="flex flex-col items-center py-8">
-        <AlertCircle className="h-8 w-8 text-muted-foreground mb-4" />
+        <AlertCircle className="h-8 w-8 text-muted-foreground mb-4" aria-hidden="true" />
         <p className="text-sm text-muted-foreground text-center">{t('workspace.patRequired')}</p>
       </div>
     );
@@ -167,7 +170,7 @@ function LakeflowContent({
   if (isLoading) {
     return (
       <div className="flex flex-col items-center py-8">
-        <Loader2 className="h-8 w-8 text-muted-foreground animate-spin mb-4" />
+        <Loader2 className="h-8 w-8 text-muted-foreground animate-spin mb-4" aria-hidden="true" />
         <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
       </div>
     );
@@ -176,10 +179,10 @@ function LakeflowContent({
   if (error) {
     return (
       <div className="flex flex-col items-center py-8">
-        <AlertCircle className="h-8 w-8 text-destructive mb-4" />
+        <AlertCircle className="h-8 w-8 text-destructive mb-4" aria-hidden="true" />
         <p className="text-sm text-destructive mb-4">{error}</p>
         <Button variant="outline" size="sm" onClick={fetchFailedRuns}>
-          <RefreshCw className="h-4 w-4 mr-2" />
+          <RefreshCw className="h-4 w-4 mr-2" aria-hidden="true" />
           {t('common.retry')}
         </Button>
       </div>
@@ -190,7 +193,7 @@ function LakeflowContent({
     return (
       <div className="flex flex-col items-center py-8">
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
-          <AlertCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+          <AlertCircle className="h-8 w-8 text-green-600 dark:text-green-400" aria-hidden="true" />
         </div>
         <p className="text-sm text-muted-foreground text-center">
           {t('quickstart.lakeflow.noFailedJobs')}
@@ -205,18 +208,20 @@ function LakeflowContent({
         <p className="text-sm text-muted-foreground">
           {t('quickstart.lakeflow.failedJobsCount', { count: failedRuns.length })}
         </p>
-        <Button variant="ghost" size="sm" onClick={fetchFailedRuns} disabled={isLoading}>
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={fetchFailedRuns}
+          disabled={isLoading}
+          aria-label={t('common.retry')}
+        >
+          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
         </Button>
       </div>
       <ScrollArea className="max-h-[300px]">
         <div className="flex flex-col gap-2 pr-4">
           {failedRuns.map(run => (
-            <FailedJobRunItem
-              key={run.run_id}
-              run={run}
-              onClick={() => handleJobClick(run)}
-            />
+            <FailedJobRunItem key={run.run_id} run={run} onClick={() => handleJobClick(run)} />
           ))}
         </div>
       </ScrollArea>
@@ -230,7 +235,7 @@ function ComingSoonContent() {
   return (
     <div className="flex flex-col items-center py-8">
       <div className="flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
-        <Construction className="h-8 w-8 text-muted-foreground" />
+        <Construction className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
       </div>
       <p className="text-sm text-muted-foreground text-center">{t('welcome.comingSoon')}</p>
     </div>
@@ -257,7 +262,7 @@ export function QuickstartModal({
       <DialogContent className="w-[90vw] max-w-4xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Bug className="h-5 w-5" />
+            <Bug className="h-5 w-5" aria-hidden="true" />
             <span>Quickstart: {t(titleKey)}</span>
           </DialogTitle>
           <DialogDescription>{t(modalDescKey)}</DialogDescription>
