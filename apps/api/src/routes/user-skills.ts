@@ -154,7 +154,8 @@ const userSkillsRoute: FastifyPluginAsync = async fastify => {
 
     try {
       const ctx = createUserContext(fastify, request);
-      const skill = await createSkill(ctx, { name, version, description, content });
+      const authorName = user.name || undefined;
+      const skill = await createSkill(ctx, { name, version, description, content }, authorName);
 
       return reply.status(201).send({
         success: true,

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, GitBranch, Trash2, Loader2, AlertCircle, FileText, Eye, Pencil } from 'lucide-react';
+import { Plus, GitBranch, Trash2, Loader2, AlertCircle, FileText, Eye, Pencil, Check, ChevronsUpDown } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -17,8 +17,30 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 import { skillService } from '@/services';
 import type { SkillInfo, SkillDetail } from '@repo/types';
+
+/** プリセットリポジトリ */
+const PRESET_REPOS = [
+  {
+    label: 'Anthropic',
+    url: 'https://github.com/anthropics/skills',
+  },
+  {
+    label: 'Databricks',
+    url: 'https://github.com/mats16/claude-agent-databricks',
+  },
+];
+
+/** GitHub APIのディレクトリエントリ型 */
+interface GitHubContent {
+  name: string;
+  path: string;
+  type: 'file' | 'dir';
+}
 
 interface SkillsContentProps {
   isSidebarOpen?: boolean;
@@ -48,11 +70,19 @@ export function SkillsContent({ isSidebarOpen, onToggleSidebar }: SkillsContentP
   // フォーム状態（インポート）
   const [importForm, setImportForm] = useState({
     repository_url: '',
-    path: '',
+    path: 'skills',
     branch: 'main',
   });
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+
+  // リポジトリ選択コンボボックス
+  const [repoComboOpen, setRepoComboOpen] = useState(false);
+
+  // スキル一覧
+  const [availableSkills, setAvailableSkills] = useState<string[]>([]);
+  const [isLoadingSkills, setIsLoadingSkills] = useState(false);
+  const [selectedSkillName, setSelectedSkillName] = useState<string | null>(null);
 
   // 削除中のスキル名
   const [deletingSkill, setDeletingSkill] = useState<string | null>(null);
@@ -102,14 +132,74 @@ export function SkillsContent({ isSidebarOpen, onToggleSidebar }: SkillsContentP
     }
   };
 
+  // GitHub URLからAPIのURLを生成
+  const buildGitHubApiUrl = (repoUrl: string, path: string): string | null => {
+    // https://github.com/owner/repo または https://github.com/owner/repo.git
+    const match = repoUrl.match(/github\.com\/([^/]+)\/([^/.]+)/);
+    if (!match) return null;
+    const [, owner, repo] = match;
+    return `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+  };
+
+  // リポジトリURLを選択/入力
+  const handleSelectRepo = (url: string) => {
+    setImportForm(f => ({ ...f, repository_url: url }));
+    setAvailableSkills([]);
+    setSelectedSkillName(null);
+    setImportError(null);
+    setRepoComboOpen(false);
+  };
+
+  // スキル一覧を取得
+  const fetchAvailableSkills = async () => {
+    const apiUrl = buildGitHubApiUrl(importForm.repository_url, importForm.path);
+    if (!apiUrl) {
+      setImportError(t('skills.importDialog.invalidUrl'));
+      return;
+    }
+    setIsLoadingSkills(true);
+    setImportError(null);
+    setAvailableSkills([]);
+    setSelectedSkillName(null);
+    try {
+      const response = await fetch(apiUrl);
+      if (!response.ok) throw new Error('Failed to fetch');
+      const data: GitHubContent[] = await response.json();
+      const skillNames = data
+        .filter(item => item.type === 'dir')
+        .map(item => item.name)
+        .sort();
+      setAvailableSkills(skillNames);
+    } catch {
+      setImportError(t('skills.importDialog.fetchError'));
+    } finally {
+      setIsLoadingSkills(false);
+    }
+  };
+
+  // スキルを選択
+  const handleSelectSkillName = (skillName: string) => {
+    if (selectedSkillName === skillName) {
+      setSelectedSkillName(null);
+    } else {
+      setSelectedSkillName(skillName);
+    }
+  };
+
   // Gitインポート
   const handleImport = async () => {
     setIsImporting(true);
     setImportError(null);
+    // スキル選択時はパスを更新
+    const finalForm = selectedSkillName
+      ? { ...importForm, path: `${importForm.path}/${selectedSkillName}` }
+      : importForm;
     try {
-      await skillService.importFromGit(importForm);
+      await skillService.importFromGit(finalForm);
       setShowImportDialog(false);
-      setImportForm({ repository_url: '', path: '', branch: 'main' });
+      setImportForm({ repository_url: '', path: 'skills', branch: 'main' });
+      setAvailableSkills([]);
+      setSelectedSkillName(null);
       await fetchSkills();
     } catch (err) {
       setImportError(err instanceof Error ? err.message : t('skills.importError'));
@@ -238,54 +328,189 @@ export function SkillsContent({ isSidebarOpen, onToggleSidebar }: SkillsContentP
         </div>
         <div className="flex gap-2">
           {/* Gitインポートダイアログ */}
-          <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+          <Dialog open={showImportDialog} onOpenChange={open => {
+            setShowImportDialog(open);
+            if (!open) {
+              setAvailableSkills([]);
+              setSelectedSkillName(null);
+              setImportForm({ repository_url: '', path: 'skills', branch: 'main' });
+              setImportError(null);
+            }
+          }}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
                 <GitBranch className="h-4 w-4 mr-2" />
                 {t('skills.importFromGit')}
               </Button>
             </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{t('skills.importDialog.title')}</DialogTitle>
-                <DialogDescription>{t('skills.importDialog.description')}</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>{t('skills.importDialog.repositoryUrl')}</Label>
-                  <Input
-                    placeholder={t('skills.importDialog.repositoryUrlPlaceholder')}
-                    value={importForm.repository_url}
-                    onChange={e => setImportForm(f => ({ ...f, repository_url: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('skills.importDialog.path')}</Label>
-                  <Input
-                    placeholder={t('skills.importDialog.pathPlaceholder')}
-                    value={importForm.path}
-                    onChange={e => setImportForm(f => ({ ...f, path: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('skills.importDialog.branch')}</Label>
-                  <Input
-                    placeholder={t('skills.importDialog.branchPlaceholder')}
-                    value={importForm.branch}
-                    onChange={e => setImportForm(f => ({ ...f, branch: e.target.value }))}
-                  />
-                </div>
-                {importError && (
-                  <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
-                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                    {importError}
+            <DialogContent className="max-w-lg">
+              {availableSkills.length > 0 ? (
+                /* スキル一覧表示画面 */
+                <div className="flex flex-col h-[400px]">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setAvailableSkills([]);
+                        setSelectedSkillName(null);
+                      }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="m15 18-6-6 6-6" />
+                      </svg>
+                    </Button>
+                    <div>
+                      <DialogTitle>{t('skills.importDialog.selectSkill')}</DialogTitle>
+                      <DialogDescription className="text-xs mt-1">
+                        {importForm.repository_url}
+                      </DialogDescription>
+                    </div>
                   </div>
-                )}
-                <Button onClick={handleImport} disabled={isImporting} className="w-full">
-                  {isImporting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                  {t('skills.importDialog.submit')}
-                </Button>
-              </div>
+                  <ScrollArea className="flex-1 rounded-md border">
+                    <div className="p-2 space-y-1">
+                      {availableSkills.map(skillName => (
+                        <button
+                          key={skillName}
+                          type="button"
+                          className={`w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-md transition-colors ${
+                            selectedSkillName === skillName
+                              ? 'bg-primary text-primary-foreground'
+                              : 'hover:bg-muted'
+                          }`}
+                          onClick={() => handleSelectSkillName(skillName)}
+                        >
+                          <span>{skillName}</span>
+                          {selectedSkillName === skillName && (
+                            <Check className="h-4 w-4" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                  {importError && (
+                    <div className="flex items-center gap-2 mt-3 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
+                      <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                      {importError}
+                    </div>
+                  )}
+                  <Button
+                    onClick={handleImport}
+                    disabled={isImporting || !selectedSkillName}
+                    className="w-full mt-4"
+                  >
+                    {isImporting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    {t('skills.importDialog.submit')}
+                  </Button>
+                </div>
+              ) : (
+                /* リポジトリ入力画面 */
+                <>
+                  <DialogHeader>
+                    <DialogTitle>{t('skills.importDialog.title')}</DialogTitle>
+                    <DialogDescription>{t('skills.importDialog.description')}</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    {/* リポジトリURL（Combobox） */}
+                    <div className="space-y-2">
+                      <Label>{t('skills.importDialog.repositoryUrl')}</Label>
+                      <Popover open={repoComboOpen} onOpenChange={setRepoComboOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={repoComboOpen}
+                            className="w-full justify-between font-normal"
+                          >
+                            {importForm.repository_url || t('skills.importDialog.selectOrEnterRepo')}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[400px] p-0">
+                          <Command>
+                            <CommandInput
+                              placeholder={t('skills.importDialog.repositoryUrlPlaceholder')}
+                              value={importForm.repository_url}
+                              onValueChange={value => {
+                                setImportForm(f => ({ ...f, repository_url: value }));
+                              }}
+                            />
+                            <CommandList>
+                              <CommandEmpty>{t('skills.importDialog.enterCustomUrl')}</CommandEmpty>
+                              <CommandGroup heading={t('skills.importDialog.presets')}>
+                                {PRESET_REPOS.map(repo => (
+                                  <CommandItem
+                                    key={repo.url}
+                                    value={repo.url}
+                                    onSelect={() => handleSelectRepo(repo.url)}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        'mr-2 h-4 w-4',
+                                        importForm.repository_url === repo.url ? 'opacity-100' : 'opacity-0'
+                                      )}
+                                    />
+                                    <span className="font-medium">{repo.label}</span>
+                                    <span className="ml-2 text-xs text-muted-foreground truncate">{repo.url}</span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    {/* パスとブランチ */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label>{t('skills.importDialog.path')}</Label>
+                        <Input
+                          placeholder={t('skills.importDialog.pathPlaceholder')}
+                          value={importForm.path}
+                          onChange={e => setImportForm(f => ({ ...f, path: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t('skills.importDialog.branch')}</Label>
+                        <Input
+                          placeholder={t('skills.importDialog.branchPlaceholder')}
+                          value={importForm.branch}
+                          onChange={e => setImportForm(f => ({ ...f, branch: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+
+                    {/* エラー表示 */}
+                    {importError && (
+                      <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                        {importError}
+                      </div>
+                    )}
+
+                    {/* スキル一覧取得ボタン */}
+                    <Button
+                      onClick={fetchAvailableSkills}
+                      disabled={isLoadingSkills || !importForm.repository_url}
+                      className="w-full"
+                    >
+                      {isLoadingSkills && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                      {t('skills.importDialog.fetchSkills')}
+                    </Button>
+                  </div>
+                </>
+              )}
             </DialogContent>
           </Dialog>
 

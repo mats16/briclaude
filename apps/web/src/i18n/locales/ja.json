@@ -115,7 +115,7 @@
     "open": "開く",
     "loading": "読み込み中...",
     "empty": "このフォルダは空です",
-    "error": "Workspaceの読み込みに失敗しました"
+    "error": "Workspace の読み込みに失敗しました"
   },
   "skills": {
     "title": "スキル管理",
@@ -143,14 +143,21 @@
       "submit": "作成"
     },
     "importDialog": {
-      "title": "Gitリポジトリからインポート",
-      "description": "Gitリポジトリからスキルをインポートします",
-      "repositoryUrl": "リポジトリURL",
-      "repositoryUrlPlaceholder": "https://github.com/user/repo.git",
-      "path": "インポートパス",
-      "pathPlaceholder": "skills/my-skill",
+      "title": "スキルのインポート",
+      "description": "Git リポジトリからスキルをインポートします",
+      "repositoryUrl": "リポジトリ URL",
+      "repositoryUrlPlaceholder": "https://github.com/user/repo",
+      "selectOrEnterRepo": "リポジトリ URL を選択または入力...",
+      "enterCustomUrl": "上のフィールドに URL を入力",
+      "presets": "プリセット",
+      "path": "パス",
+      "pathPlaceholder": "skills",
       "branch": "ブランチ",
       "branchPlaceholder": "main",
+      "fetchSkills": "スキル一覧を取得",
+      "selectSkill": "スキルを選択",
+      "invalidUrl": "無効なリポジトリ URL",
+      "fetchError": "スキルの取得に失敗しました",
       "submit": "インポート"
     },
     "previewDialog": {

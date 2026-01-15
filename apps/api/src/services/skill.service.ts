@@ -261,7 +261,8 @@ export async function getSkill(
  */
 export async function createSkill(
   ctx: UserContext,
-  request: SkillCreateRequest
+  request: SkillCreateRequest,
+  authorName?: string
 ): Promise<SkillInfo> {
   const { name, version, description, content } = request;
   const skillDir = getSkillDir(ctx, name);
@@ -280,8 +281,11 @@ export async function createSkill(
     }
   }
 
+  // metadata を構築（author を追加）
+  const metadata: SkillMetadata | undefined = authorName ? { author: authorName } : undefined;
+
   // ファイル作成
-  const fileContent = generateSkillFileContent(name, version, description, content);
+  const fileContent = generateSkillFileContent(name, version, description, content, metadata);
   await writeFile(skillFilePath, fileContent, 'utf-8');
 
   const stats = await stat(skillFilePath);
@@ -291,6 +295,7 @@ export async function createSkill(
     version,
     description,
     file_path: `${name}/${SKILL_FILE}`,
+    metadata,
     created_at: stats.birthtime.toISOString(),
     updated_at: stats.mtime.toISOString(),
   };

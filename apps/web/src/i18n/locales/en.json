@@ -143,14 +143,21 @@
       "submit": "Create"
     },
     "importDialog": {
-      "title": "Import from Git Repository",
+      "title": "Import skills",
       "description": "Import skills from a Git repository",
       "repositoryUrl": "Repository URL",
-      "repositoryUrlPlaceholder": "https://github.com/user/repo.git",
-      "path": "Import Path",
-      "pathPlaceholder": "skills/my-skill",
+      "repositoryUrlPlaceholder": "https://github.com/user/repo",
+      "selectOrEnterRepo": "Select or enter repository URL...",
+      "enterCustomUrl": "Enter a custom URL above",
+      "presets": "Presets",
+      "path": "Path",
+      "pathPlaceholder": "skills",
       "branch": "Branch",
       "branchPlaceholder": "main",
+      "fetchSkills": "Fetch Skills",
+      "selectSkill": "Select a Skill",
+      "invalidUrl": "Invalid Repository URL",
+      "fetchError": "Failed to fetch skills",
       "submit": "Import"
     },
     "previewDialog": {
