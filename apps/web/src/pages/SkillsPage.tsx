@@ -1,6 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, GitBranch, Trash2, Loader2, AlertCircle, FileText, Eye, Pencil, Check, ChevronsUpDown } from 'lucide-react';
+import {
+  Plus,
+  GitBranch,
+  Trash2,
+  Loader2,
+  AlertCircle,
+  FileText,
+  Eye,
+  Pencil,
+  Check,
+  ChevronsUpDown,
+} from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -18,7 +29,14 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { skillService } from '@/services';
 import type { SkillInfo, SkillDetail } from '@repo/types';
@@ -328,15 +346,18 @@ export function SkillsContent({ isSidebarOpen, onToggleSidebar }: SkillsContentP
         </div>
         <div className="flex gap-2">
           {/* Gitインポートダイアログ */}
-          <Dialog open={showImportDialog} onOpenChange={open => {
-            setShowImportDialog(open);
-            if (!open) {
-              setAvailableSkills([]);
-              setSelectedSkillName(null);
-              setImportForm({ repository_url: '', path: 'skills', branch: 'main' });
-              setImportError(null);
-            }
-          }}>
+          <Dialog
+            open={showImportDialog}
+            onOpenChange={open => {
+              setShowImportDialog(open);
+              if (!open) {
+                setAvailableSkills([]);
+                setSelectedSkillName(null);
+                setImportForm({ repository_url: '', path: 'skills', branch: 'main' });
+                setImportError(null);
+              }
+            }}
+          >
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
                 <GitBranch className="h-4 w-4 mr-2" />
@@ -391,9 +412,7 @@ export function SkillsContent({ isSidebarOpen, onToggleSidebar }: SkillsContentP
                           onClick={() => handleSelectSkillName(skillName)}
                         >
                           <span>{skillName}</span>
-                          {selectedSkillName === skillName && (
-                            <Check className="h-4 w-4" />
-                          )}
+                          {selectedSkillName === skillName && <Check className="h-4 w-4" />}
                         </button>
                       ))}
                     </div>
@@ -432,7 +451,8 @@ export function SkillsContent({ isSidebarOpen, onToggleSidebar }: SkillsContentP
                             aria-expanded={repoComboOpen}
                             className="w-full justify-between font-normal"
                           >
-                            {importForm.repository_url || t('skills.importDialog.selectOrEnterRepo')}
+                            {importForm.repository_url ||
+                              t('skills.importDialog.selectOrEnterRepo')}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
@@ -457,11 +477,15 @@ export function SkillsContent({ isSidebarOpen, onToggleSidebar }: SkillsContentP
                                     <Check
                                       className={cn(
                                         'mr-2 h-4 w-4',
-                                        importForm.repository_url === repo.url ? 'opacity-100' : 'opacity-0'
+                                        importForm.repository_url === repo.url
+                                          ? 'opacity-100'
+                                          : 'opacity-0'
                                       )}
                                     />
                                     <span className="font-medium">{repo.label}</span>
-                                    <span className="ml-2 text-xs text-muted-foreground truncate">{repo.url}</span>
+                                    <span className="ml-2 text-xs text-muted-foreground truncate">
+                                      {repo.url}
+                                    </span>
                                   </CommandItem>
                                 ))}
                               </CommandGroup>
@@ -609,7 +633,9 @@ export function SkillsContent({ isSidebarOpen, onToggleSidebar }: SkillsContentP
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium">{skill.name}</h3>
                       {skill.version && (
-                        <span className="text-xs px-2 py-0.5 bg-muted rounded">{skill.version}</span>
+                        <span className="text-xs px-2 py-0.5 bg-muted rounded">
+                          {skill.version}
+                        </span>
                       )}
                       {skill.metadata?.source && (
                         <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded">
@@ -617,7 +643,9 @@ export function SkillsContent({ isSidebarOpen, onToggleSidebar }: SkillsContentP
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap line-clamp-2">{skill.description}</p>
+                    <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap line-clamp-2">
+                      {skill.description}
+                    </p>
                   </div>
                   <div className="flex items-center gap-1 ml-2">
                     <Button
@@ -678,7 +706,9 @@ export function SkillsContent({ isSidebarOpen, onToggleSidebar }: SkillsContentP
                     </span>
                   )}
                 </DialogTitle>
-                <DialogDescription className={`whitespace-pre-wrap line-clamp-3 ${isEditMode ? 'invisible h-0 m-0' : ''}`}>
+                <DialogDescription
+                  className={`whitespace-pre-wrap line-clamp-3 ${isEditMode ? 'invisible h-0 m-0' : ''}`}
+                >
                   {previewSkill.description}
                 </DialogDescription>
               </DialogHeader>
@@ -718,13 +748,16 @@ export function SkillsContent({ isSidebarOpen, onToggleSidebar }: SkillsContentP
                                 </pre>
                               </div>
                             ),
-                            code: (props) => {
+                            code: props => {
                               const { children, className } = props;
                               // className があるか、children に改行が含まれる場合はブロック
-                              const hasNewline = typeof children === 'string' && children.includes('\n');
+                              const hasNewline =
+                                typeof children === 'string' && children.includes('\n');
                               const isBlock = !!className || hasNewline;
                               if (isBlock) {
-                                return <code className="text-zinc-100 font-mono block">{children}</code>;
+                                return (
+                                  <code className="text-zinc-100 font-mono block">{children}</code>
+                                );
                               }
                               return (
                                 <code className="bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 px-1.5 py-0.5 rounded text-sm font-mono">

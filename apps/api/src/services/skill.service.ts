@@ -1,7 +1,6 @@
 import { readdir, readFile, writeFile, rm, stat, cp } from 'node:fs/promises';
-import { join, basename } from 'node:path';
-import { exec } from 'node:child_process';
-import { promisify } from 'node:util';
+import { join, basename, resolve, normalize } from 'node:path';
+import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import yaml from 'js-yaml';
@@ -16,12 +15,116 @@ import type {
 import type { UserContext } from '../lib/user-context.js';
 import { ensureDirectory, removeDirectory } from '../utils/directory.js';
 
-const execAsync = promisify(exec);
+/**
+ * サービス層用のシンプルなロガー
+ * 将来的にはDI経由でFastifyのロガーを注入することを推奨
+ */
+const logger = {
+  warn: (message: string, context?: Record<string, unknown>) => {
+    if (process.env.NODE_ENV !== 'test') {
+      console.warn(`[skill.service] ${message}`, context ?? '');
+    }
+  },
+  error: (message: string, context?: Record<string, unknown>) => {
+    if (process.env.NODE_ENV !== 'test') {
+      console.error(`[skill.service] ${message}`, context ?? '');
+    }
+  },
+};
 
 /** スキルディレクトリ名 */
 const SKILLS_DIR = '.claude/skills';
 /** スキルファイル名 */
 const SKILL_FILE = 'SKILL.md';
+
+/**
+ * Git ブランチ名のバリデーション（コマンドインジェクション対策）
+ * 有効な Git ブランチ名の文字のみを許可
+ */
+function validateBranchName(branch: string): void {
+  // Git ブランチ名に許可される文字: 英数字、ハイフン、アンダースコア、スラッシュ、ドット
+  // 先頭・末尾のドット、連続ドット、特殊シーケンスを禁止
+  const validBranchPattern = /^[a-zA-Z0-9]([a-zA-Z0-9._/-]*[a-zA-Z0-9])?$/;
+  const invalidPatterns = [
+    /\.\./, // 連続ドット
+    /\/\//, // 連続スラッシュ
+    /@\{/, // reflog シンタックス
+    /\\/, // バックスラッシュ
+    /\.lock$/, // .lock で終わる名前
+  ];
+
+  // 制御文字のチェック（ESLint no-control-regex 回避のため別途チェック）
+  // eslint-disable-next-line no-control-regex
+  const controlCharPattern = /[\x00-\x1f\x7f]/;
+  if (controlCharPattern.test(branch)) {
+    throw new Error('Invalid branch name: contains control characters');
+  }
+
+  // Git で禁止されている文字のチェック
+  const forbiddenCharsPattern = /[~^:?*[\]]/;
+  if (forbiddenCharsPattern.test(branch)) {
+    throw new Error('Invalid branch name: contains forbidden characters');
+  }
+
+  if (!branch || branch.length > 255) {
+    throw new Error('Invalid branch name: must be 1-255 characters');
+  }
+
+  if (!validBranchPattern.test(branch)) {
+    throw new Error('Invalid branch name: contains invalid characters');
+  }
+
+  for (const pattern of invalidPatterns) {
+    if (pattern.test(branch)) {
+      throw new Error('Invalid branch name: contains forbidden pattern');
+    }
+  }
+}
+
+/**
+ * パストラバーサルのチェック
+ * resolvedPath が baseDir 内に収まることを確認
+ */
+function validatePathWithinBase(baseDir: string, targetPath: string): string {
+  const normalizedBase = normalize(resolve(baseDir));
+  const normalizedTarget = normalize(resolve(baseDir, targetPath));
+
+  if (!normalizedTarget.startsWith(normalizedBase + '/') && normalizedTarget !== normalizedBase) {
+    throw new Error('Path traversal detected: target path is outside base directory');
+  }
+
+  return normalizedTarget;
+}
+
+/**
+ * スキル名のバリデーション
+ * パス区切り文字、`.`、`..` のみの名前を拒否
+ */
+function validateSkillName(name: string): void {
+  if (!name || name.length > 255) {
+    throw new Error('Invalid skill name: must be 1-255 characters');
+  }
+
+  // `.` または `..` のみの名前を拒否
+  if (name === '.' || name === '..') {
+    throw new Error('Invalid skill name: "." and ".." are not allowed');
+  }
+
+  // パス区切り文字を含む名前を拒否
+  if (name.includes('/') || name.includes('\\')) {
+    throw new Error('Invalid skill name: path separators are not allowed');
+  }
+
+  // null バイトを含む名前を拒否
+  if (name.includes('\0')) {
+    throw new Error('Invalid skill name: null bytes are not allowed');
+  }
+
+  // 先頭・末尾の空白を拒否
+  if (name !== name.trim()) {
+    throw new Error('Invalid skill name: leading/trailing whitespace is not allowed');
+  }
+}
 
 /**
  * スキルディレクトリのパスを取得
@@ -32,8 +135,10 @@ function getSkillsDir(ctx: UserContext): string {
 
 /**
  * 特定スキルのディレクトリパスを取得
+ * 内部でスキル名のバリデーションを行うため、呼び出し元での重複チェックは不要
  */
 function getSkillDir(ctx: UserContext, skillName: string): string {
+  validateSkillName(skillName);
   return join(getSkillsDir(ctx), skillName);
 }
 
@@ -79,11 +184,13 @@ function generateSkillFileContent(
   }
 
   // js-yaml で YAML を生成（マルチライン文字列も適切に処理）
-  const frontmatterYaml = yaml.dump(frontmatterObj, {
-    lineWidth: -1, // 折り返しなし
-    quotingType: '"',
-    forceQuotes: false,
-  }).trim();
+  const frontmatterYaml = yaml
+    .dump(frontmatterObj, {
+      lineWidth: -1, // 折り返しなし
+      quotingType: '"',
+      forceQuotes: false,
+    })
+    .trim();
 
   return `---
 ${frontmatterYaml}
@@ -147,8 +254,12 @@ function parseSkillFile(fileContent: string): {
       frontmatter: { name, version, description, metadata },
       content: content.trim(),
     };
-  } catch {
+  } catch (error) {
     // YAMLパースに失敗した場合はnullを返す
+    logger.warn('Failed to parse YAML frontmatter', {
+      error: error instanceof Error ? error.message : String(error),
+      frontmatterPreview: frontmatter.slice(0, 100),
+    });
     return null;
   }
 }
@@ -205,8 +316,15 @@ export async function listSkills(ctx: UserContext): Promise<SkillInfo[]> {
           created_at: stats.birthtime.toISOString(),
           updated_at: stats.mtime.toISOString(),
         });
-      } catch {
+      } catch (error) {
         // SKILL.md が存在しないディレクトリはスキップ
+        // ENOENT以外のエラーはログに記録
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          logger.warn('Failed to read skill file', {
+            skillDir: entry.name,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
         continue;
       }
     }
@@ -224,10 +342,8 @@ export async function listSkills(ctx: UserContext): Promise<SkillInfo[]> {
 /**
  * スキル詳細を取得
  */
-export async function getSkill(
-  ctx: UserContext,
-  skillName: string
-): Promise<SkillDetail | null> {
+export async function getSkill(ctx: UserContext, skillName: string): Promise<SkillDetail | null> {
+  // バリデーションは getSkillFilePath -> getSkillDir 内で実行される
   const skillFilePath = getSkillFilePath(ctx, skillName);
 
   try {
@@ -265,6 +381,8 @@ export async function createSkill(
   authorName?: string
 ): Promise<SkillInfo> {
   const { name, version, description, content } = request;
+
+  // バリデーションは getSkillDir 内で実行される
   const skillDir = getSkillDir(ctx, name);
   const skillFilePath = getSkillFilePath(ctx, name);
 
@@ -302,14 +420,65 @@ export async function createSkill(
 }
 
 /**
+ * spawn でコマンドを実行し、Promise を返すヘルパー関数
+ */
+function spawnAsync(
+  command: string,
+  args: string[],
+  options: { timeout?: number; cwd?: string } = {}
+): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: options.cwd,
+      shell: false, // シェルを使わない（コマンドインジェクション防止）
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (data: Buffer) => {
+      stdout += data.toString();
+    });
+
+    child.stderr.on('data', (data: Buffer) => {
+      stderr += data.toString();
+    });
+
+    const timeoutId = options.timeout
+      ? setTimeout(() => {
+          child.kill('SIGTERM');
+          reject(new Error(`Command timed out after ${options.timeout}ms`));
+        }, options.timeout)
+      : null;
+
+    child.on('close', code => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (code === 0) {
+        resolve({ stdout, stderr });
+      } else {
+        reject(new Error(`Command failed with exit code ${code}: ${stderr}`));
+      }
+    });
+
+    child.on('error', err => {
+      if (timeoutId) clearTimeout(timeoutId);
+      reject(err);
+    });
+  });
+}
+
+/**
  * Git リポジトリからスキルをインポート
  */
 export async function importSkillsFromGit(
   ctx: UserContext,
   request: SkillImportRequest
 ): Promise<SkillInfo[]> {
-  const { repository_url, path: importPath, branch } = request;
+  const { repository_url, path: importPath, branch = 'main' } = request;
   const skillsDir = getSkillsDir(ctx);
+
+  // ブランチ名のバリデーション（コマンドインジェクション対策）
+  validateBranchName(branch);
 
   // 一時ディレクトリを作成
   const tempDir = join(tmpdir(), `skill-import-${randomUUID()}`);
@@ -323,13 +492,15 @@ export async function importSkillsFromGit(
 
   try {
     // 1. git clone（指定ブランチ、shallow clone）
-    await execAsync(
-      `git clone --depth 1 --branch ${branch} "${repository_url}" "${tempDir}"`,
+    // spawn を使用してコマンドインジェクションを防止
+    await spawnAsync(
+      'git',
+      ['clone', '--depth', '1', '--branch', branch, repository_url, tempDir],
       { timeout: 60000 } // 60秒タイムアウト
     );
 
-    // 2. インポート対象パスの確認
-    const sourcePath = join(tempDir, importPath);
+    // 2. インポート対象パスの確認（パストラバーサル対策）
+    const sourcePath = validatePathWithinBase(tempDir, importPath);
     const sourceStats = await stat(sourcePath);
 
     await ensureDirectory(skillsDir);
@@ -379,8 +550,15 @@ export async function importSkillsFromGit(
             updated_at: stats.mtime.toISOString(),
           });
         }
-      } catch {
+      } catch (error) {
         // SKILL.md が存在しない場合は無視
+        // ENOENT以外のエラーはログに記録
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          logger.warn('Failed to process imported skill', {
+            skillName,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
     } else if (sourceStats.isFile() && basename(importPath) === SKILL_FILE) {
       // 単一のSKILL.mdファイルの場合
@@ -437,6 +615,7 @@ export async function importSkillsFromGit(
  * スキルを削除
  */
 export async function deleteSkill(ctx: UserContext, skillName: string): Promise<boolean> {
+  // バリデーションは getSkillDir 内で実行される
   const skillDir = getSkillDir(ctx, skillName);
 
   try {
@@ -459,6 +638,7 @@ export async function updateSkill(
   skillName: string,
   request: SkillUpdateRequest
 ): Promise<SkillInfo | null> {
+  // バリデーションは getSkillFilePath -> getSkillDir 内で実行される
   const skillFilePath = getSkillFilePath(ctx, skillName);
 
   try {

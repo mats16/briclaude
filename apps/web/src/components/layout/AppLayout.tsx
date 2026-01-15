@@ -146,10 +146,7 @@ export function AppLayout() {
         {/* Main Area */}
         <div className="flex-1 h-full min-w-0">
           {isSkillsPage ? (
-            <SkillsContent
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={toggleSidebar}
-            />
+            <SkillsContent isSidebarOpen={isSidebarOpen} onToggleSidebar={toggleSidebar} />
           ) : (
             <MainArea
               onSessionArchived={handleMainAreaArchive}
