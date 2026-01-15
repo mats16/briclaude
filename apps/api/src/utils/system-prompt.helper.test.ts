@@ -106,8 +106,9 @@ describe('createDatabricksAppsInstruction', () => {
     const result = createDatabricksAppsInstruction(outcomes);
 
     expect(result).toContain('### CLI Reference');
-    expect(result).toContain('databricks apps describe');
-    expect(result).toContain('databricks apps list');
+    expect(result).toContain('databricks apps get');
+    expect(result).toContain('databricks apps create');
+    expect(result).toContain('databricks apps deploy');
     expect(result).toContain('databricks apps start');
     expect(result).toContain('databricks apps stop');
   });
