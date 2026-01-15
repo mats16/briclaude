@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { jobsService, appTemplatesService } from '@/services';
+import { jobsService, reposService } from '@/services';
 import { useUser } from '@/hooks/useUser';
 import type { JobRun } from '@repo/types';
 
@@ -320,6 +320,8 @@ function AppTemplateItem({
   );
 }
 
+const GITHUB_APP_TEMPLATES_REPO_URL = 'https://github.com/databricks/app-templates';
+
 function DatabricksAppsContent({
   onFillPrompt,
   onClose,
@@ -328,7 +330,7 @@ function DatabricksAppsContent({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const { hasPat } = useUser();
+  const { user, hasPat } = useUser();
   const [templates, setTemplates] = useState<AppTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -377,13 +379,22 @@ function DatabricksAppsContent({
   };
 
   const handleClone = async () => {
-    if (!selectedTemplate || !onFillPrompt || !hasPat) return;
+    if (!selectedTemplate || !onFillPrompt || !hasPat || !user?.email) return;
 
     setIsCloning(true);
     setCloneError(null);
     try {
-      const response = await appTemplatesService.cloneTemplate({
-        templateName: selectedTemplate.name,
+      // Construct workspace path: /Workspace/Users/<email>/databricks_apps/<template>-<timestamp>
+      const timestamp = Date.now();
+      const workspacePath = `/Workspace/Users/${user.email}/databricks_apps/${selectedTemplate.name}-${timestamp}`;
+
+      const response = await reposService.createRepo({
+        url: GITHUB_APP_TEMPLATES_REPO_URL,
+        provider: 'gitHub',
+        path: workspacePath,
+        sparse_checkout: {
+          patterns: [`/${selectedTemplate.name}`],
+        },
       });
 
       // Clone successful - fill prompt and workspace path

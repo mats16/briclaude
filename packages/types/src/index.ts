@@ -10,4 +10,3 @@ export * from './workspace.js';
 export * from './skill.js';
 export * from './repos.js';
 export * from './jobs.js';
-export * from './app-templates.js';
