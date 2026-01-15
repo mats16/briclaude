@@ -15,6 +15,8 @@ export interface DatabricksWorkspaceSource {
 
 export interface DatabricksAppsOutcome {
   type: 'databricks_apps';
+  /** App name (generated server-side from session_id) */
+  name?: string;
 }
 
 export type SessionSource = DatabricksWorkspaceSource;

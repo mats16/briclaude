@@ -20,6 +20,8 @@ import type {
   SessionUpdateRequest,
   CodedError,
   DatabricksWorkspaceSource,
+  DatabricksAppsOutcome,
+  SessionOutcome,
 } from '@repo/types';
 import { ClaudeSettings } from '../models/claude-settings.model.js';
 import { buildSystemPromptConfig } from '../utils/system-prompt.helper.js';
@@ -289,13 +291,24 @@ export async function createSession(
   }
 
   // 5. context オブジェクトの構築
+  // outcomes に databricks_apps がある場合、name を付与
+  const processedOutcomes: SessionOutcome[] = session_context.outcomes.map(outcome => {
+    if (outcome.type === 'databricks_apps') {
+      return {
+        ...outcome,
+        name: `app-${sessionId.getSuffix()}`,
+      } as DatabricksAppsOutcome;
+    }
+    return outcome;
+  });
+
   const sessionContext: SessionContextResponse = {
     allowed_tools: [],
     disallowed_tools: [],
     cwd,
     model: session_context.model,
     sources: session_context.sources,
-    outcomes: session_context.outcomes,
+    outcomes: processedOutcomes,
   };
 
   // 5. タイムスタンプを設定（レスポンス用）
