@@ -18,7 +18,7 @@ export function LoadingSpinner({ size = 'md', speed = 'normal' }: LoadingSpinner
     fast: '1.2s',
   };
 
-  const colors = ['#8B5CF6', '#EC4899', '#3B82F6'];
+  const colors = ['text-purple-500', 'text-pink-500', 'text-blue-500'];
   const { container, icon, radius } = sizes[size];
 
   return (
@@ -37,7 +37,7 @@ export function LoadingSpinner({ size = 'md', speed = 'normal' }: LoadingSpinner
               transform: `rotate(${deg}deg) translateY(-${radius}px) rotate(-${deg}deg)`,
             }}
           >
-            <ToyBrick className={`${icon} -ml-2.5 -mt-2.5`} style={{ color: colors[i] }} />
+            <ToyBrick className={`${icon} -ml-2.5 -mt-2.5 ${colors[i]}`} />
           </div>
         ))}
       </div>
