@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Rocket, FolderCode, Settings, Logs } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { DatabricksApp } from '@repo/types';
 
@@ -11,6 +12,8 @@ interface FloatingButtonsProps {
   workspacePath?: string;
 }
 
+type AppStateType = 'RUNNING' | 'DEPLOYING' | 'CRASHED' | 'UNAVAILABLE' | 'UNKNOWN' | string;
+
 export function FloatingButtons({
   sessionId,
   showAppButton,
@@ -19,6 +22,7 @@ export function FloatingButtons({
 }: FloatingButtonsProps) {
   const { t } = useTranslation();
   const [appInfo, setAppInfo] = useState<DatabricksApp | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchAppInfo = useCallback(async () => {
     if (!showAppButton) return;
@@ -35,14 +39,65 @@ export function FloatingButtons({
     }
   }, [sessionId, showAppButton]);
 
-  // 初回マウント時にアプリ情報を取得
+  // 初回マウント時にアプリ情報を取得 + 5秒おきにポーリング
   useEffect(() => {
     if (showAppButton) {
       fetchAppInfo();
+
+      // 5秒おきにポーリング
+      intervalRef.current = setInterval(() => {
+        fetchAppInfo();
+      }, 5000);
+
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+      };
     }
   }, [fetchAppInfo, showAppButton]);
 
-  const isAppRunning = appInfo?.compute_status?.state === 'RUNNING';
+  const appState: AppStateType = appInfo?.app_status?.state ?? 'UNKNOWN';
+
+  const getRocketIconClass = () => {
+    switch (appState) {
+      case 'RUNNING':
+        return 'text-green-500';
+      case 'DEPLOYING':
+        return 'text-yellow-500 animate-spin';
+      case 'CRASHED':
+      case 'UNAVAILABLE':
+        return 'text-red-500';
+      default:
+        return 'text-foreground';
+    }
+  };
+
+  const getBadgeVariant = (): 'default' | 'secondary' | 'destructive' | 'outline' => {
+    switch (appState) {
+      case 'RUNNING':
+        return 'default';
+      case 'CRASHED':
+      case 'UNAVAILABLE':
+        return 'destructive';
+      default:
+        return 'secondary';
+    }
+  };
+
+  const getBadgeClass = () => {
+    switch (appState) {
+      case 'RUNNING':
+        return 'bg-green-500 hover:bg-green-500';
+      case 'DEPLOYING':
+        return 'bg-yellow-500 hover:bg-yellow-500 text-black';
+      case 'CRASHED':
+      case 'UNAVAILABLE':
+        return 'bg-red-500 hover:bg-red-500';
+      default:
+        return '';
+    }
+  };
 
   const handleOpenApp = () => {
     if (appInfo?.url) {
@@ -81,18 +136,22 @@ export function FloatingButtons({
         {/* 左側: App ボタン */}
         <div>
           {showAppButton && (
-            <div className="flex items-center h-8 px-3 rounded-lg shadow-lg bg-background border">
+            <div className="flex items-center h-8 px-3 rounded-lg shadow-lg bg-background border gap-2">
               <button
                 className="flex items-center gap-1 hover:opacity-70 disabled:opacity-50"
                 onClick={handleOpenApp}
                 disabled={!appInfo?.url}
               >
-                <Rocket
-                  className={cn('h-4 w-4', isAppRunning ? 'text-green-500' : 'text-foreground')}
-                />
+                <Rocket className={cn('h-4 w-4', getRocketIconClass())} />
                 <span className="text-sm font-medium">{t('databricksApp.app')}</span>
               </button>
-              <span className="text-muted-foreground mx-2">|</span>
+              <Badge
+                variant={getBadgeVariant()}
+                className={cn('text-xs px-1.5 py-0', getBadgeClass())}
+              >
+                {appState}
+              </Badge>
+              <span className="text-muted-foreground">|</span>
               <button
                 className="flex items-center gap-1 hover:opacity-70 disabled:opacity-50"
                 onClick={handleOpenLogs}
@@ -101,7 +160,7 @@ export function FloatingButtons({
                 <Logs className="h-4 w-4 text-foreground" />
                 <span className="text-sm font-medium">{t('databricksApp.logs')}</span>
               </button>
-              <span className="text-muted-foreground mx-2">|</span>
+              <span className="text-muted-foreground">|</span>
               <button
                 className="hover:opacity-70 disabled:opacity-50"
                 onClick={handleOpenConsole}

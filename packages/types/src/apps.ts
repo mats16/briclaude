@@ -32,6 +32,14 @@ export interface AppComputeStatus {
 }
 
 /**
+ * App Status
+ */
+export interface AppStatus {
+  state?: 'RUNNING' | 'DEPLOYING' | 'CRASHED' | 'UNAVAILABLE' | string;
+  message?: string;
+}
+
+/**
  * Databricks App
  */
 export interface DatabricksApp {
@@ -45,6 +53,7 @@ export interface DatabricksApp {
   active_deployment?: AppDeployment;
   pending_deployment?: AppDeployment;
   compute_status?: AppComputeStatus;
+  app_status?: AppStatus;
   default_source_code_path?: string;
   effective_api_scopes?: string[];
 }
