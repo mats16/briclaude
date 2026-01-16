@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useCallback } from 'react';
 import type { SDKMessage } from '@repo/types';
 import { EventItem } from './EventItem';
 import { ThinkingIndicator } from './ThinkingIndicator';
@@ -14,6 +14,9 @@ interface MessageAreaProps {
   hasFloatingButton?: boolean;
 }
 
+// ユーザーが最下部付近にいるかどうかの閾値（px）
+const SCROLL_THRESHOLD = 100;
+
 export function MessageArea({
   events,
   isLoading,
@@ -21,7 +24,10 @@ export function MessageArea({
   isAgentThinking,
   hasFloatingButton,
 }: MessageAreaProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  // ユーザーが最下部付近にいるかどうか
+  const isNearBottomRef = useRef(true);
 
   // tool_result を事前に抽出してマップ化
   const toolResultMap = useMemo(() => extractToolResults(events), [events]);
@@ -42,8 +48,30 @@ export function MessageArea({
     });
   }, [events]);
 
+  // スクロール位置を監視して最下部付近かどうかを判定
+  const handleScroll = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    isNearBottomRef.current = distanceFromBottom < SCROLL_THRESHOLD;
+  }, []);
+
+  // スクロールイベントの登録
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = containerRef.current;
+    if (!container) return;
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
+  // 最下部付近にいる場合のみ自動スクロール
+  useEffect(() => {
+    if (isNearBottomRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [events]);
 
   if (error) {
@@ -63,7 +91,7 @@ export function MessageArea({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-4">
+    <div ref={containerRef} className="flex-1 overflow-y-auto px-4">
       <div className={cn('w-full max-w-[735px] mx-auto', hasFloatingButton ? 'pb-36' : 'pb-24')}>
         {topLevelEvents.map((event, index) => (
           <EventItem
