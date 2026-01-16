@@ -4,7 +4,7 @@ import { EventItem } from './EventItem';
 import { ThinkingIndicator } from './ThinkingIndicator';
 import { LoadingScreen } from '@/components/ui/loading-spinner';
 import { extractToolResults, groupChildEvents } from '@/lib/message-utils';
-import { cn } from '@/lib/utils';
+import { cn, throttle } from '@/lib/utils';
 
 interface MessageAreaProps {
   events: SDKMessage[];
@@ -58,14 +58,17 @@ export function MessageArea({
     isNearBottomRef.current = distanceFromBottom < SCROLL_THRESHOLD;
   }, []);
 
+  // スロットリングされたスクロールハンドラー（100ms間隔）
+  const throttledHandleScroll = useMemo(() => throttle(handleScroll, 100), [handleScroll]);
+
   // スクロールイベントの登録
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
+    container.addEventListener('scroll', throttledHandleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', throttledHandleScroll);
+  }, [throttledHandleScroll]);
 
   // 最下部付近にいる場合のみ自動スクロール
   useEffect(() => {

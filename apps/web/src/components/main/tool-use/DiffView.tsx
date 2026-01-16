@@ -118,11 +118,9 @@ export function DiffDisplay({ lines, filePath, className }: DiffDisplayProps) {
   if (lines.length === 0) return null;
   const hiddenLinesCount = lines.length - MAX_VISIBLE_LINES;
 
-  // 行番号の最大桁数を計算（空配列での -Infinity を防ぐため 0 をフォールバック）
-  const oldLineNumbers = lines.map(l => l.oldLineNumber ?? 0);
-  const newLineNumbers = lines.map(l => l.newLineNumber ?? 0);
-  const maxOldLineNum = oldLineNumbers.length > 0 ? Math.max(...oldLineNumbers) : 0;
-  const maxNewLineNum = newLineNumbers.length > 0 ? Math.max(...newLineNumbers) : 0;
+  // 行番号の最大桁数を計算（0 をフォールバックに含めることで -Infinity を防ぐ）
+  const maxOldLineNum = Math.max(...lines.map(l => l.oldLineNumber ?? 0), 0);
+  const maxNewLineNum = Math.max(...lines.map(l => l.newLineNumber ?? 0), 0);
   const oldLineWidth = Math.max(String(maxOldLineNum).length, 1);
   const newLineWidth = Math.max(String(maxNewLineNum).length, 1);
 
