@@ -10,7 +10,7 @@ import {
 } from '@repo/types';
 import { Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ToolUseBlock } from './ToolUseBlock';
+import { ToolUseBlock } from './tool-use';
 import { MarkdownContent } from './MarkdownContent';
 import {
   extractToolUseBlocksAsMap,

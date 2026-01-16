@@ -237,6 +237,7 @@
     "collapseResult": "Collapse result",
     "showRemainingLines": "Show remaining {{count}} lines",
     "collapseContent": "Collapse content",
-    "showRemainingLinesContent": "Show remaining {{count}} lines"
+    "showRemainingLinesContent": "Show remaining {{count}} lines",
+    "showFullDiff": "Show full diff ({{count}} more lines)"
   }
 }

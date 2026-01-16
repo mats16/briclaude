@@ -237,6 +237,7 @@
     "collapseResult": "結果を折りたたむ",
     "showRemainingLines": "残り {{count}} 行を表示",
     "collapseContent": "コンテンツを折りたたむ",
-    "showRemainingLinesContent": "残り {{count}} 行を表示"
+    "showRemainingLinesContent": "残り {{count}} 行を表示",
+    "showFullDiff": "Show full diff ({{count}} more lines)"
   }
 }
