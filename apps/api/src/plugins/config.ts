@@ -47,12 +47,6 @@ const schema = {
       default: path.join(__dirname, '../../../../tmp/users'), // -> project root tmp/users
       description: 'The base directory for user directories (default: ./tmp/users).',
     },
-    // Warehouse IDs (optional)
-    SQL_WAREHOUSE_ID: {
-      type: 'string',
-      default: '',
-      description: 'SQL Warehouse ID',
-    },
     // Databricks Apps defaults
     DATABRICKS_APP_NAME: {
       type: 'string',
@@ -132,8 +126,6 @@ declare module 'fastify' {
       ENCRYPTION_KEY: string;
       /** The base directory for user directories (e.g. /home/app/users). */
       USER_BASE_DIR: string;
-      /** The SQL Warehouse ID for the app. */
-      SQL_WAREHOUSE_ID: string;
       /** The name of the running app. */
       DATABRICKS_APP_NAME: string;
       /** The unique ID for the Databricks workspace the app belongs to. */

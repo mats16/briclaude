@@ -17,10 +17,6 @@ resources:
             scope: briclaude-${bundle.target}
             key: database-url
             permission: READ
-        - name: sql-warehouse-2xs
-          sql_warehouse:
-            id: ${resources.sql_warehouses.briclaude_sql_2xs.id}
-            permission: CAN_USE
       user_api_scopes:
         - sql
         - dashboards.genie
@@ -31,16 +27,4 @@ resources:
         - catalog.tables:read
       permissions:
         - level: CAN_USE
-          group_name: users
-
-  sql_warehouses:
-    briclaude_sql_2xs:
-      name: briclaude-sql-2xs
-      cluster_size: 2X-Small
-      min_num_clusters: 0
-      max_num_clusters: 2
-      auto_stop_mins: 5
-      enable_serverless_compute: true
-      permissions:
-        - level: CAN_MONITOR
           group_name: users
