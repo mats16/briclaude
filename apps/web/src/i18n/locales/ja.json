@@ -225,5 +225,18 @@
     "app": "アプリ",
     "logs": "ログ",
     "workspace": "ワークスペース"
+  },
+  "tools": {
+    "updateTodos": "Update Todos",
+    "readLines": "{{count}} 行を読み込み",
+    "collapse": "折りたたむ",
+    "expandLines": "+{{count}} 行",
+    "toolUsesCount": "{{count}}個のツール使用",
+    "collapseToolDetails": "ツール使用の詳細を折りたたむ",
+    "expandToolDetails": "{{count}}個のツール使用の詳細を表示",
+    "collapseResult": "結果を折りたたむ",
+    "showRemainingLines": "残り {{count}} 行を表示",
+    "collapseContent": "コンテンツを折りたたむ",
+    "showRemainingLinesContent": "残り {{count}} 行を表示"
   }
 }

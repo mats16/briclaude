@@ -1,4 +1,5 @@
 import { useState, useId, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 
 interface CollapsibleContentProps {
@@ -13,6 +14,7 @@ export function CollapsibleContent({
   isError = false,
   maxChars = 250,
 }: CollapsibleContentProps) {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const contentId = useId();
 
@@ -82,13 +84,17 @@ export function CollapsibleContent({
           onClick={() => setIsExpanded(!isExpanded)}
           aria-expanded={isExpanded}
           aria-controls={contentId}
-          aria-label={isExpanded ? 'コンテンツを折りたたむ' : `残り ${hiddenLines} 行を表示`}
+          aria-label={
+            isExpanded
+              ? t('tools.collapseContent')
+              : t('tools.showRemainingLinesContent', { count: hiddenLines })
+          }
           className={cn(
             'text-xs text-muted-foreground hover:text-foreground transition-colors',
             showContent ? 'ml-6' : 'ml-0'
           )}
         >
-          {isExpanded ? '折りたたむ' : `... +${hiddenLines} 行`}
+          {isExpanded ? t('tools.collapse') : t('tools.expandLines', { count: hiddenLines })}
         </button>
       )}
     </div>

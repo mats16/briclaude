@@ -1,4 +1,5 @@
 import { useState, useId } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { SDKMessage } from '@repo/types';
 import { Circle } from 'lucide-react';
 import { CollapsibleContent } from './CollapsibleContent';
@@ -25,10 +26,13 @@ export function ToolUseBlock({
   childEvents,
   toolResultMap,
 }: ToolUseBlockProps) {
+  const { t } = useTranslation();
   const [isInputExpanded, setIsInputExpanded] = useState(false);
   const inputDisplay = getToolInputDisplay(name, input);
-  const isTaskTool = name.toLowerCase() === 'task';
-  const isTodoWriteTool = name.toLowerCase() === 'todowrite';
+  const lowerName = name.toLowerCase();
+  const isTaskTool = lowerName === 'task';
+  const isTodoWriteTool = lowerName === 'todowrite';
+  const isReadTool = lowerName === 'read';
 
   // ドットの色を状態に応じて変更
   const isRunning = !result;
@@ -40,7 +44,10 @@ export function ToolUseBlock({
   const nestedToolCount = hasChildEvents ? countNestedToolUses(childEvents) : 0;
 
   // TodoWrite ツールの場合の表示名とコンテンツ
-  const displayName = isTodoWriteTool ? 'Update Todos' : name;
+  const displayName = isTodoWriteTool ? t('tools.updateTodos') : name;
+
+  // Read ツールの場合は行数のみ表示
+  const readLineCount = isReadTool && result?.content ? result.content.split('\n').length : 0;
 
   // TodoWrite ツールの場合は input.todos を表示
   if (isTodoWriteTool) {
@@ -59,6 +66,40 @@ export function ToolUseBlock({
           <span className="font-bold text-sm flex-shrink-0">{displayName}</span>
         </div>
         <TodoList todos={input.todos as TodoItem[]} />
+      </div>
+    );
+  }
+
+  // Read ツールの場合は行数のみ表示
+  if (isReadTool) {
+    return (
+      <div className="py-1">
+        <div className="flex items-start gap-1">
+          <Circle
+            aria-hidden="true"
+            className={cn(
+              'h-2 w-2 fill-current flex-shrink-0 mt-1.5',
+              isRunning && 'text-foreground animate-pulse',
+              isSuccess && 'text-green-500',
+              isError && 'text-red-500'
+            )}
+          />
+          <span className="font-bold text-sm flex-shrink-0">{name}</span>
+          <span className="text-sm text-muted-foreground font-mono truncate">{inputDisplay}</span>
+        </div>
+        {result && !result.isError && (
+          <div className="mt-1 ml-4">
+            <div className="flex items-start gap-1 text-muted-foreground">
+              <span className="select-none" aria-hidden="true">
+                └
+              </span>
+              <span className="text-xs font-mono">
+                {t('tools.readLines', { count: readLineCount })}
+              </span>
+            </div>
+          </div>
+        )}
+        {result?.isError && <CollapsibleContent content={result.content} isError={true} />}
       </div>
     );
   }
@@ -109,11 +150,12 @@ interface TaskChildContentProps {
 }
 
 function TaskChildContent({ childEvents, toolResultMap, toolCount }: TaskChildContentProps) {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const contentId = useId();
   const nestedTools = extractNestedToolUses(childEvents, toolResultMap);
 
-  const summaryText = `${toolCount}個のツール使用`;
+  const summaryText = t('tools.toolUsesCount', { count: toolCount });
 
   return (
     <div className="mt-1 ml-4">
@@ -123,7 +165,9 @@ function TaskChildContent({ childEvents, toolResultMap, toolCount }: TaskChildCo
         aria-expanded={isExpanded}
         aria-controls={contentId}
         aria-label={
-          isExpanded ? 'ツール使用の詳細を折りたたむ' : `${toolCount}個のツール使用の詳細を表示`
+          isExpanded
+            ? t('tools.collapseToolDetails')
+            : t('tools.expandToolDetails', { count: toolCount })
         }
         className="flex items-start gap-1 text-muted-foreground hover:text-foreground transition-colors text-left w-full"
       >
@@ -154,6 +198,7 @@ interface NestedToolItemProps {
 }
 
 function NestedToolItem({ tool }: NestedToolItemProps) {
+  const { t } = useTranslation();
   const [isInputExpanded, setIsInputExpanded] = useState(false);
   const [isResultExpanded, setIsResultExpanded] = useState(false);
   const resultId = useId();
@@ -235,10 +280,16 @@ function NestedToolItem({ tool }: NestedToolItemProps) {
               onClick={() => setIsResultExpanded(!isResultExpanded)}
               aria-expanded={isResultExpanded}
               aria-controls={resultId}
-              aria-label={isResultExpanded ? '結果を折りたたむ' : `残り ${hiddenLines} 行を表示`}
+              aria-label={
+                isResultExpanded
+                  ? t('tools.collapseResult')
+                  : t('tools.showRemainingLines', { count: hiddenLines })
+              }
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              {isResultExpanded ? '折りたたむ' : `... +${hiddenLines} 行`}
+              {isResultExpanded
+                ? t('tools.collapse')
+                : t('tools.expandLines', { count: hiddenLines })}
             </button>
           )}
         </div>

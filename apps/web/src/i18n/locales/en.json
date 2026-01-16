@@ -225,5 +225,18 @@
     "app": "App",
     "logs": "Logs",
     "workspace": "Workspace"
+  },
+  "tools": {
+    "updateTodos": "Update Todos",
+    "readLines": "Read {{count}} lines",
+    "collapse": "Collapse",
+    "expandLines": "+{{count}} lines",
+    "toolUsesCount": "{{count}} tool uses",
+    "collapseToolDetails": "Collapse tool use details",
+    "expandToolDetails": "Show {{count}} tool use details",
+    "collapseResult": "Collapse result",
+    "showRemainingLines": "Show remaining {{count}} lines",
+    "collapseContent": "Collapse content",
+    "showRemainingLinesContent": "Show remaining {{count}} lines"
   }
 }
