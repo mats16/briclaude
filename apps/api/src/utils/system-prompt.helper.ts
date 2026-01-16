@@ -8,20 +8,6 @@ export interface SystemPromptConfig {
 }
 
 /**
- * outcomes から Databricks Workspace のエントリを抽出
- */
-function filterWorkspaceOutcomes(outcomes: SessionOutcome[]): DatabricksWorkspaceSource[] {
-  return outcomes.filter((o): o is DatabricksWorkspaceSource => o.type === 'databricks_workspace');
-}
-
-/**
- * outcomes から Databricks Apps のエントリを抽出
- */
-function filterAppsOutcomes(outcomes: SessionOutcome[]): DatabricksAppsOutcome[] {
-  return outcomes.filter((o): o is DatabricksAppsOutcome => o.type === 'databricks_apps');
-}
-
-/**
  * outcomes に基づいて systemPrompt 設定を構築
  *
  * @param outcomes - セッションの outcomes 配列
@@ -34,15 +20,27 @@ function filterAppsOutcomes(outcomes: SessionOutcome[]): DatabricksAppsOutcome[]
  * ```
  */
 export function buildSystemPromptConfig(outcomes: SessionOutcome[] = []): SystemPromptConfig {
-  const workspaceOutcomes = filterWorkspaceOutcomes(outcomes);
-  const appsOutcomes = filterAppsOutcomes(outcomes);
+  // outcomes から必要な値を抽出
+  const workspaceOutcome = outcomes.find(
+    (o): o is DatabricksWorkspaceSource => o.type === 'databricks_workspace'
+  );
+  const appsOutcome = outcomes.find(
+    (o): o is DatabricksAppsOutcome => o.type === 'databricks_apps' && !!o.name
+  );
 
-  const workspaceInstruction = createWorkspacePushInstruction(workspaceOutcomes);
-  const appsInstruction = createDatabricksAppsInstruction(appsOutcomes);
+  const workspacePath = workspaceOutcome?.path;
+  const appName = appsOutcome?.name;
 
-  // instruction を結合（存在する場合のみ）
-  const instructions = [workspaceInstruction, appsInstruction].filter(Boolean);
-  const append = instructions.length > 0 ? instructions.join('\n\n') : undefined;
+  // Apps outcome がある場合は Apps instruction のみ（Workspace Push を含む）
+  // そうでなければ Workspace instruction のみ
+  // 注: Apps のみのパターンは存在しない（Apps がある場合は必ず Workspace もある）
+  let append: string | undefined;
+
+  if (appName && workspacePath) {
+    append = createDatabricksAppsInstruction(workspacePath, appName);
+  } else if (workspacePath) {
+    append = createWorkspacePushInstruction(workspacePath);
+  }
 
   if (append) {
     return { type: 'preset', preset: 'claude_code', append };
@@ -53,23 +51,16 @@ export function buildSystemPromptConfig(outcomes: SessionOutcome[] = []): System
 /**
  * Databricks Workspace にファイルをアップロードするための systemPrompt 追加指示を生成
  *
- * @param outcomes - push 先の Databricks Workspace パスの配列
- * @returns systemPrompt に追加する指示文字列（空の場合は undefined）
+ * @param workspacePath - push 先の Databricks Workspace パス
+ * @returns systemPrompt に追加する指示文字列
  *
  * @example
  * ```typescript
- * const outcomes = [{ type: 'databricks_workspace', path: '/Workspace/Users/user@example.com/project' }];
- * const instruction = createWorkspacePushInstruction(outcomes);
+ * const instruction = createWorkspacePushInstruction('/Workspace/Users/user@example.com/project');
  * // Returns markdown instruction text for Claude
  * ```
  */
-export function createWorkspacePushInstruction(
-  outcomes: DatabricksWorkspaceSource[]
-): string | undefined {
-  if (outcomes.length === 0) return undefined;
-
-  const pathList = outcomes.map((o, i) => `${i + 1}. **${o.path}**`).join('\n');
-
+export function createWorkspacePushInstruction(workspacePath: string): string {
   return `
 Your task is to complete the request described in the task description.
 
@@ -79,9 +70,7 @@ Instructions:
 
 ## Databricks Workspace Push Requirements
 
-You are working on the copy of the following Databricks Workspace path:
-
- **${pathList}**
+You are working on the copy of the following Databricks Workspace path: \`${workspacePath}\`
 
 ### Important Instructions:
 
@@ -92,46 +81,34 @@ You are working on the copy of the following Databricks Workspace path:
 ### CLI Reference:
 
 - To push all files from the session directory to workspace:
-  \`databricks sync --exclude .claude/settings.local.json . "<workspace_path>"\`
+  \`databricks sync --exclude .claude/settings.local.json . "${workspacePath}"\`
 - To check the upload result:
-  \`databricks workspace list "<workspace_path>"\`
+  \`databricks workspace list "${workspacePath}"\`
 `.trim();
 }
 
 /**
  * Databricks Apps をデプロイするための systemPrompt 追加指示を生成
  *
- * @param outcomes - deploy 先の Databricks Apps 情報の配列
- * @returns systemPrompt に追加する指示文字列（空の場合は undefined）
+ * @param workspacePath - Workspace のパス
+ * @param appName - デプロイする App の名前
+ * @returns systemPrompt に追加する指示文字列
  *
  * @example
  * ```typescript
- * const outcomes = [{ type: 'databricks_apps', name: 'app-01h455vb4pex5vsknk084sn02q' }];
- * const instruction = createDatabricksAppsInstruction(outcomes);
+ * const instruction = createDatabricksAppsInstruction('/Workspace/Users/user@example.com/project', 'app-01h455vb4pex5vsknk084sn02q');
  * // Returns markdown instruction text for Claude
  * ```
  */
-export function createDatabricksAppsInstruction(
-  outcomes: DatabricksAppsOutcome[]
-): string | undefined {
-  if (outcomes.length === 0) return undefined;
-
-  // name が設定されているもののみを対象とする
-  const namedOutcomes = outcomes.filter(o => o.name);
-  if (namedOutcomes.length === 0) return undefined;
-
-  const appName = namedOutcomes[0]?.name;
-
+export function createDatabricksAppsInstruction(workspacePath: string, appName: string): string {
   return `
 Your task is to complete the request described in the task description.
 
 Instructions:
 1. For questions: Research the codebase and provide a detailed answer
-2. For implementations: Make the requested changes and deploy Databricks Apps
+2. For implementations: Make the requested changes, push to Workspace and **deploy Databricks Apps**
 
 ## Databricks Apps Development Requirements
-
-You are working on the copy of the following Databricks Workspace path: \`${workspacePath}\`
 
 Deploy the app with the exact name: \`${appName}\`
 
@@ -140,29 +117,28 @@ Do not modify this name—changing it will break the association between the dep
 
 ### Important Instructions:
 
-1. **CREATE** the app (takes ~2 minutes)
+**Use TodoWrite to create tasks for each step below.** Mark each task complete as you finish it.
+Do not consider the work done until the app is successfully deployed and verified.
+
+1. **CREATE** the app with the exact name: \`${appName}\` (takes ~2 minutes)
 2. **DEVELOP** all your changes in the current working directory
-3. **PUSH** your completed work to the specified Workspace path (required before deploy)
+3. **PUSH** your completed work to the specified Workspace path (NOT sufficient, need to DEPLOY the app)
 4. **DEPLOY** the app from the specified Workspace path
 5. **VERIFY** deployment status
 
 ### CLI Reference:
 
-- To push all files from the session directory to workspace:
-  \`databricks sync --exclude .claude/settings.local.json . "<workspace_path>"\`
-- To check the upload result:
-  \`databricks workspace list "<workspace_path>"\`
 - To create the app:
-  \`databricks apps create <app_name> --no-wait\`
+  \`databricks apps create "${appName}" --no-wait\`
 - To deploy the app:
-  \`databricks apps deploy <app_name> --source-code-path <workspace_path>\`
+  \`databricks apps deploy "${appName}" --source-code-path "${workspacePath}"\`
 - To get the app details and status:
-  \`databricks apps get <app_name>\`
-- To start a stopped app:
-  \`databricks apps start <app_name>\`
-- To stop a running app:
-  \`databricks apps stop <app_name>\`
+  \`databricks apps get "${appName}"\`
+- To push all files from the session directory to workspace:
+  \`databricks sync --exclude .claude/settings.local.json . "${workspacePath}"\`
+- To check the upload result:
+  \`databricks workspace list "${workspacePath}"\`
 
-**Note**: \`DATABRICKS_APP_PORT\` environment variable is automatically provided. Your app should listen on the port specified by this variable.
+If any step fails, troubleshoot and retry. Do NOT consider the task complete until the app is accessible.
 `.trim();
 }
