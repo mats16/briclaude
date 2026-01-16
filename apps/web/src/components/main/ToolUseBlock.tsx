@@ -121,9 +121,43 @@ interface NestedToolItemProps {
 function NestedToolItem({ tool }: NestedToolItemProps) {
   const [isResultExpanded, setIsResultExpanded] = useState(false);
   const resultId = useId();
+  const maxChars = 250;
+
   const hasResult = tool.result && tool.result.length > 0;
-  const shouldCollapseResult = hasResult && tool.result!.length > 200;
-  const hiddenChars = shouldCollapseResult ? tool.result!.length - 200 : 0;
+
+  const { displayResult, shouldCollapseResult, hiddenLines } = (() => {
+    if (!hasResult) {
+      return { displayResult: '', shouldCollapseResult: false, hiddenLines: 0 };
+    }
+
+    const totalChars = tool.result!.length;
+
+    // 250文字以下なら折り畳まない
+    if (totalChars <= maxChars) {
+      return { displayResult: tool.result!, shouldCollapseResult: false, hiddenLines: 0 };
+    }
+
+    // 250文字以内に収まる行数を計算
+    const lines = tool.result!.split('\n');
+    const totalLines = lines.length;
+    let visibleLines = 0;
+    let charCount = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const lineLength = lines[i].length + (i > 0 ? 1 : 0);
+      if (charCount + lineLength > maxChars) {
+        break;
+      }
+      charCount += lineLength;
+      visibleLines++;
+    }
+
+    return {
+      displayResult: visibleLines > 0 ? lines.slice(0, visibleLines).join('\n') : '',
+      shouldCollapseResult: true,
+      hiddenLines: totalLines - visibleLines,
+    };
+  })();
 
   return (
     <div className="py-0.5">
@@ -148,7 +182,7 @@ function NestedToolItem({ tool }: NestedToolItemProps) {
               tool.isError ? 'text-destructive' : 'text-muted-foreground'
             )}
           >
-            {shouldCollapseResult && !isResultExpanded ? tool.result!.slice(0, 200) : tool.result}
+            {isResultExpanded ? tool.result : displayResult}
           </pre>
           {shouldCollapseResult && (
             <button
@@ -156,10 +190,10 @@ function NestedToolItem({ tool }: NestedToolItemProps) {
               onClick={() => setIsResultExpanded(!isResultExpanded)}
               aria-expanded={isResultExpanded}
               aria-controls={resultId}
-              aria-label={isResultExpanded ? '結果を折りたたむ' : `残り ${hiddenChars} 文字を表示`}
+              aria-label={isResultExpanded ? '結果を折りたたむ' : `残り ${hiddenLines} 行を表示`}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              {isResultExpanded ? '折りたたむ' : `... +${hiddenChars} 文字`}
+              {isResultExpanded ? '折りたたむ' : `... +${hiddenLines} 行`}
             </button>
           )}
         </div>
