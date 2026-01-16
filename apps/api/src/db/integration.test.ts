@@ -1,6 +1,6 @@
 // apps/api/src/db/integration.test.ts
 // 統合テスト: 実際のデータベースに接続してテスト
-// ローカル: .env の DATABASE_URL を使用
+// ローカル: .env の DATABASE_URL_TEST を使用（開発DBとは別のテスト専用DB）
 // CI: Docker の PostgreSQL を使用
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
@@ -45,9 +45,9 @@ describe('Database Integration Tests', () => {
   }
 
   beforeAll(async () => {
-    const databaseUrl = process.env.DATABASE_URL;
+    const databaseUrl = process.env.DATABASE_URL_TEST;
     if (!databaseUrl) {
-      throw new Error('DATABASE_URL is not set');
+      throw new Error('DATABASE_URL_TEST is not set');
     }
 
     client = postgres(databaseUrl, { max: 1 });

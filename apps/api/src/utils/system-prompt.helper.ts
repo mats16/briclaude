@@ -8,20 +8,6 @@ export interface SystemPromptConfig {
 }
 
 /**
- * outcomes から Databricks Workspace のエントリを抽出
- */
-function filterWorkspaceOutcomes(outcomes: SessionOutcome[]): DatabricksWorkspaceSource[] {
-  return outcomes.filter((o): o is DatabricksWorkspaceSource => o.type === 'databricks_workspace');
-}
-
-/**
- * outcomes から Databricks Apps のエントリを抽出
- */
-function filterAppsOutcomes(outcomes: SessionOutcome[]): DatabricksAppsOutcome[] {
-  return outcomes.filter((o): o is DatabricksAppsOutcome => o.type === 'databricks_apps');
-}
-
-/**
  * outcomes に基づいて systemPrompt 設定を構築
  *
  * @param outcomes - セッションの outcomes 配列
@@ -34,15 +20,26 @@ function filterAppsOutcomes(outcomes: SessionOutcome[]): DatabricksAppsOutcome[]
  * ```
  */
 export function buildSystemPromptConfig(outcomes: SessionOutcome[] = []): SystemPromptConfig {
-  const workspaceOutcomes = filterWorkspaceOutcomes(outcomes);
-  const appsOutcomes = filterAppsOutcomes(outcomes);
+  // outcomes から必要な値を抽出
+  const workspaceOutcome = outcomes.find(
+    (o): o is DatabricksWorkspaceSource => o.type === 'databricks_workspace'
+  );
+  const appsOutcome = outcomes.find(
+    (o): o is DatabricksAppsOutcome => o.type === 'databricks_apps'
+  );
 
-  const workspaceInstruction = createWorkspacePushInstruction(workspaceOutcomes);
-  const appsInstruction = createDatabricksAppsInstruction(appsOutcomes);
+  const workspacePath = workspaceOutcome?.path;
 
-  // 両方の instruction を結合（存在する場合のみ）
-  const instructions = [workspaceInstruction, appsInstruction].filter(Boolean);
-  const append = instructions.length > 0 ? instructions.join('\n\n') : undefined;
+  // Apps outcome がある場合は Apps instruction のみ（Workspace Push を含む）
+  // そうでなければ Workspace instruction のみ
+  // 注: Apps のみのパターンは存在しない（Apps がある場合は必ず Workspace もある）
+  let append: string | undefined;
+
+  if (appsOutcome && workspacePath) {
+    append = createDatabricksAppsInstruction(workspacePath);
+  } else if (workspacePath) {
+    append = createWorkspacePushInstruction(workspacePath);
+  }
 
   if (append) {
     return { type: 'preset', preset: 'claude_code', append };
@@ -53,151 +50,100 @@ export function buildSystemPromptConfig(outcomes: SessionOutcome[] = []): System
 /**
  * Databricks Workspace にファイルをアップロードするための systemPrompt 追加指示を生成
  *
- * @param outcomes - push 先の Databricks Workspace パスの配列
- * @returns systemPrompt に追加する指示文字列（空の場合は undefined）
+ * @param workspacePath - push 先の Databricks Workspace パス
+ * @returns systemPrompt に追加する指示文字列
  *
  * @example
  * ```typescript
- * const outcomes = [{ type: 'databricks_workspace', path: '/Workspace/Users/user@example.com/project' }];
- * const instruction = createWorkspacePushInstruction(outcomes);
+ * const instruction = createWorkspacePushInstruction('/Workspace/Users/user@example.com/project');
  * // Returns markdown instruction text for Claude
  * ```
  */
-export function createWorkspacePushInstruction(
-  outcomes: DatabricksWorkspaceSource[]
-): string | undefined {
-  if (outcomes.length === 0) return undefined;
-
-  const pathList = outcomes.map((o, i) => `${i + 1}. **${o.path}**`).join('\n');
-
+export function createWorkspacePushInstruction(workspacePath: string): string {
   return `
+Your task is to complete the request described in the task description.
+
+Instructions:
+1. For questions: Research the codebase and provide a detailed answer
+2. For implementations: Make the requested changes and push to Databricks Workspace
+
 ## Databricks Workspace Push Requirements
 
-You are expected to push your completed work to the following Databricks Workspace paths:
-
-${pathList}
+The workspace path is provided via the \`DATABRICKS_WORKSPACE_PATH\` environment variable: \`${workspacePath}\`
 
 ### Important Instructions:
 
 1. **DEVELOP** all your changes in the current working directory
-2. **PUSH** your completed work to the specified Databricks Workspace path(s) using the Databricks CLI:
-   \`\`\`bash
-   databricks sync --exclude .claude/settings.local.json . "<workspace_path>"
-   \`\`\`
-3. **VERIFY** that all files have been uploaded successfully
-4. **NEVER** push to a different workspace path without explicit permission
-5. The following environment variables are already available:
-   - \`DATABRICKS_HOST\`: The Databricks workspace URL
-   - \`DATABRICKS_TOKEN\`: Authentication token for the Databricks API
+2. **PUSH** your completed work to the specified Workspace path
+3. **NEVER** push to a different workspace path without explicit permission
 
 ### CLI Reference:
 
 - To push all files from the session directory to workspace:
-  \`databricks sync --exclude .claude/settings.local.json . "/Workspace/Users/..."\`
+  \`databricks sync --exclude .claude/settings.local.json . "$DATABRICKS_WORKSPACE_PATH"\`
 - To check the upload result:
-  \`databricks workspace list "/Workspace/Users/..."\`
+  \`databricks workspace list "$DATABRICKS_WORKSPACE_PATH"\`
 `.trim();
 }
 
 /**
  * Databricks Apps をデプロイするための systemPrompt 追加指示を生成
  *
- * @param outcomes - deploy 先の Databricks Apps 情報の配列
- * @returns systemPrompt に追加する指示文字列（空の場合は undefined）
+ * @param workspacePath - Workspace のパス
+ * @returns systemPrompt に追加する指示文字列
  *
  * @example
  * ```typescript
- * const outcomes = [{ type: 'databricks_apps', name: 'app-01h455vb4pex5vsknk084sn02q' }];
- * const instruction = createDatabricksAppsInstruction(outcomes);
+ * const instruction = createDatabricksAppsInstruction('/Workspace/Users/user@example.com/project');
  * // Returns markdown instruction text for Claude
  * ```
  */
-export function createDatabricksAppsInstruction(
-  outcomes: DatabricksAppsOutcome[]
-): string | undefined {
-  if (outcomes.length === 0) return undefined;
-
-  // name が設定されているもののみを対象とする
-  const namedOutcomes = outcomes.filter(o => o.name);
-  if (namedOutcomes.length === 0) return undefined;
-
-  const appList = namedOutcomes.map((o, i) => `${i + 1}. **${o.name}**`).join('\n');
-  const appName = namedOutcomes[0]?.name;
-
+export function createDatabricksAppsInstruction(workspacePath: string): string {
   return `
-## Databricks Apps Deployment Requirements (Auto-Deploy Enabled)
+Your task is to complete the request described in the task description.
 
-**IMPORTANT: Automatic app deployment is ENABLED for this session.**
+Instructions:
+1. For questions: Research the codebase and provide a detailed answer
+2. For implementations: Make the requested changes, push to Workspace and **deploy Databricks Apps**
 
-You MUST deploy your application as a Databricks App. The following app name has been pre-assigned:
+## Databricks Apps Development Requirements
 
-${appList}
+- Workspace path: \`DATABRICKS_WORKSPACE_PATH\` = \`${workspacePath}\`
 
-### CRITICAL: Create the App IMMEDIATELY
+### App Name:
 
-**DO THIS FIRST** before any other work. App creation takes ~2 minutes, so start it NOW:
-
-\`\`\`bash
-databricks apps create ${appName} --no-wait
-\`\`\`
-
-The \`--no-wait\` flag allows you to continue working while the app is being provisioned.
+The app name is **automatically generated** from the session ID. You don't need to choose an app name.
+Use the MCP tools below - they already know the correct app name.
 
 ### Important Instructions:
 
-1. **APP NAME IS PRE-ASSIGNED**: The app name above has been assigned to this session. Do NOT use a different name.
+**Use TodoWrite to create tasks for each step below.** Mark each task complete as you finish it.
+Do not consider the work done until the app is successfully deployed and verified.
 
-2. **BEFORE DEPLOYMENT**:
-   - Ensure your application has a valid \`app.yaml\` configuration file in the root directory
-   - The \`app.yaml\` defines the app's runtime configuration (command, environment variables, etc.)
+1. **CREATE** the app using \`mcp__dbapps__create\` (takes ~2 minutes)
+2. **DEVELOP** all your changes in the current working directory
+3. **PUSH** your completed work to the specified Workspace path
+4. **DEPLOY** the app using \`mcp__dbapps__deploy\` (session outcomes are automatically updated)
+5. **VERIFY** deployment status using \`mcp__dbapps__get\`
 
-3. **SYNC FILES TO WORKSPACE** (required before deploy):
-   The \`databricks apps deploy\` command expects a **Workspace path**, not a local path.
-   You must first sync your files to the Databricks Workspace:
-   \`\`\`bash
-   databricks sync --exclude .claude/settings.local.json . "<workspace_path>"
-   \`\`\`
+### MCP Tools Reference:
 
-4. **DEPLOY THE APP** using the Workspace path:
-   \`\`\`bash
-   databricks apps deploy ${appName} --source-code-path "<workspace_path>"
-   \`\`\`
+Use these MCP tools instead of CLI commands:
 
-5. **VERIFY DEPLOYMENT**:
-   \`\`\`bash
-   databricks apps get ${appName}
-   \`\`\`
+| Tool | Description |
+|------|-------------|
+| \`mcp__dbapps__create\` | Create the app (app name is auto-generated) |
+| \`mcp__dbapps__deploy({ source_code_path: "$DATABRICKS_WORKSPACE_PATH" })\` | Deploy the app (auto-updates session outcomes) |
+| \`mcp__dbapps__get\` | Get app details and status |
+| \`mcp__dbapps__list_deployments\` | List deployment history |
 
-6. **NEVER** create or deploy to a different app name without explicit permission
+### Workspace Push (CLI):
 
-### Environment Variables:
+- To push all files from the session directory to workspace:
+  \`databricks sync --exclude .claude/settings.local.json . "$DATABRICKS_WORKSPACE_PATH"\`
+- To check the upload result:
+  \`databricks workspace list "$DATABRICKS_WORKSPACE_PATH"\`
 
-The following environment variables are already available:
-- \`DATABRICKS_HOST\`: The Databricks workspace URL
-- \`DATABRICKS_TOKEN\`: Authentication token for the Databricks API
-
-### CLI Reference:
-
-| Command | Description |
-|---------|-------------|
-| \`databricks apps create <app-name> --no-wait\` | Create a new app (takes ~2 min to be ready) |
-| \`databricks apps deploy <app-name> --source-code-path <workspace_path>\` | Deploy app from Workspace path |
-| \`databricks apps get <app-name>\` | Get app details and status |
-| \`databricks apps start <app-name>\` | Start a stopped app |
-| \`databricks apps stop <app-name>\` | Stop a running app |
-
-### Example app.yaml:
-
-\`\`\`yaml
-command:
-  - python
-  - app.py
-
-env:
-  - name: "CATALOG_NAME"
-    value: "main"
-\`\`\`
-
-**Note**: Databricks Apps automatically provides the \`DATABRICKS_APP_PORT\` environment variable. Your application should listen on the port specified by this variable.
+If any step fails, troubleshoot and retry. Do NOT consider the task complete until the app is accessible and verified.
 `.trim();
 }

@@ -21,11 +21,11 @@ import type {
   CodedError,
   DatabricksWorkspaceSource,
   DatabricksAppsOutcome,
-  SessionOutcome,
 } from '@repo/types';
 import { ClaudeSettings } from '../models/claude-settings.model.js';
 import { buildSystemPromptConfig } from '../utils/system-prompt.helper.js';
 import { sessions } from '../db/schema.js';
+import { createDbAppsMcpServer } from '../mcp/dbapps.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 import { ensureDirectory, removeDirectory } from '../utils/directory.js';
 import { wsManager } from './websocket-manager.service.js';
@@ -292,13 +292,13 @@ export async function createSession(
   }
 
   // 5. context オブジェクトの構築
-  // outcomes に databricks_apps がある場合、name を付与
-  const processedOutcomes: SessionOutcome[] = session_context.outcomes.map(outcome => {
+  // databricks_apps outcome がある場合は app name を計算して設定
+  const outcomes = session_context.outcomes.map(outcome => {
     if (outcome.type === 'databricks_apps') {
       return {
         ...outcome,
         name: `app-${sessionId.getSuffix()}`,
-      } as DatabricksAppsOutcome;
+      };
     }
     return outcome;
   });
@@ -309,7 +309,7 @@ export async function createSession(
     cwd,
     model: session_context.model,
     sources: session_context.sources,
-    outcomes: processedOutcomes,
+    outcomes,
   };
 
   // 5. タイムスタンプを設定（レスポンス用）
@@ -385,6 +385,43 @@ export async function createSession(
     // AbortController を作成（abort 用）
     const abortController = new AbortController();
 
+    // outcomes に databricks_apps があるか確認
+    const hasAppsOutcome = session_context.outcomes.some(o => o.type === 'databricks_apps');
+
+    // MCP サーバーを構築（databricks_apps がある場合のみ）
+    const mcpServers: Record<string, ReturnType<typeof createDbAppsMcpServer>> | undefined =
+      hasAppsOutcome && workspaceSources[0]?.path
+        ? {
+            dbapps: createDbAppsMcpServer(
+              sessionId,
+              fastify.config.DATABRICKS_HOST,
+              workspaceSources[0].path,
+              () => ctx.getAccessToken()
+            ),
+          }
+        : undefined;
+
+    // allowedTools を構築
+    const allowedTools = [
+      'Skill',
+      'Bash',
+      'Read',
+      'Write',
+      'Edit',
+      'Glob',
+      'Grep',
+      'WebSearch',
+      'WebFetch',
+    ];
+    if (hasAppsOutcome && workspaceSources[0]?.path) {
+      allowedTools.push(
+        'mcp__dbapps__create',
+        'mcp__dbapps__deploy',
+        'mcp__dbapps__get',
+        'mcp__dbapps__list_deployments'
+      );
+    }
+
     const response = query({
       prompt,
       options: {
@@ -399,21 +436,15 @@ export async function createSession(
           type: 'preset',
           preset: 'claude_code',
         },
-        allowedTools: [
-          'Skill',
-          'Bash',
-          'Read',
-          'Write',
-          'Edit',
-          'Glob',
-          'Grep',
-          'WebSearch',
-          'WebFetch',
-        ],
+        mcpServers,
+        allowedTools,
         env: {
           PATH: fastify.config.PATH,
           HOME: userHome,
           CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
+          // Session
+          SESSION_ID: sessionId.toString(),
+          DATABRICKS_WORKSPACE_PATH: workspaceSources[0]?.path,
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
           ANTHROPIC_AUTH_TOKEN: accessToken,
@@ -719,6 +750,48 @@ export async function sendMessageToSession(
     // AbortController を作成（abort 用）
     const abortController = new AbortController();
 
+    const workspacePath = sessionContext.sources.find(
+      (s): s is DatabricksWorkspaceSource => s.type === 'databricks_workspace'
+    )?.path;
+
+    // outcomes に databricks_apps があるか確認
+    const hasAppsOutcome =
+      sessionContext.outcomes?.some(o => o.type === 'databricks_apps') ?? false;
+
+    // MCP サーバーを構築（databricks_apps がある場合のみ）
+    const mcpServers: Record<string, ReturnType<typeof createDbAppsMcpServer>> | undefined =
+      hasAppsOutcome && workspacePath
+        ? {
+            dbapps: createDbAppsMcpServer(
+              sessionId,
+              fastify.config.DATABRICKS_HOST,
+              workspacePath,
+              () => ctx.getAccessToken()
+            ),
+          }
+        : undefined;
+
+    // allowedTools を構築
+    const allowedTools = [
+      'Skill',
+      'Bash',
+      'Read',
+      'Write',
+      'Edit',
+      'Glob',
+      'Grep',
+      'WebSearch',
+      'WebFetch',
+    ];
+    if (hasAppsOutcome && workspacePath) {
+      allowedTools.push(
+        'mcp__dbapps__create',
+        'mcp__dbapps__deploy',
+        'mcp__dbapps__get',
+        'mcp__dbapps__list_deployments'
+      );
+    }
+
     const response = query({
       prompt,
       options: {
@@ -734,21 +807,16 @@ export async function sendMessageToSession(
           type: 'preset',
           preset: 'claude_code',
         },
-        allowedTools: [
-          'Skill',
-          'Bash',
-          'Read',
-          'Write',
-          'Edit',
-          'Glob',
-          'Grep',
-          'WebSearch',
-          'WebFetch',
-        ],
+        mcpServers,
+        allowedTools,
         env: {
           PATH: fastify.config.PATH,
           HOME: userHome,
           CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
+          // Session
+          CLAUDE_CODE_SESSION_ID: sessionRow.sdkSessionId,
+          SESSION_ID: sessionId.toString(),
+          DATABRICKS_WORKSPACE_PATH: workspacePath,
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
           ANTHROPIC_AUTH_TOKEN: accessToken,

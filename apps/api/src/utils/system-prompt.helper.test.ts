@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { DatabricksWorkspaceSource, DatabricksAppsOutcome, SessionOutcome } from '@repo/types';
+import type { SessionOutcome } from '@repo/types';
 import {
   buildSystemPromptConfig,
   createWorkspacePushInstruction,
@@ -8,150 +8,75 @@ import {
 } from './system-prompt.helper.js';
 
 describe('createWorkspacePushInstruction', () => {
-  it('should return undefined for empty outcomes', () => {
-    const result = createWorkspacePushInstruction([]);
-    expect(result).toBeUndefined();
-  });
+  it('should generate instruction with workspace path', () => {
+    const result = createWorkspacePushInstruction('/Workspace/Users/test@example.com/project');
 
-  it('should generate instruction for single workspace', () => {
-    const outcomes: DatabricksWorkspaceSource[] = [
-      { type: 'databricks_workspace', path: '/Workspace/Users/test@example.com/project' },
-    ];
-
-    const result = createWorkspacePushInstruction(outcomes);
-
-    expect(result).toBeDefined();
     expect(result).toContain('Databricks Workspace Push Requirements');
     expect(result).toContain('/Workspace/Users/test@example.com/project');
     expect(result).toContain('databricks sync');
   });
 
-  it('should generate numbered list for multiple workspaces', () => {
-    const outcomes: DatabricksWorkspaceSource[] = [
-      { type: 'databricks_workspace', path: '/Workspace/path1' },
-      { type: 'databricks_workspace', path: '/Workspace/path2' },
-    ];
+  it('should include CLI reference with environment variable', () => {
+    const result = createWorkspacePushInstruction('/Workspace/test');
 
-    const result = createWorkspacePushInstruction(outcomes);
-
-    expect(result).toContain('1. **/Workspace/path1**');
-    expect(result).toContain('2. **/Workspace/path2**');
+    expect(result).toContain('CLI Reference');
+    expect(result).toContain('DATABRICKS_WORKSPACE_PATH');
+    expect(result).toContain('databricks workspace list "$DATABRICKS_WORKSPACE_PATH"');
+    expect(result).toContain(
+      'databricks sync --exclude .claude/settings.local.json . "$DATABRICKS_WORKSPACE_PATH"'
+    );
   });
 
-  it('should include CLI reference section', () => {
-    const outcomes: DatabricksWorkspaceSource[] = [
-      { type: 'databricks_workspace', path: '/Workspace/test' },
-    ];
+  it('should include task instructions', () => {
+    const result = createWorkspacePushInstruction('/Workspace/test');
 
-    const result = createWorkspacePushInstruction(outcomes);
-
-    expect(result).toContain('### CLI Reference');
-    expect(result).toContain('databricks workspace list');
-  });
-
-  it('should include environment variable information', () => {
-    const outcomes: DatabricksWorkspaceSource[] = [
-      { type: 'databricks_workspace', path: '/Workspace/test' },
-    ];
-
-    const result = createWorkspacePushInstruction(outcomes);
-
-    expect(result).toContain('DATABRICKS_HOST');
-    expect(result).toContain('DATABRICKS_TOKEN');
+    expect(result).toContain('Your task is to complete the request');
+    expect(result).toContain('DEVELOP');
+    expect(result).toContain('PUSH');
   });
 });
 
 describe('createDatabricksAppsInstruction', () => {
-  it('should return undefined for empty outcomes', () => {
-    const result = createDatabricksAppsInstruction([]);
-    expect(result).toBeUndefined();
+  it('should generate instruction with workspace path', () => {
+    const result = createDatabricksAppsInstruction('/Workspace/test');
+
+    expect(result).toContain('Databricks Apps');
+    expect(result).toContain('/Workspace/test');
   });
 
-  it('should return undefined for outcomes without name', () => {
-    const outcomes: DatabricksAppsOutcome[] = [{ type: 'databricks_apps' }];
+  it('should include app name info (auto-generated)', () => {
+    const result = createDatabricksAppsInstruction('/Workspace/test');
 
-    const result = createDatabricksAppsInstruction(outcomes);
-
-    expect(result).toBeUndefined();
+    expect(result).toContain('App Name');
+    expect(result).toContain('automatically generated');
   });
 
-  it('should generate instruction for single app', () => {
-    const outcomes: DatabricksAppsOutcome[] = [{ type: 'databricks_apps', name: 'app-test123' }];
-
-    const result = createDatabricksAppsInstruction(outcomes);
-
-    expect(result).toBeDefined();
-    expect(result).toContain('Databricks Apps Deployment Requirements');
-    expect(result).toContain('app-test123');
-    expect(result).toContain('databricks apps create');
-    expect(result).toContain('--no-wait');
-    expect(result).toContain('databricks apps deploy');
-  });
-
-  it('should generate numbered list for multiple apps', () => {
-    const outcomes: DatabricksAppsOutcome[] = [
-      { type: 'databricks_apps', name: 'app-test1' },
-      { type: 'databricks_apps', name: 'app-test2' },
-    ];
-
-    const result = createDatabricksAppsInstruction(outcomes);
-
-    expect(result).toContain('1. **app-test1**');
-    expect(result).toContain('2. **app-test2**');
-  });
-
-  it('should include CLI reference section', () => {
-    const outcomes: DatabricksAppsOutcome[] = [{ type: 'databricks_apps', name: 'app-test' }];
-
-    const result = createDatabricksAppsInstruction(outcomes);
-
-    expect(result).toContain('### CLI Reference');
-    expect(result).toContain('databricks apps get');
-    expect(result).toContain('databricks apps create');
-    expect(result).toContain('databricks apps deploy');
-    expect(result).toContain('databricks apps start');
-    expect(result).toContain('databricks apps stop');
-  });
-
-  it('should include environment variable information', () => {
-    const outcomes: DatabricksAppsOutcome[] = [{ type: 'databricks_apps', name: 'app-test' }];
-
-    const result = createDatabricksAppsInstruction(outcomes);
-
-    expect(result).toContain('DATABRICKS_HOST');
-    expect(result).toContain('DATABRICKS_TOKEN');
-  });
-
-  it('should include app.yaml example and DATABRICKS_APP_PORT note', () => {
-    const outcomes: DatabricksAppsOutcome[] = [{ type: 'databricks_apps', name: 'app-test' }];
-
-    const result = createDatabricksAppsInstruction(outcomes);
-
-    expect(result).toContain('app.yaml');
-    expect(result).toContain('DATABRICKS_APP_PORT');
-  });
-
-  it('should include databricks sync instruction before deploy', () => {
-    const outcomes: DatabricksAppsOutcome[] = [{ type: 'databricks_apps', name: 'app-test' }];
-
-    const result = createDatabricksAppsInstruction(outcomes);
+  it('should include databricks sync instruction', () => {
+    const result = createDatabricksAppsInstruction('/Workspace/test');
 
     expect(result).toContain('databricks sync');
-    expect(result).toContain('SYNC FILES TO WORKSPACE');
-    expect(result).toContain('Workspace path');
   });
 
-  it('should skip outcomes without name but include those with name', () => {
-    const outcomes: DatabricksAppsOutcome[] = [
-      { type: 'databricks_apps' },
-      { type: 'databricks_apps', name: 'app-valid' },
-    ];
+  it('should include MCP tools reference', () => {
+    const result = createDatabricksAppsInstruction('/Workspace/test');
 
-    const result = createDatabricksAppsInstruction(outcomes);
+    expect(result).toContain('MCP Tools Reference');
+    expect(result).toContain('mcp__dbapps__create');
+    expect(result).toContain('mcp__dbapps__deploy');
+    expect(result).toContain('mcp__dbapps__get');
+    expect(result).toContain('mcp__dbapps__list_deployments');
+  });
 
-    expect(result).toBeDefined();
-    expect(result).toContain('app-valid');
-    expect(result).toContain('1. **app-valid**');
+  it('should include task instructions with CREATE step', () => {
+    const result = createDatabricksAppsInstruction('/Workspace/test');
+
+    expect(result).toContain('Your task is to complete the request');
+    expect(result).toContain('CREATE');
+    expect(result).toContain('DEVELOP');
+    expect(result).toContain('PUSH');
+    expect(result).toContain('DEPLOY');
+    expect(result).toContain('VERIFY');
+    // UPDATE ステップは削除された（deploy 時に自動的に outcomes が更新される）
   });
 });
 
@@ -174,7 +99,7 @@ describe('buildSystemPromptConfig', () => {
     });
   });
 
-  it('should return config with append for databricks_workspace outcomes', () => {
+  it('should return config with Workspace instruction for workspace-only outcome', () => {
     const outcomes: SessionOutcome[] = [{ type: 'databricks_workspace', path: '/Workspace/test' }];
 
     const result = buildSystemPromptConfig(outcomes);
@@ -184,11 +109,15 @@ describe('buildSystemPromptConfig', () => {
     expect('append' in result).toBe(true);
     if ('append' in result) {
       expect(result.append).toContain('Databricks Workspace Push Requirements');
+      expect(result.append).not.toContain('databricks apps create');
     }
   });
 
-  it('should return config with append for databricks_apps outcomes', () => {
-    const outcomes: SessionOutcome[] = [{ type: 'databricks_apps', name: 'app-test' }];
+  it('should return config with Apps instruction when both workspace and apps outcomes exist', () => {
+    const outcomes: SessionOutcome[] = [
+      { type: 'databricks_workspace', path: '/Workspace/test' },
+      { type: 'databricks_apps' },
+    ];
 
     const result = buildSystemPromptConfig(outcomes);
 
@@ -196,34 +125,43 @@ describe('buildSystemPromptConfig', () => {
     expect(result.preset).toBe('claude_code');
     expect('append' in result).toBe(true);
     if ('append' in result) {
-      expect(result.append).toContain('Databricks Apps Deployment Requirements');
+      // Apps instruction のみが使用される（排他）
+      expect(result.append).toContain('Databricks Apps');
+      expect(result.append).toContain('/Workspace/test');
+      expect(result.append).toContain('MCP Tools Reference');
+      // Workspace Push Requirements セクションは含まれない
+      expect(result.append).not.toContain('Databricks Workspace Push Requirements');
     }
   });
 
-  it('should combine both workspace and apps instructions', () => {
+  it('should return Apps instruction even when databricks_apps has no name initially', () => {
     const outcomes: SessionOutcome[] = [
       { type: 'databricks_workspace', path: '/Workspace/test' },
-      { type: 'databricks_apps', name: 'app-test' },
+      { type: 'databricks_apps' },
+    ];
+
+    const result = buildSystemPromptConfig(outcomes);
+
+    // Apps outcome があれば Apps instruction が使われる（name は Agent が設定）
+    expect('append' in result).toBe(true);
+    if ('append' in result) {
+      expect(result.append).toContain('Databricks Apps');
+      expect(result.append).toContain('mcp__dbapps__create');
+    }
+  });
+
+  it('should use first workspace path when multiple workspaces exist', () => {
+    const outcomes: SessionOutcome[] = [
+      { type: 'databricks_workspace', path: '/Workspace/first' },
+      { type: 'databricks_workspace', path: '/Workspace/second' },
     ];
 
     const result = buildSystemPromptConfig(outcomes);
 
     expect('append' in result).toBe(true);
     if ('append' in result) {
-      expect(result.append).toContain('Databricks Workspace Push Requirements');
-      expect(result.append).toContain('Databricks Apps Deployment Requirements');
+      expect(result.append).toContain('/Workspace/first');
     }
-  });
-
-  it('should return base config for databricks_apps without name', () => {
-    const outcomes: SessionOutcome[] = [{ type: 'databricks_apps' }];
-
-    const result = buildSystemPromptConfig(outcomes);
-
-    expect(result).toEqual({
-      type: 'preset',
-      preset: 'claude_code',
-    });
   });
 });
 
