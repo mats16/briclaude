@@ -40,14 +40,8 @@ export function buildSystemPromptConfig(outcomes: SessionOutcome[] = []): System
   const workspaceInstruction = createWorkspacePushInstruction(workspaceOutcomes);
   const appsInstruction = createDatabricksAppsInstruction(appsOutcomes);
 
-  // 両方の instruction がある場合、Workspace Push 後に Apps デプロイを促す
-  const bridgeInstruction =
-    workspaceInstruction && appsInstruction
-      ? '⚠️ **After pushing to Workspace, you MUST proceed to create and deploy the Databricks App.** Your task is NOT complete until the app is deployed.'
-      : undefined;
-
   // instruction を結合（存在する場合のみ）
-  const instructions = [workspaceInstruction, bridgeInstruction, appsInstruction].filter(Boolean);
+  const instructions = [workspaceInstruction, appsInstruction].filter(Boolean);
   const append = instructions.length > 0 ? instructions.join('\n\n') : undefined;
 
   if (append) {
@@ -77,22 +71,30 @@ export function createWorkspacePushInstruction(
   const pathList = outcomes.map((o, i) => `${i + 1}. **${o.path}**`).join('\n');
 
   return `
+Your task is to complete the request described in the task description.
+
+Instructions:
+1. For questions: Research the codebase and provide a detailed answer
+2. For implementations: Make the requested changes and push to Databricks Workspace
+
 ## Databricks Workspace Push Requirements
 
-You are expected to push your completed work to the following Databricks Workspace paths:
+You are working on the copy of the following Databricks Workspace path:
 
-${pathList}
+ **${pathList}**
 
 ### Important Instructions:
 
 1. **DEVELOP** all your changes in the current working directory
-
-2. **PUSH** your completed work to the specified Databricks Workspace path(s) using the Databricks CLI:
-   \`\`\`bash
-   databricks sync --exclude .claude/settings.local.json . "<workspace_path>"
-   \`\`\`
-
+2. **PUSH** your completed work to the specified Workspace path
 3. **NEVER** push to a different workspace path without explicit permission
+
+### CLI Reference:
+
+- To push all files from the session directory to workspace:
+  \`databricks sync --exclude .claude/settings.local.json . "<workspace_path>"\`
+- To check the upload result:
+  \`databricks workspace list "<workspace_path>"\`
 `.trim();
 }
 
@@ -121,47 +123,46 @@ export function createDatabricksAppsInstruction(
   const appName = namedOutcomes[0]?.name;
 
   return `
-## Databricks Apps Deployment Requirements
+Your task is to complete the request described in the task description.
 
-⚠️ **MANDATORY: You MUST complete the following deployment steps.**
+Instructions:
+1. For questions: Research the codebase and provide a detailed answer
+2. For implementations: Make the requested changes and deploy Databricks Apps
 
-### Pre-assigned App Name (DO NOT CHANGE)
+## Databricks Apps Development Requirements
 
-\`${appName}\`
+You are working on the copy of the following Databricks Workspace path: \`${workspacePath}\`
 
-This name is **system-generated** and linked to your session.
+Deploy the app with the exact name: \`${appName}\`
 
-**CRITICAL RULES**:
-- Do NOT invent a new app name (e.g., "my-app", "sample-app")
-- Do NOT use a name suggested by the user - the system-assigned name is required
-- Using a different name will break deployment tracking and session management
+This app name is derived from the session ID and has a 1:1 mapping with the user's session. 
+Do not modify this name—changing it will break the association between the deployed app and its session.
 
-### Deployment Steps (ALL REQUIRED)
+### Important Instructions:
 
-Your task is NOT complete until all steps are finished:
+1. **CREATE** the app (takes ~2 minutes)
+2. **DEVELOP** all your changes in the current working directory
+3. **PUSH** your completed work to the specified Workspace path (required before deploy)
+4. **DEPLOY** the app from the specified Workspace path
+5. **VERIFY** deployment status
 
-1. **CREATE** the app (takes ~2 minutes):
-   \`\`\`bash
-   databricks apps create ${appName} --no-wait
-   \`\`\`
+### CLI Reference:
 
-2. **SYNC** files to Workspace (required before deploy):
-   \`\`\`bash
-   databricks sync --exclude .claude/settings.local.json . "<workspace_path>"
-   \`\`\`
+- To push all files from the session directory to workspace:
+  \`databricks sync --exclude .claude/settings.local.json . "<workspace_path>"\`
+- To check the upload result:
+  \`databricks workspace list "<workspace_path>"\`
+- To create the app:
+  \`databricks apps create <app_name> --no-wait\`
+- To deploy the app:
+  \`databricks apps deploy <app_name> --source-code-path <workspace_path>\`
+- To get the app details and status:
+  \`databricks apps get <app_name>\`
+- To start a stopped app:
+  \`databricks apps start <app_name>\`
+- To stop a running app:
+  \`databricks apps stop <app_name>\`
 
-3. **DEPLOY** the app:
-   \`\`\`bash
-   databricks apps deploy ${appName} --source-code-path "<workspace_path>"
-   \`\`\`
-
-4. **VERIFY** deployment status:
-   \`\`\`bash
-   databricks apps get ${appName}
-   \`\`\`
-
-⚠️ **Your work is NOT complete until the app is deployed and verified.**
-
-**Note**: \`DATABRICKS_APP_PORT\` environment variable is automatically provided.
+**Note**: \`DATABRICKS_APP_PORT\` environment variable is automatically provided. Your app should listen on the port specified by this variable.
 `.trim();
 }
