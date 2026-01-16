@@ -62,7 +62,7 @@ export function CollapsibleContent({
 
   return (
     <div className="mt-1 ml-4">
-      {showContent && (
+      {showContent ? (
         <div className="flex items-start gap-1 text-muted-foreground">
           <span className="select-none" aria-hidden="true">
             └─
@@ -77,8 +77,24 @@ export function CollapsibleContent({
             {showContent}
           </pre>
         </div>
-      )}
-      {shouldCollapse && (
+      ) : shouldCollapse ? (
+        <div className="flex items-start gap-1 text-muted-foreground">
+          <span className="select-none" aria-hidden="true">
+            └─
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            aria-expanded={isExpanded}
+            aria-controls={contentId}
+            aria-label={t('tools.showRemainingLinesContent', { count: hiddenLines })}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {t('tools.expandLines', { count: hiddenLines })}
+          </button>
+        </div>
+      ) : null}
+      {shouldCollapse && showContent && (
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
@@ -89,10 +105,7 @@ export function CollapsibleContent({
               ? t('tools.collapseContent')
               : t('tools.showRemainingLinesContent', { count: hiddenLines })
           }
-          className={cn(
-            'text-xs text-muted-foreground hover:text-foreground transition-colors',
-            showContent ? 'ml-6' : 'ml-0'
-          )}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-6"
         >
           {isExpanded ? t('tools.collapse') : t('tools.expandLines', { count: hiddenLines })}
         </button>
