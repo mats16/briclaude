@@ -1,24 +1,68 @@
-import { useState, useId } from 'react';
+import { useState, useId, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 
 interface CollapsibleContentProps {
   content: string;
   isError?: boolean;
-  collapsedChars?: number;
+  /** 折り畳む文字数の閾値 */
+  maxChars?: number;
 }
 
 export function CollapsibleContent({
   content,
   isError = false,
-  collapsedChars = 200,
+  maxChars = 250,
 }: CollapsibleContentProps) {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const contentId = useId();
-  const totalChars = content.length;
-  const shouldCollapse = totalChars > collapsedChars;
-  const hiddenChars = totalChars - collapsedChars;
 
-  const displayContent = shouldCollapse && !isExpanded ? content.slice(0, collapsedChars) : content;
+  const { displayContent, shouldCollapse, hiddenLines } = useMemo(() => {
+    if (!content) {
+      return { displayContent: '', shouldCollapse: false, hiddenLines: 0 };
+    }
+
+    if (content.length <= maxChars) {
+      return { displayContent: content, shouldCollapse: false, hiddenLines: 0 };
+    }
+
+    // maxChars 以内に収まる行数を計算
+    const lines = content.split('\n');
+    let visibleLines = 0;
+    let charCount = 0;
+
+    for (const line of lines) {
+      const lineLength = line.length + (visibleLines > 0 ? 1 : 0);
+      if (charCount + lineLength > maxChars) break;
+      charCount += lineLength;
+      visibleLines++;
+    }
+
+    return {
+      displayContent: visibleLines > 0 ? lines.slice(0, visibleLines).join('\n') : '',
+      shouldCollapse: true,
+      hiddenLines: lines.length - visibleLines,
+    };
+  }, [content, maxChars]);
+
+  if (!content) return null;
+
+  const visibleContent = isExpanded ? content : displayContent;
+  const hasVisibleContent = visibleContent.length > 0;
+
+  const handleToggle = () => setIsExpanded(prev => !prev);
+
+  const toggleLabel = isExpanded
+    ? t('tools.collapse')
+    : t('tools.expandLines', { count: hiddenLines });
+
+  const toggleAriaLabel = isExpanded
+    ? t('tools.collapseContent')
+    : t('tools.showRemainingLinesContent', { count: hiddenLines });
+
+  // 表示するものがない場合は null を返す
+  if (!hasVisibleContent && !shouldCollapse) return null;
 
   return (
     <div className="mt-1 ml-4">
@@ -26,26 +70,39 @@ export function CollapsibleContent({
         <span className="select-none" aria-hidden="true">
           └─
         </span>
-        <pre
-          id={contentId}
-          className={cn(
-            'text-xs font-mono whitespace-pre-wrap break-all flex-1',
-            isError && 'text-destructive'
-          )}
-        >
-          {displayContent}
-        </pre>
+        {hasVisibleContent ? (
+          <pre
+            id={contentId}
+            className={cn(
+              'text-xs font-mono whitespace-pre-wrap break-all flex-1',
+              isError && 'text-destructive'
+            )}
+          >
+            {visibleContent}
+          </pre>
+        ) : (
+          <button
+            type="button"
+            onClick={handleToggle}
+            aria-expanded={isExpanded}
+            aria-controls={contentId}
+            aria-label={toggleAriaLabel}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {toggleLabel}
+          </button>
+        )}
       </div>
-      {shouldCollapse && (
+      {shouldCollapse && hasVisibleContent && (
         <button
           type="button"
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={handleToggle}
           aria-expanded={isExpanded}
           aria-controls={contentId}
-          aria-label={isExpanded ? 'コンテンツを折りたたむ' : `残り ${hiddenChars} 文字を表示`}
-          className="ml-6 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          aria-label={toggleAriaLabel}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-6"
         >
-          {isExpanded ? '折りたたむ' : `... +${hiddenChars} 文字`}
+          {toggleLabel}
         </button>
       )}
     </div>

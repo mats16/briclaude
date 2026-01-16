@@ -1,16 +1,17 @@
 import { useState, useId } from 'react';
-import type { SDKMessage } from '@repo/types';
+import { useTranslation } from 'react-i18next';
 import { Circle } from 'lucide-react';
-import { CollapsibleContent } from './CollapsibleContent';
+import type { SDKMessage } from '@repo/types';
+import { cn } from '@/lib/utils';
 import {
   getToolInputDisplay,
   extractNestedToolUses,
   countNestedToolUses,
-  type ToolResult,
 } from '@/lib/message-utils';
-import { cn } from '@/lib/utils';
+import { CollapsibleContent } from '../CollapsibleContent';
+import type { ToolResult } from './types';
 
-interface ToolUseBlockProps {
+interface TaskToolUseProps {
   name: string;
   input: Record<string, unknown>;
   result?: ToolResult;
@@ -18,43 +19,43 @@ interface ToolUseBlockProps {
   toolResultMap: Map<string, ToolResult>;
 }
 
-export function ToolUseBlock({
-  name,
-  input,
-  result,
-  childEvents,
-  toolResultMap,
-}: ToolUseBlockProps) {
+export function TaskToolUse({ name, input, result, childEvents, toolResultMap }: TaskToolUseProps) {
+  const [isInputExpanded, setIsInputExpanded] = useState(false);
   const inputDisplay = getToolInputDisplay(name, input);
-  const isTaskTool = name.toLowerCase() === 'task';
 
-  // ドットの色を状態に応じて変更
   const isRunning = !result;
   const isSuccess = result && !result.isError;
   const isError = result?.isError;
 
-  // Task ツールの場合、子イベントからネストされたツール使用を抽出
   const hasChildEvents = childEvents && childEvents.length > 0;
   const nestedToolCount = hasChildEvents ? countNestedToolUses(childEvents) : 0;
 
   return (
     <div className="py-1">
-      <div className="flex items-center gap-1">
+      <div className="flex items-start gap-1">
         <Circle
           aria-hidden="true"
           className={cn(
-            'h-2 w-2 fill-current flex-shrink-0',
+            'h-2 w-2 fill-current flex-shrink-0 mt-1.5',
             isRunning && 'text-foreground animate-pulse',
             isSuccess && 'text-green-500',
             isError && 'text-red-500'
           )}
         />
-        <span className="font-bold text-sm">{name}</span>
-        <span className="text-sm text-muted-foreground font-mono truncate">{inputDisplay}</span>
+        <span className="font-bold text-sm flex-shrink-0">{name}</span>
+        <button
+          type="button"
+          onClick={() => setIsInputExpanded(!isInputExpanded)}
+          className={cn(
+            'text-sm text-muted-foreground font-mono text-left',
+            isInputExpanded ? 'whitespace-pre-wrap break-all' : 'truncate'
+          )}
+        >
+          {inputDisplay}
+        </button>
       </div>
 
-      {/* Task ツールの場合は子イベントをネスト表示 */}
-      {isTaskTool && hasChildEvents ? (
+      {hasChildEvents ? (
         <TaskChildContent
           childEvents={childEvents}
           toolResultMap={toolResultMap}
@@ -74,11 +75,12 @@ interface TaskChildContentProps {
 }
 
 function TaskChildContent({ childEvents, toolResultMap, toolCount }: TaskChildContentProps) {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const contentId = useId();
   const nestedTools = extractNestedToolUses(childEvents, toolResultMap);
 
-  const summaryText = `${toolCount}個のツール使用`;
+  const summaryText = t('tools.toolUsesCount', { count: toolCount });
 
   return (
     <div className="mt-1 ml-4">
@@ -88,7 +90,9 @@ function TaskChildContent({ childEvents, toolResultMap, toolCount }: TaskChildCo
         aria-expanded={isExpanded}
         aria-controls={contentId}
         aria-label={
-          isExpanded ? 'ツール使用の詳細を折りたたむ' : `${toolCount}個のツール使用の詳細を表示`
+          isExpanded
+            ? t('tools.collapseToolDetails')
+            : t('tools.expandToolDetails', { count: toolCount })
         }
         className="flex items-start gap-1 text-muted-foreground hover:text-foreground transition-colors text-left w-full"
       >
@@ -119,24 +123,67 @@ interface NestedToolItemProps {
 }
 
 function NestedToolItem({ tool }: NestedToolItemProps) {
+  const { t } = useTranslation();
+  const [isInputExpanded, setIsInputExpanded] = useState(false);
   const [isResultExpanded, setIsResultExpanded] = useState(false);
   const resultId = useId();
+  const maxChars = 250;
+
   const hasResult = tool.result && tool.result.length > 0;
-  const shouldCollapseResult = hasResult && tool.result!.length > 200;
-  const hiddenChars = shouldCollapseResult ? tool.result!.length - 200 : 0;
+
+  const { displayResult, shouldCollapseResult, hiddenLines } = (() => {
+    if (!hasResult) {
+      return { displayResult: '', shouldCollapseResult: false, hiddenLines: 0 };
+    }
+
+    const totalChars = tool.result!.length;
+
+    if (totalChars <= maxChars) {
+      return { displayResult: tool.result!, shouldCollapseResult: false, hiddenLines: 0 };
+    }
+
+    const lines = tool.result!.split('\n');
+    const totalLines = lines.length;
+    let visibleLines = 0;
+    let charCount = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const lineLength = lines[i].length + (i > 0 ? 1 : 0);
+      if (charCount + lineLength > maxChars) {
+        break;
+      }
+      charCount += lineLength;
+      visibleLines++;
+    }
+
+    return {
+      displayResult: visibleLines > 0 ? lines.slice(0, visibleLines).join('\n') : '',
+      shouldCollapseResult: true,
+      hiddenLines: totalLines - visibleLines,
+    };
+  })();
 
   return (
     <div className="py-0.5">
-      <div className="flex items-center gap-1">
+      <div className="flex items-start gap-1">
         <Circle
           aria-hidden="true"
           className={cn(
-            'h-2 w-2 fill-current flex-shrink-0',
+            'h-2 w-2 fill-current flex-shrink-0 mt-1',
             tool.isError ? 'text-red-500' : 'text-green-500'
           )}
         />
-        <span className="font-bold text-xs">{tool.name}</span>
-        <span className="text-xs text-muted-foreground font-mono truncate">{tool.input}</span>
+        <span className="font-bold text-xs flex-shrink-0">{tool.name}</span>
+        <button
+          type="button"
+          onClick={() => setIsInputExpanded(!isInputExpanded)}
+          className={cn(
+            'text-xs text-muted-foreground font-mono text-left',
+            isInputExpanded ? 'whitespace-pre-wrap break-all' : 'truncate'
+          )}
+        >
+          {tool.input}
+        </button>
       </div>
 
       {hasResult && (
@@ -148,7 +195,7 @@ function NestedToolItem({ tool }: NestedToolItemProps) {
               tool.isError ? 'text-destructive' : 'text-muted-foreground'
             )}
           >
-            {shouldCollapseResult && !isResultExpanded ? tool.result!.slice(0, 200) : tool.result}
+            {isResultExpanded ? tool.result : displayResult}
           </pre>
           {shouldCollapseResult && (
             <button
@@ -156,10 +203,16 @@ function NestedToolItem({ tool }: NestedToolItemProps) {
               onClick={() => setIsResultExpanded(!isResultExpanded)}
               aria-expanded={isResultExpanded}
               aria-controls={resultId}
-              aria-label={isResultExpanded ? '結果を折りたたむ' : `残り ${hiddenChars} 文字を表示`}
+              aria-label={
+                isResultExpanded
+                  ? t('tools.collapseResult')
+                  : t('tools.showRemainingLines', { count: hiddenLines })
+              }
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              {isResultExpanded ? '折りたたむ' : `... +${hiddenChars} 文字`}
+              {isResultExpanded
+                ? t('tools.collapse')
+                : t('tools.expandLines', { count: hiddenLines })}
             </button>
           )}
         </div>

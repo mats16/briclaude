@@ -103,6 +103,8 @@ export interface SDKUserMessageEvent {
   session_id?: string;
   parent_tool_use_id?: string | null;
   message: UserMessageContent;
+  /** Skill実行時にシステムが自動生成したメッセージかどうか */
+  isSynthetic?: boolean;
 }
 
 /**

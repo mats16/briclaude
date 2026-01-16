@@ -9,7 +9,6 @@ import {
   RefreshCw,
   Bug,
   Rocket,
-  FileSearch,
   FolderGit2,
   Check,
   Download,
@@ -27,7 +26,7 @@ import { jobsService, reposService } from '@/services';
 import { useUser } from '@/hooks/useUser';
 import type { JobRun } from '@repo/types';
 
-export type QuickstartType = 'lakeflow' | 'unityCatalog' | 'databricksApps';
+export type QuickstartType = 'lakeflow' | 'databricksApps' | 'tbd';
 
 interface QuickstartModalProps {
   open: boolean;
@@ -525,8 +524,8 @@ function ComingSoonContent() {
 
 const QUICKSTART_ICONS: Record<QuickstartType, React.ElementType> = {
   lakeflow: Bug,
-  unityCatalog: FileSearch,
   databricksApps: Rocket,
+  tbd: Construction,
 };
 
 export function QuickstartModal({

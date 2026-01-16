@@ -103,8 +103,8 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
           h3: ({ children }) => <h3 className="text-base font-bold mt-2 mb-1">{children}</h3>,
           h4: ({ children }) => <h4 className="text-sm font-bold mt-2 mb-1">{children}</h4>,
           // リスト
-          ul: ({ children }) => <ul className="list-disc list-inside my-2">{children}</ul>,
-          ol: ({ children }) => <ol className="list-decimal list-inside my-2">{children}</ol>,
+          ul: ({ children }) => <ul className="list-disc pl-6 my-2">{children}</ul>,
+          ol: ({ children }) => <ol className="list-decimal pl-6 my-2">{children}</ol>,
           li: ({ children, node }) => {
             // 緩いリストの場合、li 内に p タグが生成される
             // その場合は children をそのまま表示（p のマージンは CSS で調整）
@@ -114,10 +114,10 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
               const childArray = React.Children.toArray(children);
               if (childArray.length === 1 && React.isValidElement(childArray[0])) {
                 const pProps = childArray[0].props as { children?: React.ReactNode };
-                return <li className="ml-2">{pProps.children}</li>;
+                return <li>{pProps.children}</li>;
               }
             }
-            return <li className="ml-2">{children}</li>;
+            return <li>{children}</li>;
           },
           // 段落
           p: ({ children }) => <p className="my-1">{children}</p>,

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import useLocalStorageState from 'use-local-storage-state';
 import { Send, Image, Loader2, Square } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -43,8 +44,7 @@ export function InputArea({
   const { images, isProcessing, addImages, removeImage, clearImages, hasImages } =
     useImageAttachment({
       onError: message => {
-        // TODO: トーストで表示
-        console.error(message);
+        toast.error(message);
       },
     });
 
@@ -82,6 +82,29 @@ export function InputArea({
       handleSubmit();
     }
   };
+
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      const imageFiles: File[] = [];
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            imageFiles.push(file);
+          }
+        }
+      }
+
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        addImages(imageFiles);
+      }
+    },
+    [addImages]
+  );
 
   const handleAbort = async () => {
     if (isAborting || !onAbort) return;
@@ -135,6 +158,7 @@ export function InputArea({
             value={content}
             onChange={e => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder={t('main.inputPlaceholder')}
             disabled={disabled}
             className="min-h-[40px] max-h-[150px] w-full resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none px-1 py-0"

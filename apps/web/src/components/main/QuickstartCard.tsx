@@ -19,13 +19,13 @@ export function QuickstartCard({ icon: Icon, title, description, onClick }: Quic
         'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
       )}
     >
-      <div className="flex items-center justify-center w-8 h-8 rounded-md bg-muted shrink-0">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </div>
-      <div className="min-w-0">
+      <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-muted shrink-0">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        </div>
         <h3 className="font-medium text-sm text-foreground leading-tight">{title}</h3>
-        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{description}</p>
       </div>
+      <p className="text-xs text-muted-foreground line-clamp-2">{description}</p>
     </button>
   );
 }

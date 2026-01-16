@@ -179,19 +179,19 @@
     "databricksAppsToggle": "Databricks Apps への自動デプロイを有効化",
     "quickstarts": {
       "lakeflow": {
-        "title": "Lakeflow Jobs のエラー調査",
+        "title": "ジョブのエラー調査",
         "description": "ジョブの失敗原因を分析し、解決策を提案します",
         "modalDescription": "Lakeflow Jobs で発生したエラーのログを解析し、根本原因の特定と修正方法を提案します。"
       },
-      "unityCatalog": {
-        "title": "Unity Catalog の EDA",
-        "description": "データカタログを探索し、スキーマを理解します",
-        "modalDescription": "Unity Catalog 内のテーブルやビューに対して探索的データ分析を実行し、データの特徴を把握します。"
-      },
       "databricksApps": {
-        "title": "Databricks Apps でのアプリ開発",
+        "title": "アプリの開発",
         "description": "Databricks Apps 上でアプリを構築します",
         "modalDescription": "Databricks Apps プラットフォームを活用したウェブアプリケーションの開発をサポートします。"
+      },
+      "tbd": {
+        "title": "Coming Soon",
+        "description": "新しいクイックスタートを準備中です",
+        "modalDescription": "この機能は近日公開予定です。"
       }
     }
   },
@@ -225,5 +225,19 @@
     "app": "アプリ",
     "logs": "ログ",
     "workspace": "ワークスペース"
+  },
+  "tools": {
+    "updateTodos": "Update Todos",
+    "readLines": "{{count}} 行を読み込み",
+    "collapse": "折りたたむ",
+    "expandLines": "+{{count}} 行",
+    "toolUsesCount": "{{count}}個のツール使用",
+    "collapseToolDetails": "ツール使用の詳細を折りたたむ",
+    "expandToolDetails": "{{count}}個のツール使用の詳細を表示",
+    "collapseResult": "結果を折りたたむ",
+    "showRemainingLines": "残り {{count}} 行を表示",
+    "collapseContent": "コンテンツを折りたたむ",
+    "showRemainingLinesContent": "残り {{count}} 行を表示",
+    "showFullDiff": "すべての差分を表示 (+{{count}} 行)"
   }
 }

@@ -80,7 +80,7 @@ The workspace path is provided via the \`DATABRICKS_WORKSPACE_PATH\` environment
 ### CLI Reference:
 
 - To push all files from the session directory to workspace:
-  \`databricks sync --exclude .claude/settings.local.json . "$DATABRICKS_WORKSPACE_PATH"\`
+  \`databricks sync --include "*" --exclude .claude/settings.local.json . "$DATABRICKS_WORKSPACE_PATH"\`
 - To check the upload result:
   \`databricks workspace list "$DATABRICKS_WORKSPACE_PATH"\`
 `.trim();
@@ -140,7 +140,7 @@ Use these MCP tools instead of CLI commands:
 ### Workspace Push (CLI):
 
 - To push all files from the session directory to workspace:
-  \`databricks sync --exclude .claude/settings.local.json . "$DATABRICKS_WORKSPACE_PATH"\`
+  \`databricks sync --include "*" --exclude .claude/settings.local.json . "$DATABRICKS_WORKSPACE_PATH"\`
 - To check the upload result:
   \`databricks workspace list "$DATABRICKS_WORKSPACE_PATH"\`
 
