@@ -60,6 +60,27 @@ export function CollapsibleContent({
 
   const showContent = isExpanded ? content : displayContent;
 
+  // 展開/折りたたみトグルボタン
+  const ToggleButton = ({ className: btnClassName }: { className?: string }) => (
+    <button
+      type="button"
+      onClick={() => setIsExpanded(!isExpanded)}
+      aria-expanded={isExpanded}
+      aria-controls={contentId}
+      aria-label={
+        isExpanded
+          ? t('tools.collapseContent')
+          : t('tools.showRemainingLinesContent', { count: hiddenLines })
+      }
+      className={cn(
+        'text-xs text-muted-foreground hover:text-foreground transition-colors',
+        btnClassName
+      )}
+    >
+      {isExpanded ? t('tools.collapse') : t('tools.expandLines', { count: hiddenLines })}
+    </button>
+  );
+
   return (
     <div className="mt-1 ml-4">
       {showContent ? (
@@ -82,34 +103,10 @@ export function CollapsibleContent({
           <span className="select-none" aria-hidden="true">
             └─
           </span>
-          <button
-            type="button"
-            onClick={() => setIsExpanded(!isExpanded)}
-            aria-expanded={isExpanded}
-            aria-controls={contentId}
-            aria-label={t('tools.showRemainingLinesContent', { count: hiddenLines })}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {t('tools.expandLines', { count: hiddenLines })}
-          </button>
+          <ToggleButton />
         </div>
       ) : null}
-      {shouldCollapse && showContent && (
-        <button
-          type="button"
-          onClick={() => setIsExpanded(!isExpanded)}
-          aria-expanded={isExpanded}
-          aria-controls={contentId}
-          aria-label={
-            isExpanded
-              ? t('tools.collapseContent')
-              : t('tools.showRemainingLinesContent', { count: hiddenLines })
-          }
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-6"
-        >
-          {isExpanded ? t('tools.collapse') : t('tools.expandLines', { count: hiddenLines })}
-        </button>
-      )}
+      {shouldCollapse && showContent && <ToggleButton className="ml-6" />}
     </div>
   );
 }

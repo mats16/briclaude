@@ -7,6 +7,18 @@ import type { DiffLine } from './types';
 
 const MAX_VISIBLE_LINES = 20;
 
+/**
+ * CSS color 値をサニタイズする
+ * Shiki は信頼できるライブラリだが、念のため不正な値を除外
+ */
+function sanitizeColor(color: string | undefined): string | undefined {
+  if (!color) return undefined;
+  // 有効な CSS color 形式のみ許可: #RGB, #RRGGBB, #RRGGBBAA, rgb(), rgba(), hsl(), hsla(), 色名
+  const validColorPattern =
+    /^(#[0-9a-fA-F]{3,8}|rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)|rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[\d.]+\s*\)|[a-zA-Z]+)$/;
+  return validColorPattern.test(color) ? color : undefined;
+}
+
 interface DiffViewProps {
   oldText: string;
   newText: string;
@@ -101,9 +113,11 @@ export function DiffDisplay({ lines, filePath, className }: DiffDisplayProps) {
   const visibleLines = isExpanded ? lines : lines.slice(0, MAX_VISIBLE_LINES);
   const hiddenLinesCount = lines.length - MAX_VISIBLE_LINES;
 
-  // 行番号の最大桁数を計算
-  const maxOldLineNum = Math.max(...lines.map(l => l.oldLineNumber ?? 0));
-  const maxNewLineNum = Math.max(...lines.map(l => l.newLineNumber ?? 0));
+  // 行番号の最大桁数を計算（空配列での -Infinity を防ぐため 0 をフォールバック）
+  const oldLineNumbers = lines.map(l => l.oldLineNumber ?? 0);
+  const newLineNumbers = lines.map(l => l.newLineNumber ?? 0);
+  const maxOldLineNum = oldLineNumbers.length > 0 ? Math.max(...oldLineNumbers) : 0;
+  const maxNewLineNum = newLineNumbers.length > 0 ? Math.max(...newLineNumbers) : 0;
   const oldLineWidth = Math.max(String(maxOldLineNum).length, 1);
   const newLineWidth = Math.max(String(maxNewLineNum).length, 1);
 
@@ -186,7 +200,7 @@ function DiffLineRow({ line, tokens, oldLineWidth, newLineWidth }: DiffLineRowPr
       <span className="whitespace-pre px-1">
         {tokens
           ? tokens.map((token, i) => (
-              <span key={i} style={{ color: token.color }}>
+              <span key={i} style={{ color: sanitizeColor(token.color) }}>
                 {token.content}
               </span>
             ))
