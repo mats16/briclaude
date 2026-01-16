@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { eq, desc } from 'drizzle-orm';
 import {
   query,
+  type McpServerConfig,
   type SDKMessage,
   type SDKResultMessage,
   type SDKSystemMessage,
@@ -388,20 +389,32 @@ export async function createSession(
     // outcomes に databricks_apps があるか確認
     const hasAppsOutcome = session_context.outcomes.some(o => o.type === 'databricks_apps');
 
-    // MCP サーバーを構築（databricks_apps がある場合のみ）
-    const mcpServers: Record<string, ReturnType<typeof createDbAppsMcpServer>> | undefined =
-      hasAppsOutcome && workspaceSources[0]?.path
-        ? {
-            dbapps: createDbAppsMcpServer(
-              sessionId,
-              fastify.config.DATABRICKS_HOST,
-              workspaceSources[0].path,
-              () => ctx.getAccessToken()
-            ),
-          }
-        : undefined;
+    // MCP サーバーを構築（固定で設定、allowedTools で制御）
+    const mcpServers: Record<string, McpServerConfig> = {};
 
-    // allowedTools を構築
+    // sql: OBO token がある場合に有効（ユーザーの Databricks 権限で SQL 実行）
+    const oboToken = ctx.oboAccessToken;
+    if (oboToken) {
+      mcpServers.sql = {
+        type: 'http',
+        url: `https://${fastify.config.DATABRICKS_HOST}/api/2.0/mcp/sql`,
+        headers: {
+          Authorization: `Bearer ${oboToken}`,
+        },
+      };
+    }
+
+    // apps: workspacePath がある場合に固定で追加
+    if (workspaceSources[0]?.path) {
+      mcpServers.apps = createDbAppsMcpServer(
+        sessionId,
+        fastify.config.DATABRICKS_HOST,
+        workspaceSources[0].path,
+        () => ctx.getAccessToken()
+      );
+    }
+
+    // allowedTools を構築（MCP ツールは allowedTools で制御）
     const allowedTools = [
       'Skill',
       'Bash',
@@ -412,14 +425,14 @@ export async function createSession(
       'Grep',
       'WebSearch',
       'WebFetch',
+      // mcp__sql は常時許可
+      'mcp__sql__execute_sql_read_only',
+      'mcp__sql__poll_sql_result',
     ];
-    if (hasAppsOutcome && workspaceSources[0]?.path) {
-      allowedTools.push(
-        'mcp__dbapps__create',
-        'mcp__dbapps__deploy',
-        'mcp__dbapps__get',
-        'mcp__dbapps__list_deployments'
-      );
+
+    // databricks_apps outcome がある場合は mcp__apps 関連ツールを許可
+    if (hasAppsOutcome) {
+      allowedTools.push('mcp__apps__*');
     }
 
     const response = query({
@@ -758,20 +771,32 @@ export async function sendMessageToSession(
     const hasAppsOutcome =
       sessionContext.outcomes?.some(o => o.type === 'databricks_apps') ?? false;
 
-    // MCP サーバーを構築（databricks_apps がある場合のみ）
-    const mcpServers: Record<string, ReturnType<typeof createDbAppsMcpServer>> | undefined =
-      hasAppsOutcome && workspacePath
-        ? {
-            dbapps: createDbAppsMcpServer(
-              sessionId,
-              fastify.config.DATABRICKS_HOST,
-              workspacePath,
-              () => ctx.getAccessToken()
-            ),
-          }
-        : undefined;
+    // MCP サーバーを構築（固定で設定、allowedTools で制御）
+    const mcpServers: Record<string, McpServerConfig> = {};
 
-    // allowedTools を構築
+    // sql: OBO token がある場合に有効（ユーザーの Databricks 権限で SQL 実行）
+    const oboToken = ctx.oboAccessToken;
+    if (oboToken) {
+      mcpServers.sql = {
+        type: 'http',
+        url: `https://${fastify.config.DATABRICKS_HOST}/api/2.0/mcp/sql`,
+        headers: {
+          Authorization: `Bearer ${oboToken}`,
+        },
+      };
+    }
+
+    // apps: workspacePath がある場合に固定で追加
+    if (workspacePath) {
+      mcpServers.apps = createDbAppsMcpServer(
+        sessionId,
+        fastify.config.DATABRICKS_HOST,
+        workspacePath,
+        () => ctx.getAccessToken()
+      );
+    }
+
+    // allowedTools を構築（MCP ツールは allowedTools で制御）
     const allowedTools = [
       'Skill',
       'Bash',
@@ -782,14 +807,14 @@ export async function sendMessageToSession(
       'Grep',
       'WebSearch',
       'WebFetch',
+      // mcp__sql は常時許可
+      'mcp__sql__execute_sql_read_only',
+      'mcp__sql__poll_sql_result',
     ];
-    if (hasAppsOutcome && workspacePath) {
-      allowedTools.push(
-        'mcp__dbapps__create',
-        'mcp__dbapps__deploy',
-        'mcp__dbapps__get',
-        'mcp__dbapps__list_deployments'
-      );
+
+    // databricks_apps outcome がある場合は mcp__apps 関連ツールを許可
+    if (hasAppsOutcome) {
+      allowedTools.push('mcp__apps__*');
     }
 
     const response = query({
