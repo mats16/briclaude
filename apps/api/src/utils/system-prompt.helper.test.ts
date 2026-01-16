@@ -16,13 +16,14 @@ describe('createWorkspacePushInstruction', () => {
     expect(result).toContain('databricks sync');
   });
 
-  it('should include CLI reference with actual path', () => {
+  it('should include CLI reference with environment variable', () => {
     const result = createWorkspacePushInstruction('/Workspace/test');
 
     expect(result).toContain('CLI Reference');
-    expect(result).toContain('databricks workspace list "/Workspace/test"');
+    expect(result).toContain('DATABRICKS_WORKSPACE_PATH');
+    expect(result).toContain('databricks workspace list "$DATABRICKS_WORKSPACE_PATH"');
     expect(result).toContain(
-      'databricks sync --exclude .claude/settings.local.json . "/Workspace/test"'
+      'databricks sync --exclude .claude/settings.local.json . "$DATABRICKS_WORKSPACE_PATH"'
     );
   });
 

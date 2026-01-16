@@ -70,7 +70,7 @@ Instructions:
 
 ## Databricks Workspace Push Requirements
 
-You are working on the copy of the following Databricks Workspace path: \`${workspacePath}\`
+The workspace path is provided via the \`DATABRICKS_WORKSPACE_PATH\` environment variable: \`${workspacePath}\`
 
 ### Important Instructions:
 
@@ -81,9 +81,9 @@ You are working on the copy of the following Databricks Workspace path: \`${work
 ### CLI Reference:
 
 - To push all files from the session directory to workspace:
-  \`databricks sync --exclude .claude/settings.local.json . "${workspacePath}"\`
+  \`databricks sync --exclude .claude/settings.local.json . "$DATABRICKS_WORKSPACE_PATH"\`
 - To check the upload result:
-  \`databricks workspace list "${workspacePath}"\`
+  \`databricks workspace list "$DATABRICKS_WORKSPACE_PATH"\`
 `.trim();
 }
 
@@ -110,9 +110,10 @@ Instructions:
 
 ## Databricks Apps Development Requirements
 
-Deploy the app with the exact name: \`${appName}\`
+- Workspace path: \`DATABRICKS_WORKSPACE_PATH\` = \`${workspacePath}\`
+- App name: \`DATABRICKS_APP_NAME\` = \`${appName}\`
 
-This app name is derived from the session ID and has a 1:1 mapping with the user's session. 
+The app name is derived from the session ID and has a 1:1 mapping with the user's session.
 Do not modify this name—changing it will break the association between the deployed app and its session.
 
 ### Important Instructions:
@@ -120,7 +121,7 @@ Do not modify this name—changing it will break the association between the dep
 **Use TodoWrite to create tasks for each step below.** Mark each task complete as you finish it.
 Do not consider the work done until the app is successfully deployed and verified.
 
-1. **CREATE** the app with the exact name: \`${appName}\` (takes ~2 minutes)
+1. **CREATE** the app (takes ~2 minutes)
 2. **DEVELOP** all your changes in the current working directory
 3. **PUSH** your completed work to the specified Workspace path (NOT sufficient, need to DEPLOY the app)
 4. **DEPLOY** the app from the specified Workspace path
@@ -129,15 +130,15 @@ Do not consider the work done until the app is successfully deployed and verifie
 ### CLI Reference:
 
 - To create the app:
-  \`databricks apps create "${appName}" --no-wait\`
+  \`databricks apps create "$DATABRICKS_APP_NAME" --no-wait\`
 - To deploy the app:
-  \`databricks apps deploy "${appName}" --source-code-path "${workspacePath}"\`
+  \`databricks apps deploy "$DATABRICKS_APP_NAME" --source-code-path "$DATABRICKS_WORKSPACE_PATH"\`
 - To get the app details and status:
-  \`databricks apps get "${appName}"\`
+  \`databricks apps get "$DATABRICKS_APP_NAME"\`
 - To push all files from the session directory to workspace:
-  \`databricks sync --exclude .claude/settings.local.json . "${workspacePath}"\`
+  \`databricks sync --exclude .claude/settings.local.json . "$DATABRICKS_WORKSPACE_PATH"\`
 - To check the upload result:
-  \`databricks workspace list "${workspacePath}"\`
+  \`databricks workspace list "$DATABRICKS_WORKSPACE_PATH"\`
 
 If any step fails, troubleshoot and retry. Do NOT consider the task complete until the app is accessible.
 `.trim();

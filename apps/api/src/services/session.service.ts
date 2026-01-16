@@ -417,6 +417,7 @@ export async function createSession(
           // Session
           CLAUDE_CODE_REMOTE_SESSION_ID: sessionId.toString(),
           DATABRICKS_APP_NAME: `app-${sessionId.getSuffix()}`,
+          DATABRICKS_WORKSPACE_PATH: workspaceSources[0]?.path,
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
           ANTHROPIC_AUTH_TOKEN: accessToken,
@@ -722,6 +723,10 @@ export async function sendMessageToSession(
     // AbortController を作成（abort 用）
     const abortController = new AbortController();
 
+    const workspacePath = sessionContext.sources.find(
+      (s): s is DatabricksWorkspaceSource => s.type === 'databricks_workspace'
+    )?.path;
+
     const response = query({
       prompt,
       options: {
@@ -756,6 +761,7 @@ export async function sendMessageToSession(
           CLAUDE_CODE_SESSION_ID: sessionRow.sdkSessionId,
           CLAUDE_CODE_REMOTE_SESSION_ID: sessionId.toString(),
           DATABRICKS_APP_NAME: `app-${sessionId.getSuffix()}`,
+          DATABRICKS_WORKSPACE_PATH: workspacePath,
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
           ANTHROPIC_AUTH_TOKEN: accessToken,
