@@ -23,7 +23,7 @@ describe('createWorkspacePushInstruction', () => {
     expect(result).toContain('DATABRICKS_WORKSPACE_PATH');
     expect(result).toContain('databricks workspace list "$DATABRICKS_WORKSPACE_PATH"');
     expect(result).toContain(
-      'databricks sync --exclude .claude/settings.local.json . "$DATABRICKS_WORKSPACE_PATH"'
+      'databricks sync --include "*" --exclude .claude/settings.local.json . "$DATABRICKS_WORKSPACE_PATH"'
     );
   });
 
