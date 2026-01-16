@@ -101,15 +101,19 @@ export function DiffDisplay({ lines, filePath, className }: DiffDisplayProps) {
   const shouldCollapse = lines.length > MAX_VISIBLE_LINES;
   const visibleLines = isExpanded ? lines : lines.slice(0, MAX_VISIBLE_LINES);
 
-  // パフォーマンス最適化: 表示されている行のみをハイライト
-  // 折りたたみ時は MAX_VISIBLE_LINES 行のみ、展開時は全行をハイライト
-  const highlightedLines = useMemo(() => {
+  // パフォーマンス最適化: 全行を事前にハイライトし、表示時にスライス
+  // isExpanded に依存しないことで、展開/折りたたみ時の再計算を防ぐ
+  const allHighlightedLines = useMemo(() => {
     if (!highlighter) return null;
 
-    const linesToHighlight = isExpanded ? lines : lines.slice(0, MAX_VISIBLE_LINES);
-    const code = linesToHighlight.map(l => l.content).join('\n');
+    const code = lines.map(l => l.content).join('\n');
     return highlightCode(highlighter, code, lang);
-  }, [highlighter, lines, lang, isExpanded]);
+  }, [highlighter, lines, lang]);
+
+  const highlightedLines = allHighlightedLines?.slice(
+    0,
+    isExpanded ? undefined : MAX_VISIBLE_LINES
+  );
 
   if (lines.length === 0) return null;
   const hiddenLinesCount = lines.length - MAX_VISIBLE_LINES;
