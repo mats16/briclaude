@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import useLocalStorageState from 'use-local-storage-state';
 import { Send, Image, Loader2, Square } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -43,8 +44,7 @@ export function InputArea({
   const { images, isProcessing, addImages, removeImage, clearImages, hasImages } =
     useImageAttachment({
       onError: message => {
-        // TODO: トーストで表示
-        console.error(message);
+        toast.error(message);
       },
     });
 
