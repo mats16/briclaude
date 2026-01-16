@@ -414,6 +414,9 @@ export async function createSession(
           PATH: fastify.config.PATH,
           HOME: userHome,
           CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
+          // Session
+          CLAUDE_CODE_REMOTE_SESSION_ID: sessionId.toString(),
+          DATABRICKS_APP_NAME: `app-${sessionId.getSuffix()}`,
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
           ANTHROPIC_AUTH_TOKEN: accessToken,
@@ -749,6 +752,10 @@ export async function sendMessageToSession(
           PATH: fastify.config.PATH,
           HOME: userHome,
           CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
+          // Session
+          CLAUDE_CODE_SESSION_ID: sessionRow.sdkSessionId,
+          CLAUDE_CODE_REMOTE_SESSION_ID: sessionId.toString(),
+          DATABRICKS_APP_NAME: `app-${sessionId.getSuffix()}`,
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
           ANTHROPIC_AUTH_TOKEN: accessToken,

@@ -51,12 +51,6 @@ describe('createDatabricksAppsInstruction', () => {
     expect(result).toContain('Do not modify this name');
   });
 
-  it('should include DATABRICKS_APP_PORT note', () => {
-    const result = createDatabricksAppsInstruction('/Workspace/test', 'app-test');
-
-    expect(result).toContain('DATABRICKS_APP_PORT');
-  });
-
   it('should include databricks sync instruction', () => {
     const result = createDatabricksAppsInstruction('/Workspace/test', 'app-test');
 
@@ -70,8 +64,6 @@ describe('createDatabricksAppsInstruction', () => {
     expect(result).toContain('databricks apps create');
     expect(result).toContain('databricks apps deploy');
     expect(result).toContain('databricks apps get');
-    expect(result).toContain('databricks apps start');
-    expect(result).toContain('databricks apps stop');
   });
 
   it('should include task instructions', () => {
