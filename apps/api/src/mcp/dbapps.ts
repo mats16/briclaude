@@ -135,8 +135,7 @@ This operation typically takes about 2 minutes to complete. After creating, you 
         description: `Deploy the Databricks App.
 
 - App name: **${appName}**
-- Source code path: **${workspacePath}**
-- App URL: https://${databricksHost}/apps/${appName}`,
+- Source code path: **${workspacePath}**`,
         inputSchema: {
           type: 'object' as const,
           properties: {},
