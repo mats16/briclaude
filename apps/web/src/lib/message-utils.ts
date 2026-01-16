@@ -135,6 +135,17 @@ export function getToolInputDisplay(name: string, input: Record<string, unknown>
     case 'mcp__sql__execute_sql_read_only':
     case 'mcp__sql__execute_sql':
       return typeof input.query === 'string' ? input.query : '';
+    case 'todowrite':
+      if (Array.isArray(input.todos)) {
+        return input.todos
+          .map((todo: { status?: string; content?: string }) => {
+            const status =
+              todo.status === 'completed' ? '✓' : todo.status === 'in_progress' ? '→' : '○';
+            return `${status} ${todo.content ?? ''}`;
+          })
+          .join('\n');
+      }
+      return '';
     default:
       return JSON.stringify(input);
   }

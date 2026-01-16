@@ -28,6 +28,7 @@ export function ToolUseBlock({
   const [isInputExpanded, setIsInputExpanded] = useState(false);
   const inputDisplay = getToolInputDisplay(name, input);
   const isTaskTool = name.toLowerCase() === 'task';
+  const isTodoWriteTool = name.toLowerCase() === 'todowrite';
 
   // ドットの色を状態に応じて変更
   const isRunning = !result;
@@ -37,6 +38,30 @@ export function ToolUseBlock({
   // Task ツールの場合、子イベントからネストされたツール使用を抽出
   const hasChildEvents = childEvents && childEvents.length > 0;
   const nestedToolCount = hasChildEvents ? countNestedToolUses(childEvents) : 0;
+
+  // TodoWrite ツールの場合の表示名とコンテンツ
+  const displayName = isTodoWriteTool ? 'Update Todos' : name;
+
+  // TodoWrite ツールの場合は input.todos を表示
+  if (isTodoWriteTool) {
+    return (
+      <div className="py-1">
+        <div className="flex items-start gap-1">
+          <Circle
+            aria-hidden="true"
+            className={cn(
+              'h-2 w-2 fill-current flex-shrink-0 mt-1.5',
+              isRunning && 'text-foreground animate-pulse',
+              isSuccess && 'text-green-500',
+              isError && 'text-red-500'
+            )}
+          />
+          <span className="font-bold text-sm flex-shrink-0">{displayName}</span>
+        </div>
+        <TodoList todos={input.todos as TodoItem[]} />
+      </div>
+    );
+  }
 
   return (
     <div className="py-1">
@@ -50,7 +75,7 @@ export function ToolUseBlock({
             isError && 'text-red-500'
           )}
         />
-        <span className="font-bold text-sm flex-shrink-0">{name}</span>
+        <span className="font-bold text-sm flex-shrink-0">{displayName}</span>
         <button
           type="button"
           onClick={() => setIsInputExpanded(!isInputExpanded)}
@@ -218,6 +243,52 @@ function NestedToolItem({ tool }: NestedToolItemProps) {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// TodoWrite 用の型とコンポーネント
+interface TodoItem {
+  status?: 'pending' | 'in_progress' | 'completed';
+  content?: string;
+  activeForm?: string;
+}
+
+interface TodoListProps {
+  todos: TodoItem[] | undefined;
+}
+
+function TodoList({ todos }: TodoListProps) {
+  if (!todos || !Array.isArray(todos) || todos.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-1 ml-4">
+      <div className="flex items-start gap-1 text-muted-foreground">
+        <span className="select-none" aria-hidden="true">
+          └
+        </span>
+        <ul className="text-xs font-mono space-y-0.5">
+          {todos.map((todo, index) => {
+            const isInProgress = todo.status === 'in_progress';
+            const isCompleted = todo.status === 'completed';
+            const displayText = isInProgress ? todo.activeForm : todo.content;
+            const checkbox = isCompleted ? '☑' : '☐';
+
+            return (
+              <li key={index} className="flex items-start gap-1">
+                <span>{checkbox}</span>
+                <span
+                  className={cn(isInProgress && 'text-foreground', isCompleted && 'line-through')}
+                >
+                  {displayText}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </div>
   );
 }
