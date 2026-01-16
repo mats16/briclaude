@@ -98,19 +98,20 @@ export function DiffDisplay({ lines, filePath, className }: DiffDisplayProps) {
 
   const lang = filePath ? getLanguageFromPath(filePath) : 'typescript';
 
-  // Shiki でハイライト済みのトークンを取得
+  const shouldCollapse = lines.length > MAX_VISIBLE_LINES;
+  const visibleLines = isExpanded ? lines : lines.slice(0, MAX_VISIBLE_LINES);
+
+  // パフォーマンス最適化: 表示されている行のみをハイライト
+  // 折りたたみ時は MAX_VISIBLE_LINES 行のみ、展開時は全行をハイライト
   const highlightedLines = useMemo(() => {
     if (!highlighter) return null;
 
-    // 全行のコードを結合してハイライト
-    const code = lines.map(l => l.content).join('\n');
+    const linesToHighlight = isExpanded ? lines : lines.slice(0, MAX_VISIBLE_LINES);
+    const code = linesToHighlight.map(l => l.content).join('\n');
     return highlightCode(highlighter, code, lang);
-  }, [highlighter, lines, lang]);
+  }, [highlighter, lines, lang, isExpanded]);
 
   if (lines.length === 0) return null;
-
-  const shouldCollapse = lines.length > MAX_VISIBLE_LINES;
-  const visibleLines = isExpanded ? lines : lines.slice(0, MAX_VISIBLE_LINES);
   const hiddenLinesCount = lines.length - MAX_VISIBLE_LINES;
 
   // 行番号の最大桁数を計算（空配列での -Infinity を防ぐため 0 をフォールバック）

@@ -19,29 +19,22 @@ export function CollapsibleContent({
   const contentId = useId();
 
   const { displayContent, shouldCollapse, hiddenLines } = useMemo(() => {
-    // content が undefined または空の場合
     if (!content) {
       return { displayContent: '', shouldCollapse: false, hiddenLines: 0 };
     }
 
-    const totalChars = content.length;
-
-    // 250文字以下なら折り畳まない
-    if (totalChars <= maxChars) {
+    if (content.length <= maxChars) {
       return { displayContent: content, shouldCollapse: false, hiddenLines: 0 };
     }
 
-    // 250文字以内に収まる行数を計算
+    // maxChars 以内に収まる行数を計算
     const lines = content.split('\n');
-    const totalLines = lines.length;
     let visibleLines = 0;
     let charCount = 0;
 
-    for (let i = 0; i < lines.length; i++) {
-      const lineLength = lines[i].length + (i > 0 ? 1 : 0); // 改行文字を含む
-      if (charCount + lineLength > maxChars) {
-        break;
-      }
+    for (const line of lines) {
+      const lineLength = line.length + (visibleLines > 0 ? 1 : 0);
+      if (charCount + lineLength > maxChars) break;
       charCount += lineLength;
       visibleLines++;
     }
@@ -49,45 +42,35 @@ export function CollapsibleContent({
     return {
       displayContent: visibleLines > 0 ? lines.slice(0, visibleLines).join('\n') : '',
       shouldCollapse: true,
-      hiddenLines: totalLines - visibleLines,
+      hiddenLines: lines.length - visibleLines,
     };
   }, [content, maxChars]);
 
-  // content が undefined または空の場合は何も表示しない
-  if (!content) {
-    return null;
-  }
+  if (!content) return null;
 
-  const showContent = isExpanded ? content : displayContent;
+  const visibleContent = isExpanded ? content : displayContent;
+  const hasVisibleContent = visibleContent.length > 0;
 
-  // 展開/折りたたみトグルボタン
-  const ToggleButton = ({ className: btnClassName }: { className?: string }) => (
-    <button
-      type="button"
-      onClick={() => setIsExpanded(!isExpanded)}
-      aria-expanded={isExpanded}
-      aria-controls={contentId}
-      aria-label={
-        isExpanded
-          ? t('tools.collapseContent')
-          : t('tools.showRemainingLinesContent', { count: hiddenLines })
-      }
-      className={cn(
-        'text-xs text-muted-foreground hover:text-foreground transition-colors',
-        btnClassName
-      )}
-    >
-      {isExpanded ? t('tools.collapse') : t('tools.expandLines', { count: hiddenLines })}
-    </button>
-  );
+  const handleToggle = () => setIsExpanded(prev => !prev);
+
+  const toggleLabel = isExpanded
+    ? t('tools.collapse')
+    : t('tools.expandLines', { count: hiddenLines });
+
+  const toggleAriaLabel = isExpanded
+    ? t('tools.collapseContent')
+    : t('tools.showRemainingLinesContent', { count: hiddenLines });
+
+  // 表示するものがない場合は null を返す
+  if (!hasVisibleContent && !shouldCollapse) return null;
 
   return (
     <div className="mt-1 ml-4">
-      {showContent ? (
-        <div className="flex items-start gap-1 text-muted-foreground">
-          <span className="select-none" aria-hidden="true">
-            └─
-          </span>
+      <div className="flex items-start gap-1 text-muted-foreground">
+        <span className="select-none" aria-hidden="true">
+          └─
+        </span>
+        {hasVisibleContent ? (
           <pre
             id={contentId}
             className={cn(
@@ -95,18 +78,33 @@ export function CollapsibleContent({
               isError && 'text-destructive'
             )}
           >
-            {showContent}
+            {visibleContent}
           </pre>
-        </div>
-      ) : shouldCollapse ? (
-        <div className="flex items-start gap-1 text-muted-foreground">
-          <span className="select-none" aria-hidden="true">
-            └─
-          </span>
-          <ToggleButton />
-        </div>
-      ) : null}
-      {shouldCollapse && showContent && <ToggleButton className="ml-6" />}
+        ) : (
+          <button
+            type="button"
+            onClick={handleToggle}
+            aria-expanded={isExpanded}
+            aria-controls={contentId}
+            aria-label={toggleAriaLabel}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {toggleLabel}
+          </button>
+        )}
+      </div>
+      {shouldCollapse && hasVisibleContent && (
+        <button
+          type="button"
+          onClick={handleToggle}
+          aria-expanded={isExpanded}
+          aria-controls={contentId}
+          aria-label={toggleAriaLabel}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-6"
+        >
+          {toggleLabel}
+        </button>
+      )}
     </div>
   );
 }
