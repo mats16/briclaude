@@ -91,11 +91,11 @@ export function createDbAppsMcpServer(
   }
 
   return createSdkMcpServer({
-    name: 'dbapps',
+    name: 'apps',
     version: '1.0.0',
     tools: [
       {
-        name: 'create',
+        name: 'create_app',
         description: `Create a new Databricks App for this session.
 
 The app name is automatically generated as: **${appName}**
@@ -131,7 +131,7 @@ This operation typically takes about 2 minutes to complete. After creating, you 
         },
       },
       {
-        name: 'deploy',
+        name: 'deploy_app',
         description: `Deploy the Databricks App.
 
 - App name: **${appName}**
@@ -154,7 +154,7 @@ This operation typically takes about 2 minutes to complete. After creating, you 
         },
       },
       {
-        name: 'get',
+        name: 'show_app',
         description: `Get information about the Databricks App.
 
 The app name is: **${appName}**
