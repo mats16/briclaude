@@ -35,7 +35,11 @@ export function extractToolResults(events: SDKMessage[]): Map<string, ToolResult
       if (isToolResultContentBlock(block)) {
         toolResultMap.set(block.tool_use_id, {
           content:
-            typeof block.content === 'string' ? block.content : JSON.stringify(block.content),
+            typeof block.content === 'string'
+              ? block.content
+              : block.content != null
+                ? JSON.stringify(block.content)
+                : '',
           isError: block.is_error ?? false,
         });
       }

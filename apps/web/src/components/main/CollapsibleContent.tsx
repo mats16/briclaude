@@ -14,6 +14,12 @@ export function CollapsibleContent({
 }: CollapsibleContentProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const contentId = useId();
+
+  // content が undefined または空の場合は何も表示しない
+  if (!content) {
+    return null;
+  }
+
   const totalChars = content.length;
   const shouldCollapse = totalChars > collapsedChars;
   const hiddenChars = totalChars - collapsedChars;
