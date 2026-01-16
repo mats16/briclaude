@@ -25,19 +25,18 @@ export function buildSystemPromptConfig(outcomes: SessionOutcome[] = []): System
     (o): o is DatabricksWorkspaceSource => o.type === 'databricks_workspace'
   );
   const appsOutcome = outcomes.find(
-    (o): o is DatabricksAppsOutcome => o.type === 'databricks_apps' && !!o.name
+    (o): o is DatabricksAppsOutcome => o.type === 'databricks_apps'
   );
 
   const workspacePath = workspaceOutcome?.path;
-  const appName = appsOutcome?.name;
 
   // Apps outcome がある場合は Apps instruction のみ（Workspace Push を含む）
   // そうでなければ Workspace instruction のみ
   // 注: Apps のみのパターンは存在しない（Apps がある場合は必ず Workspace もある）
   let append: string | undefined;
 
-  if (appName && workspacePath) {
-    append = createDatabricksAppsInstruction(workspacePath, appName);
+  if (appsOutcome && workspacePath) {
+    append = createDatabricksAppsInstruction(workspacePath);
   } else if (workspacePath) {
     append = createWorkspacePushInstruction(workspacePath);
   }
@@ -91,16 +90,15 @@ The workspace path is provided via the \`DATABRICKS_WORKSPACE_PATH\` environment
  * Databricks Apps をデプロイするための systemPrompt 追加指示を生成
  *
  * @param workspacePath - Workspace のパス
- * @param appName - デプロイする App の名前
  * @returns systemPrompt に追加する指示文字列
  *
  * @example
  * ```typescript
- * const instruction = createDatabricksAppsInstruction('/Workspace/Users/user@example.com/project', 'app-01h455vb4pex5vsknk084sn02q');
+ * const instruction = createDatabricksAppsInstruction('/Workspace/Users/user@example.com/project');
  * // Returns markdown instruction text for Claude
  * ```
  */
-export function createDatabricksAppsInstruction(workspacePath: string, appName: string): string {
+export function createDatabricksAppsInstruction(workspacePath: string): string {
   return `
 Your task is to complete the request described in the task description.
 
@@ -111,35 +109,41 @@ Instructions:
 ## Databricks Apps Development Requirements
 
 - Workspace path: \`DATABRICKS_WORKSPACE_PATH\` = \`${workspacePath}\`
-- App name: \`DATABRICKS_APP_NAME\` = \`${appName}\`
 
-The app name is derived from the session ID and has a 1:1 mapping with the user's session.
-Do not modify this name—changing it will break the association between the deployed app and its session.
+### App Name:
+
+The app name is **automatically generated** from the session ID. You don't need to choose an app name.
+Use the MCP tools below - they already know the correct app name.
 
 ### Important Instructions:
 
 **Use TodoWrite to create tasks for each step below.** Mark each task complete as you finish it.
 Do not consider the work done until the app is successfully deployed and verified.
 
-1. **CREATE** the app (takes ~2 minutes)
+1. **CREATE** the app using \`mcp__dbapps__create\` (takes ~2 minutes)
 2. **DEVELOP** all your changes in the current working directory
-3. **PUSH** your completed work to the specified Workspace path (NOT sufficient, need to DEPLOY the app)
-4. **DEPLOY** the app from the specified Workspace path
-5. **VERIFY** deployment status
+3. **PUSH** your completed work to the specified Workspace path
+4. **DEPLOY** the app using \`mcp__dbapps__deploy\` (session outcomes are automatically updated)
+5. **VERIFY** deployment status using \`mcp__dbapps__get\`
 
-### CLI Reference:
+### MCP Tools Reference:
 
-- To create the app:
-  \`databricks apps create "$DATABRICKS_APP_NAME" --no-wait\`
-- To deploy the app:
-  \`databricks apps deploy "$DATABRICKS_APP_NAME" --source-code-path "$DATABRICKS_WORKSPACE_PATH"\`
-- To get the app details and status:
-  \`databricks apps get "$DATABRICKS_APP_NAME"\`
+Use these MCP tools instead of CLI commands:
+
+| Tool | Description |
+|------|-------------|
+| \`mcp__dbapps__create\` | Create the app (app name is auto-generated) |
+| \`mcp__dbapps__deploy({ source_code_path: "$DATABRICKS_WORKSPACE_PATH" })\` | Deploy the app (auto-updates session outcomes) |
+| \`mcp__dbapps__get\` | Get app details and status |
+| \`mcp__dbapps__list_deployments\` | List deployment history |
+
+### Workspace Push (CLI):
+
 - To push all files from the session directory to workspace:
   \`databricks sync --exclude .claude/settings.local.json . "$DATABRICKS_WORKSPACE_PATH"\`
 - To check the upload result:
   \`databricks workspace list "$DATABRICKS_WORKSPACE_PATH"\`
 
-If any step fails, troubleshoot and retry. Do NOT consider the task complete until the app is accessible.
+If any step fails, troubleshoot and retry. Do NOT consider the task complete until the app is accessible and verified.
 `.trim();
 }
