@@ -25,7 +25,8 @@ export async function build() {
   await app.register(configPlugin);
 
   // データベースプラグイン（configの後、他のプラグインの前）
-  await app.register(databasePlugin);
+  // TEMPORARY: Disabled for skill testing without database
+  // await app.register(databasePlugin);
 
   // WebSocket プラグイン
   await app.register(websocketPlugin);
@@ -40,14 +41,15 @@ export async function build() {
 
   // ルート登録（静的ファイルより先に）
   await app.register(healthRoute, { prefix: '/api' });
-  await app.register(userRoute, { prefix: '/api' });
-  await app.register(userTokensRoute, { prefix: '/api' });
-  await app.register(sessionRoute, { prefix: '/api' });
-  await app.register(sessionAppRoute, { prefix: '/api' });
-  await app.register(titleRoute, { prefix: '/api' });
-  await app.register(workspaceRoute, { prefix: '/api/databricks' });
-  await app.register(reposRoute, { prefix: '/api/databricks' });
-  await app.register(jobsRoute, { prefix: '/api/databricks' });
+  // TEMPORARY: Disabled database-dependent routes for skill testing
+  // await app.register(userRoute, { prefix: '/api' });
+  // await app.register(userTokensRoute, { prefix: '/api' });
+  // await app.register(sessionRoute, { prefix: '/api' });
+  // await app.register(sessionAppRoute, { prefix: '/api' });
+  // await app.register(titleRoute, { prefix: '/api' });
+  // await app.register(workspaceRoute, { prefix: '/api/databricks' });
+  // await app.register(reposRoute, { prefix: '/api/databricks' });
+  // await app.register(jobsRoute, { prefix: '/api/databricks' });
   await app.register(userSkillsRoute, { prefix: '/api' });
 
   // APIルートのキャッシュ制御
