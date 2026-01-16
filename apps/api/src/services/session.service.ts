@@ -443,7 +443,7 @@ export async function createSession(
           HOME: userHome,
           CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
           // Session
-          CLAUDE_CODE_REMOTE_SESSION_ID: sessionId.toString(),
+          SESSION_ID: sessionId.toString(),
           DATABRICKS_WORKSPACE_PATH: workspaceSources[0]?.path,
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
@@ -815,7 +815,7 @@ export async function sendMessageToSession(
           CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
           // Session
           CLAUDE_CODE_SESSION_ID: sessionRow.sdkSessionId,
-          CLAUDE_CODE_REMOTE_SESSION_ID: sessionId.toString(),
+          SESSION_ID: sessionId.toString(),
           DATABRICKS_WORKSPACE_PATH: workspacePath,
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
