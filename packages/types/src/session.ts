@@ -187,6 +187,36 @@ export interface ChatMessage {
 }
 
 // =====================================================
+// Session Usage Types (GET /api/sessions/:session_id/usage)
+// =====================================================
+
+/**
+ * モデル別使用量情報
+ */
+export interface ModelUsageInfo {
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_input_tokens: number;
+  cache_creation_input_tokens: number;
+  web_search_requests: number;
+  cost_usd: number;
+  context_window: number;
+  max_output_tokens: number;
+}
+
+/**
+ * GET /api/sessions/:session_id/usage のレスポンス
+ */
+export interface SessionUsageResponse {
+  session_id: string;
+  total_cost_usd: number;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  model_usage: Record<string, ModelUsageInfo>;
+  updated_at: string;
+}
+
+// =====================================================
 // Legacy Types (後方互換性のため残す)
 // =====================================================
 

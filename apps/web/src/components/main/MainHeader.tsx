@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GitBranch, ChevronDown, Pencil, Archive } from 'lucide-react';
+import { GitBranch, ChevronDown, Pencil, Archive, DollarSign } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,9 +17,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+
 interface MainHeaderProps {
   title?: string;
   branchName?: string;
+  totalCostUsd?: number;
   onTitleUpdate?: (newTitle: string) => Promise<void>;
   onArchive?: () => Promise<void>;
 }
@@ -27,6 +29,7 @@ interface MainHeaderProps {
 export function MainHeader({
   title = 'New Session',
   branchName,
+  totalCostUsd,
   onTitleUpdate,
   onArchive,
 }: MainHeaderProps) {
@@ -82,6 +85,21 @@ export function MainHeader({
         </div>
 
         <div className="flex items-center gap-2">
+          {totalCostUsd !== undefined && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+                    <DollarSign className="h-3.5 w-3.5" />
+                    <span className="text-xs">{totalCostUsd.toFixed(4)}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('main.totalCost')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           {branchName && (
             <TooltipProvider>
               <Tooltip>

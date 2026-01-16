@@ -46,7 +46,8 @@
     "sessionNotFoundDescription": "このセッションは削除されたか、存在しない可能性があります。",
     "goHome": "ホームに戻る",
     "stop": "停止",
-    "thinking": "Thinking…"
+    "thinking": "Thinking…",
+    "totalCost": "合計コスト (USD)"
   },
   "image": {
     "unsupportedFormat": "{{fileName}} はサポートされていない画像形式です",
