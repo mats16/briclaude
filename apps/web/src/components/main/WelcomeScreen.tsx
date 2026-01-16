@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import useLocalStorageState from 'use-local-storage-state';
 import { useTranslation } from 'react-i18next';
-import { Send, Image, ChevronDown, Check, Loader2, Bug, FileSearch, Rocket } from 'lucide-react';
+import { Send, Image, ChevronDown, Check, Loader2, Bug, Rocket, Construction } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -130,16 +130,16 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
       description: t('welcome.quickstarts.lakeflow.description'),
     },
     {
-      type: 'unityCatalog' as const,
-      icon: FileSearch,
-      title: t('welcome.quickstarts.unityCatalog.title'),
-      description: t('welcome.quickstarts.unityCatalog.description'),
-    },
-    {
       type: 'databricksApps' as const,
       icon: Rocket,
       title: t('welcome.quickstarts.databricksApps.title'),
       description: t('welcome.quickstarts.databricksApps.description'),
+    },
+    {
+      type: 'tbd' as const,
+      icon: Construction,
+      title: t('welcome.quickstarts.tbd.title'),
+      description: t('welcome.quickstarts.tbd.description'),
     },
   ];
 
