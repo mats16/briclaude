@@ -54,7 +54,6 @@ describe('config plugin', () => {
       expect(app.config.NODE_ENV).toBe('test');
       expect(app.config.PORT).toBe(8000);
       expect(app.config.DATABRICKS_APP_PORT).toBe(8000);
-      expect(app.config.SQL_WAREHOUSE_ID).toBe('');
       expect(app.config.DATABRICKS_APP_NAME).toBe('');
       expect(app.config.DATABRICKS_WORKSPACE_ID).toBe('');
     });
@@ -223,7 +222,6 @@ describe('config plugin', () => {
       process.env.DATABRICKS_WORKSPACE_ID = 'workspace-123';
       process.env.DATABRICKS_CLIENT_ID = 'client-id';
       process.env.DATABRICKS_CLIENT_SECRET = 'client-secret';
-      process.env.SQL_WAREHOUSE_ID = 'warehouse-123';
 
       await app.register(configPlugin);
 
@@ -231,7 +229,6 @@ describe('config plugin', () => {
       expect(app.config.DATABRICKS_WORKSPACE_ID).toBe('workspace-123');
       expect(app.config.DATABRICKS_CLIENT_ID).toBe('client-id');
       expect(app.config.DATABRICKS_CLIENT_SECRET).toBe('client-secret');
-      expect(app.config.SQL_WAREHOUSE_ID).toBe('warehouse-123');
     });
   });
 });
