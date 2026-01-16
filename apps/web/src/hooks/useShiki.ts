@@ -1,19 +1,25 @@
 import { useState, useEffect } from 'react';
-import { createHighlighter, type Highlighter, type BundledLanguage } from 'shiki';
+import {
+  createHighlighter,
+  type HighlighterGeneric,
+  type BundledLanguage,
+  type BundledTheme,
+  bundledLanguages,
+} from 'shiki/bundle/web';
 
 /**
  * @fileoverview Shiki シンタックスハイライターのためのReactフック
  *
- * このモジュールは Shiki ライブラリを使用したコードハイライト機能を提供します。
+ * このモジュールは Shiki ライブラリ (shiki/bundle/web) を使用したコードハイライト機能を提供します。
  * シングルトンパターンでハイライターインスタンスを管理し、複数コンポーネント間で共有します。
  *
- * ## 対応言語
- * - JavaScript/TypeScript (js, mjs, cjs, ts, mts, cts, tsx, jsx)
- * - Web (html, htm, css, scss)
- * - Data (json, yaml, yml)
- * - Backend (python, sql)
- * - Shell (bash, sh, zsh)
- * - Documentation (markdown, md, mdx)
+ * ## 対応言語 (shiki/bundle/web に含まれる言語)
+ * - JavaScript/TypeScript (js, ts, tsx, jsx)
+ * - Web (html, css, scss)
+ * - Data (json, yaml)
+ * - Database (sql)
+ * - Shell (bash, shell)
+ * - Documentation (markdown)
  *
  * ## テーマ
  * - github-light (固定)
@@ -44,19 +50,21 @@ import { createHighlighter, type Highlighter, type BundledLanguage } from 'shiki
  * ```
  *
  * ## 制限事項
- * - 対応していない言語は typescript として扱われます
+ * - shiki/bundle/web に含まれない言語は typescript として扱われます
  * - ダークテーマは未サポート
  * - 大量のコード（数千行）では遅延読み込みを検討してください
  */
+
+type Highlighter = HighlighterGeneric<BundledLanguage, BundledTheme>;
 
 let highlighterPromise: Promise<Highlighter> | null = null;
 let highlighterInstance: Highlighter | null = null;
 
 /**
- * バンドルされている対応言語のリスト
- * パフォーマンスのため、よく使う言語のみを含めています
+ * 使用する言語のリスト
+ * shiki/bundle/web に含まれる言語から選択
  */
-const BUNDLED_LANGUAGES: BundledLanguage[] = [
+const LANGUAGES_TO_LOAD: BundledLanguage[] = [
   'javascript',
   'typescript',
   'tsx',
@@ -64,7 +72,6 @@ const BUNDLED_LANGUAGES: BundledLanguage[] = [
   'json',
   'html',
   'css',
-  'python',
   'sql',
   'bash',
   'yaml',
@@ -79,7 +86,7 @@ async function getHighlighter(): Promise<Highlighter> {
   if (!highlighterPromise) {
     highlighterPromise = createHighlighter({
       themes: ['github-light'],
-      langs: BUNDLED_LANGUAGES,
+      langs: LANGUAGES_TO_LOAD,
     });
   }
 
@@ -117,7 +124,6 @@ export function getLanguageFromPath(filePath: string): BundledLanguage {
     htm: 'html',
     css: 'css',
     scss: 'css',
-    py: 'python',
     sql: 'sql',
     sh: 'bash',
     bash: 'bash',
@@ -128,7 +134,14 @@ export function getLanguageFromPath(filePath: string): BundledLanguage {
     mdx: 'markdown',
   };
 
-  return langMap[ext ?? ''] ?? 'typescript';
+  const lang = langMap[ext ?? ''];
+
+  // shiki/bundle/web に含まれる言語かチェック
+  if (lang && lang in bundledLanguages) {
+    return lang;
+  }
+
+  return 'typescript';
 }
 
 /**
@@ -184,7 +197,7 @@ export function useShiki(): UseShikiResult {
  *
  * @param highlighter - Shiki ハイライターインスタンス
  * @param code - ハイライトするコード文字列
- * @param lang - ハイライトに使用する言語（BUNDLED_LANGUAGES のいずれか）
+ * @param lang - ハイライトに使用する言語
  * @returns 行ごとのトークン配列。各トークンは content と color を持つ
  *
  * @example
