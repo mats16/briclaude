@@ -11,6 +11,7 @@ import type {
   SessionResponse,
   SessionArchiveResponse,
   SessionUpdateRequest,
+  SessionUsageResponse,
   WsConnectedMessage,
   WsErrorMessage,
   WsControlRequest,
@@ -29,7 +30,11 @@ import {
   canAbortSession,
   executeAbort,
 } from '../services/session.service.js';
-import { listSessionEvents, getSessionLastEventId } from '../services/session-events.service.js';
+import {
+  listSessionEvents,
+  getSessionLastEventId,
+  getSessionUsage,
+} from '../services/session-events.service.js';
 import { wsManager } from '../services/websocket-manager.service.js';
 import { SessionId } from '../models/session.model.js';
 import { createUserContext } from '../lib/user-context.js';
@@ -277,6 +282,36 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
       }
       request.log.error(error, 'Failed to get session events');
       return sendError(reply, 500, 'InternalServerError', 'Failed to get session events');
+    }
+  });
+
+  // GET /sessions/:session_id/usage - セッション使用量取得
+  fastify.get<{
+    Params: { session_id: string };
+    Reply: SessionUsageResponse | ApiError;
+  }>('/sessions/:session_id/usage', async (request, reply) => {
+    const { user } = request.ctx!;
+
+    if (!user.id) {
+      return sendError(reply, 401, 'Unauthorized', 'User ID not found in request context');
+    }
+
+    const { session_id } = request.params;
+    const sessionId = parseSessionId(session_id, request.log);
+
+    if (!sessionId) {
+      return sendError(reply, 404, 'NotFound', 'Session not found');
+    }
+
+    try {
+      const result = await getSessionUsage(fastify, user.id, sessionId);
+      return reply.send(result);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Session not found') {
+        return sendError(reply, 404, 'NotFound', 'Session not found');
+      }
+      request.log.error(error, 'Failed to get session usage');
+      return sendError(reply, 500, 'InternalServerError', 'Failed to get session usage');
     }
   });
 

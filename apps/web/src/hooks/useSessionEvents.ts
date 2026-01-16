@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { SDKMessage, UserMessageContentBlock } from '@repo/types';
+import { isSDKResultMessageEvent } from '@repo/types';
 import { sessionService } from '@/services/session.service';
 import { useSessionWebSocket } from './useSessionWebSocket';
 
@@ -12,6 +13,7 @@ interface UseSessionEventsReturn {
   isLoading: boolean;
   isConnected: boolean;
   error: Error | null;
+  totalCostUsd: number;
   sendMessage: (content: UserMessageContentBlock[]) => void;
   abort: () => Promise<boolean>;
 }
@@ -21,6 +23,7 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [shouldAutoConnect, setShouldAutoConnect] = useState(false);
+  const [totalCostUsd, setTotalCostUsd] = useState<number>(0);
   const seenUuidsRef = useRef<Set<string>>(new Set());
 
   // 過去イベントの取得
@@ -30,17 +33,26 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
     setIsLoading(true);
     setError(null);
     setShouldAutoConnect(false);
+    setTotalCostUsd(0);
 
     try {
-      const response = await sessionService.getSessionEvents(targetSessionId);
-      setEvents(response.data);
+      // イベントと使用量を並行取得
+      const [eventsResponse, usageResponse] = await Promise.all([
+        sessionService.getSessionEvents(targetSessionId),
+        sessionService.getSessionUsage(targetSessionId),
+      ]);
+
+      setEvents(eventsResponse.data);
       // SDKMessage.uuid を使用して seen set を構築（uuid がない場合はスキップ）
       seenUuidsRef.current = new Set(
-        response.data.filter(e => 'uuid' in e && e.uuid).map(e => e.uuid as string)
+        eventsResponse.data.filter(e => 'uuid' in e && e.uuid).map(e => e.uuid as string)
       );
 
+      // 使用量から total_cost_usd を設定
+      setTotalCostUsd(usageResponse.total_cost_usd);
+
       // 最後のイベントが result でない場合のみ自動接続
-      const lastEvent = response.data[response.data.length - 1];
+      const lastEvent = eventsResponse.data[eventsResponse.data.length - 1];
       const isSessionComplete =
         lastEvent && 'type' in lastEvent && (lastEvent as { type: string }).type === 'result';
       setShouldAutoConnect(!isSessionComplete);
@@ -58,6 +70,11 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
       const uuid = event.uuid as string;
       if (seenUuidsRef.current.has(uuid)) return;
       seenUuidsRef.current.add(uuid);
+    }
+
+    // result message から cost を抽出して加算
+    if (isSDKResultMessageEvent(event) && event.total_cost_usd !== undefined) {
+      setTotalCostUsd(prev => prev + event.total_cost_usd!);
     }
 
     setEvents(prev => [...prev, event]);
@@ -90,6 +107,7 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
     isLoading,
     isConnected,
     error,
+    totalCostUsd,
     sendMessage,
     abort,
   };

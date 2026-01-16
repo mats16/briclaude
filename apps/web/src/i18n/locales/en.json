@@ -46,7 +46,8 @@
     "sessionNotFoundDescription": "This session may have been deleted or does not exist.",
     "goHome": "Go to Home",
     "stop": "Stop",
-    "thinking": "Thinking…"
+    "thinking": "Thinking…",
+    "totalCost": "Total Cost (USD)"
   },
   "image": {
     "unsupportedFormat": "{{fileName}} is not a supported image format",

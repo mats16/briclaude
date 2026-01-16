@@ -132,6 +132,10 @@ export interface SDKSystemMessageEvent {
  */
 export interface SDKResultMessageEvent {
   type: 'result';
+  uuid?: string;
+  session_id?: string;
+  subtype?: 'success' | 'error_during_execution' | 'error_max_turns' | 'error_max_budget_usd';
+  total_cost_usd?: number;
 }
 
 /**
@@ -217,6 +221,15 @@ export function isSDKSystemMessageEvent(event: unknown): event is SDKSystemMessa
   if (typeof event !== 'object' || event === null) return false;
   const e = event as Record<string, unknown>;
   return e.type === 'system';
+}
+
+/**
+ * SDKResultMessageEvent の型ガード
+ */
+export function isSDKResultMessageEvent(event: unknown): event is SDKResultMessageEvent {
+  if (typeof event !== 'object' || event === null) return false;
+  const e = event as Record<string, unknown>;
+  return e.type === 'result';
 }
 
 /**

@@ -8,6 +8,7 @@ import type {
   SessionResponse,
   SessionArchiveResponse,
   SessionUpdateRequest,
+  SessionUsageResponse,
   GenerateTitleRequest,
   GenerateTitleResponse,
 } from '@repo/types';
@@ -79,5 +80,9 @@ export const sessionService = {
       method: 'POST',
       body: JSON.stringify({}),
     });
+  },
+
+  async getSessionUsage(sessionId: string): Promise<SessionUsageResponse> {
+    return apiClient<SessionUsageResponse>(`/api/sessions/${sessionId}/usage`);
   },
 };

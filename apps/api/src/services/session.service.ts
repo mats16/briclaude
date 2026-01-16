@@ -77,8 +77,9 @@ function convertToSDKUserMessage(
 }
 
 /**
- * イベントを WebSocket にブロードキャストし、DB に保存する（並列処理）
- * WebSocket 送信は即座に行い、DB 書き込みは待たない
+ * イベントを WebSocket にブロードキャストし、DB に保存する
+ * WebSocket 送信は即座に行い、DB 書き込みの Promise を返す
+ * 呼び出し側で await することでイベント順序を保証できる
  *
  * @param sessionId - SessionId オブジェクト
  * @param options.skipDbSave - true の場合、DB 保存をスキップ（init イベント前に使用）
@@ -180,6 +181,7 @@ async function waitForInit(
 
 /**
  * init 以降のイベントをバックグラウンドで処理する
+ * イベントは順次 DB に保存され、順序が保証される
  */
 async function processRemainingEvents(
   iterator: AsyncIterator<SDKMessage, void>,
@@ -195,8 +197,8 @@ async function processRemainingEvents(
         break;
       }
 
-      // WebSocket 送信 & DB 保存（並列）
-      saveAndBroadcastEvent(fastify, userId, sessionId, message);
+      // WebSocket 送信 & DB 保存（順序保証のため await）
+      await saveAndBroadcastEvent(fastify, userId, sessionId, message);
 
       // result イベント時にセッション状態を idle に更新
       if (message.type === 'result') {

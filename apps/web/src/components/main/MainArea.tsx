@@ -46,7 +46,7 @@ export function MainArea({
     sessionId: sessionId ?? null,
   });
 
-  const { events, isLoading, error, sendMessage, abort } = useSessionEvents({
+  const { events, isLoading, error, totalCostUsd, sendMessage, abort } = useSessionEvents({
     sessionId: sessionId ?? null,
   });
 
@@ -164,6 +164,7 @@ export function MainArea({
       <MainHeader
         title={session?.title ?? 'New Session'}
         branchName={branchName}
+        totalCostUsd={totalCostUsd}
         onTitleUpdate={handleTitleUpdate}
         onArchive={handleArchive}
       />
