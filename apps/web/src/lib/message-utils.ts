@@ -132,6 +132,9 @@ export function getToolInputDisplay(name: string, input: Record<string, unknown>
       return typeof input.description === 'string' ? input.description : '';
     case 'skill':
       return typeof input.skill === 'string' ? input.skill : '';
+    case 'mcp__sql__execute_sql_read_only':
+    case 'mcp__sql__execute_sql':
+      return typeof input.query === 'string' ? input.query : '';
     default:
       return JSON.stringify(input);
   }

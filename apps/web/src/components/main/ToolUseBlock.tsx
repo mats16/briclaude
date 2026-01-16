@@ -25,6 +25,7 @@ export function ToolUseBlock({
   childEvents,
   toolResultMap,
 }: ToolUseBlockProps) {
+  const [isInputExpanded, setIsInputExpanded] = useState(false);
   const inputDisplay = getToolInputDisplay(name, input);
   const isTaskTool = name.toLowerCase() === 'task';
 
@@ -39,18 +40,27 @@ export function ToolUseBlock({
 
   return (
     <div className="py-1">
-      <div className="flex items-center gap-1">
+      <div className="flex items-start gap-1">
         <Circle
           aria-hidden="true"
           className={cn(
-            'h-2 w-2 fill-current flex-shrink-0',
+            'h-2 w-2 fill-current flex-shrink-0 mt-1.5',
             isRunning && 'text-foreground animate-pulse',
             isSuccess && 'text-green-500',
             isError && 'text-red-500'
           )}
         />
-        <span className="font-bold text-sm">{name}</span>
-        <span className="text-sm text-muted-foreground font-mono truncate">{inputDisplay}</span>
+        <span className="font-bold text-sm flex-shrink-0">{name}</span>
+        <button
+          type="button"
+          onClick={() => setIsInputExpanded(!isInputExpanded)}
+          className={cn(
+            'text-sm text-muted-foreground font-mono text-left',
+            isInputExpanded ? 'whitespace-pre-wrap break-all' : 'truncate'
+          )}
+        >
+          {inputDisplay}
+        </button>
       </div>
 
       {/* Task ツールの場合は子イベントをネスト表示 */}
@@ -119,6 +129,7 @@ interface NestedToolItemProps {
 }
 
 function NestedToolItem({ tool }: NestedToolItemProps) {
+  const [isInputExpanded, setIsInputExpanded] = useState(false);
   const [isResultExpanded, setIsResultExpanded] = useState(false);
   const resultId = useId();
   const maxChars = 250;
@@ -161,16 +172,25 @@ function NestedToolItem({ tool }: NestedToolItemProps) {
 
   return (
     <div className="py-0.5">
-      <div className="flex items-center gap-1">
+      <div className="flex items-start gap-1">
         <Circle
           aria-hidden="true"
           className={cn(
-            'h-2 w-2 fill-current flex-shrink-0',
+            'h-2 w-2 fill-current flex-shrink-0 mt-1',
             tool.isError ? 'text-red-500' : 'text-green-500'
           )}
         />
-        <span className="font-bold text-xs">{tool.name}</span>
-        <span className="text-xs text-muted-foreground font-mono truncate">{tool.input}</span>
+        <span className="font-bold text-xs flex-shrink-0">{tool.name}</span>
+        <button
+          type="button"
+          onClick={() => setIsInputExpanded(!isInputExpanded)}
+          className={cn(
+            'text-xs text-muted-foreground font-mono text-left',
+            isInputExpanded ? 'whitespace-pre-wrap break-all' : 'truncate'
+          )}
+        >
+          {tool.input}
+        </button>
       </div>
 
       {hasResult && (
