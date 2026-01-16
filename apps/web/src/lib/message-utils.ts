@@ -130,6 +130,8 @@ export function getToolInputDisplay(name: string, input: Record<string, unknown>
       return typeof input.pattern === 'string' ? input.pattern : '';
     case 'task':
       return typeof input.description === 'string' ? input.description : '';
+    case 'skill':
+      return typeof input.skill === 'string' ? input.skill : '';
     default:
       return JSON.stringify(input);
   }
