@@ -56,22 +56,26 @@ export function CollapsibleContent({
     return null;
   }
 
+  const showContent = isExpanded ? content : displayContent;
+
   return (
     <div className="mt-1 ml-4">
-      <div className="flex items-start gap-1 text-muted-foreground">
-        <span className="select-none" aria-hidden="true">
-          └─
-        </span>
-        <pre
-          id={contentId}
-          className={cn(
-            'text-xs font-mono whitespace-pre-wrap break-all flex-1',
-            isError && 'text-destructive'
-          )}
-        >
-          {isExpanded ? content : displayContent}
-        </pre>
-      </div>
+      {showContent && (
+        <div className="flex items-start gap-1 text-muted-foreground">
+          <span className="select-none" aria-hidden="true">
+            └─
+          </span>
+          <pre
+            id={contentId}
+            className={cn(
+              'text-xs font-mono whitespace-pre-wrap break-all flex-1',
+              isError && 'text-destructive'
+            )}
+          >
+            {showContent}
+          </pre>
+        </div>
+      )}
       {shouldCollapse && (
         <button
           type="button"
@@ -79,7 +83,10 @@ export function CollapsibleContent({
           aria-expanded={isExpanded}
           aria-controls={contentId}
           aria-label={isExpanded ? 'コンテンツを折りたたむ' : `残り ${hiddenLines} 行を表示`}
-          className="ml-6 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className={cn(
+            'text-xs text-muted-foreground hover:text-foreground transition-colors',
+            showContent ? 'ml-6' : 'ml-0'
+          )}
         >
           {isExpanded ? '折りたたむ' : `... +${hiddenLines} 行`}
         </button>
