@@ -71,14 +71,9 @@ The app name is automatically generated as: **${appName}**
 This operation typically takes about 3 minutes to complete. After creating, you should deploy the app using the deploy tool.
 
 **Note**: You don't need to specify an app name - it's automatically derived from the session ID.`,
-    {
-      description: z
-        .string()
-        .optional()
-        .default(`Created by ${userName} via Briclaude`)
-        .describe('Optional description for the app'),
-    },
-    async ({ description }) => {
+    {},
+    async () => {
+      const description = `Created by ${userName} via Briclaude`;
       const app = await client.create(appName, description);
 
       if (authProvider.type === 'oauth-m2m') {
