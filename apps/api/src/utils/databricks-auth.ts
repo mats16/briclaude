@@ -102,7 +102,11 @@ export async function getServicePrincipalTokenFromConfig(
   const { DATABRICKS_HOST, DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET } = fastify.config;
 
   try {
-    return await getServicePrincipalToken(DATABRICKS_HOST, DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET);
+    return await getServicePrincipalToken(
+      DATABRICKS_HOST,
+      DATABRICKS_CLIENT_ID,
+      DATABRICKS_CLIENT_SECRET
+    );
   } catch (error) {
     fastify.log.error(error, 'Failed to get Service Principal token');
     return undefined;

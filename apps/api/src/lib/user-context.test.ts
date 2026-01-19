@@ -11,7 +11,9 @@ vi.mock('../utils/databricks-auth.js', () => ({
 import { getUserPAT, getServicePrincipalTokenFromConfig } from '../utils/databricks-auth.js';
 
 const mockGetUserPAT = getUserPAT as ReturnType<typeof vi.fn>;
-const mockGetServicePrincipalTokenFromConfig = getServicePrincipalTokenFromConfig as ReturnType<typeof vi.fn>;
+const mockGetServicePrincipalTokenFromConfig = getServicePrincipalTokenFromConfig as ReturnType<
+  typeof vi.fn
+>;
 
 describe('UserContext', () => {
   const createMockFastify = (): FastifyInstance => {

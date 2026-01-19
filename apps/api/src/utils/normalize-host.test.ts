@@ -20,7 +20,9 @@ describe('normalizeHost', () => {
   });
 
   it('should handle host with path', () => {
-    expect(normalizeHost('https://example.databricks.com/path')).toBe('example.databricks.com/path');
+    expect(normalizeHost('https://example.databricks.com/path')).toBe(
+      'example.databricks.com/path'
+    );
   });
 
   it('should handle empty string', () => {
