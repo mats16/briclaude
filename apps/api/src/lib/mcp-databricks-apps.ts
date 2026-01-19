@@ -72,7 +72,11 @@ This operation typically takes about 3 minutes to complete. After creating, you 
 
 **Note**: You don't need to specify an app name - it's automatically derived from the session ID.`,
     {
-      description: z.string().optional().describe('Optional description for the app'),
+      description: z
+        .string()
+        .optional()
+        .default(`Created by ${userName} via Briclaude`)
+        .describe('Optional description for the app'),
     },
     async ({ description }) => {
       const app = await client.create(appName, description);
