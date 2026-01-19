@@ -90,9 +90,9 @@ This operation typically takes about 2 minutes to complete. After creating, you 
           const { description } = params as { description?: string };
           const app = await client.create(appName, description);
 
-          // ユーザーに CAN_USE 権限を付与
+          // ユーザーに CAN_MANAGE 権限を付与
           await client.setPermissions(appName, [
-            { user_name: userName, permission_level: 'CAN_USE' },
+            { user_name: userName, permission_level: 'CAN_MANAGE' },
           ]);
 
           return {
