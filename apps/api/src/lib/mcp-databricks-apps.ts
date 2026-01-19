@@ -217,11 +217,15 @@ Options:
 
 The app name is: **${appName}**
 
-Use this to grant access to users or groups. Common use case: granting CAN_USE to the "users" group.
+Use this to grant access to users or groups.
 
-Permission levels:
+**Permission levels:**
 - CAN_USE: Can view and run the app
-- CAN_MANAGE: Can view, run, and manage the app`,
+- CAN_MANAGE: Can view, run, and manage the app
+
+**Examples:**
+- Grant access to all users: \`{ "group_name": "users", "permission_level": "CAN_USE" }\`
+- Grant access to a specific user: \`{ "user_name": "user@example.com", "permission_level": "CAN_MANAGE" }\``,
         inputSchema: {
           type: 'object' as const,
           properties: {
