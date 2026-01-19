@@ -194,17 +194,17 @@ export class DatabricksAppsClient {
   }
 
   /**
-   * Databricks App の権限を設定
+   * Databricks App の権限を更新（既存の権限に追加/更新）
    *
    * @param appName - アプリ名
    * @param accessControlList - アクセス制御リスト
-   * @returns 設定された権限情報
+   * @returns 更新された権限情報
    */
-  async setPermissions(
+  async updatePermissions(
     appName: string,
     accessControlList: AccessControlItem[]
   ): Promise<ObjectPermissions> {
-    return this.callApi<ObjectPermissions>('PUT', `/api/2.0/permissions/apps/${appName}`, {
+    return this.callApi<ObjectPermissions>('POST', `/api/2.0/permissions/apps/${appName}`, {
       access_control_list: accessControlList,
     });
   }
