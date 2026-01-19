@@ -242,22 +242,22 @@ Permission levels:
           required: ['permission_level'],
         },
         handler: async (params: Record<string, unknown>) => {
-          const { user_name, group_name, permission_level } = params as {
-            user_name?: string;
-            group_name?: string;
-            permission_level: 'CAN_USE' | 'CAN_MANAGE';
-          };
+          const userName = params.user_name as string | undefined;
+          const groupName = params.group_name as string | undefined;
+          const permissionLevel = params.permission_level as 'CAN_USE' | 'CAN_MANAGE';
 
-          if (!user_name && !group_name) {
-            throw new Error('Either user_name or group_name must be specified');
+          if (!userName && !groupName) {
+            throw new Error(
+              `Either user_name or group_name must be specified. Received params: ${JSON.stringify(params)}`
+            );
           }
-          if (user_name && group_name) {
+          if (userName && groupName) {
             throw new Error('Only one of user_name or group_name can be specified');
           }
 
-          const accessControlItem = user_name
-            ? { user_name, permission_level }
-            : { group_name, permission_level };
+          const accessControlItem = userName
+            ? { user_name: userName, permission_level: permissionLevel }
+            : { group_name: groupName, permission_level: permissionLevel };
 
           const result = await client.updatePermissions(appName, [accessControlItem]);
           return {
