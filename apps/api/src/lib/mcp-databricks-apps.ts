@@ -211,6 +211,60 @@ Options:
           };
         },
       },
+      {
+        name: 'update_permissions',
+        description: `Update permissions for the Databricks App.
+
+The app name is: **${appName}**
+
+Use this to grant access to users or groups. Common use case: granting CAN_USE to the "users" group.
+
+Permission levels:
+- CAN_USE: Can view and run the app
+- CAN_MANAGE: Can view, run, and manage the app`,
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            user_name: {
+              type: 'string',
+              description: 'User name to grant permission (mutually exclusive with group_name)',
+            },
+            group_name: {
+              type: 'string',
+              description: 'Group name to grant permission (e.g., "users"). Mutually exclusive with user_name',
+            },
+            permission_level: {
+              type: 'string',
+              enum: ['CAN_USE', 'CAN_MANAGE'],
+              description: 'Permission level to grant',
+            },
+          },
+          required: ['permission_level'],
+        },
+        handler: async (params: Record<string, unknown>) => {
+          const { user_name, group_name, permission_level } = params as {
+            user_name?: string;
+            group_name?: string;
+            permission_level: 'CAN_USE' | 'CAN_MANAGE';
+          };
+
+          if (!user_name && !group_name) {
+            throw new Error('Either user_name or group_name must be specified');
+          }
+          if (user_name && group_name) {
+            throw new Error('Only one of user_name or group_name can be specified');
+          }
+
+          const accessControlItem = user_name
+            ? { user_name, permission_level }
+            : { group_name, permission_level };
+
+          const result = await client.updatePermissions(appName, [accessControlItem]);
+          return {
+            content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+          };
+        },
+      },
     ],
   });
 }
