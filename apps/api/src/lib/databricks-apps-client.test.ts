@@ -214,10 +214,32 @@ describe('DatabricksAppsClient', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
-          text: () => Promise.resolve(''),
         });
 
       await expect(client.delete('test-app')).resolves.toBeUndefined();
+    });
+
+    it('should throw error when delete fails', async () => {
+      global.fetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              access_token: 'test-token',
+              token_type: 'Bearer',
+              expires_in: 3600,
+            }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          text: () => Promise.resolve('App not found'),
+        });
+
+      await expect(client.delete('non-existent-app')).rejects.toThrow(
+        'Databricks API error (404): App not found'
+      );
     });
   });
 

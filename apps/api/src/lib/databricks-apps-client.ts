@@ -104,7 +104,7 @@ export class DatabricksAppsClient {
    * Databricks API を呼び出すヘルパー関数
    */
   private async callApi<T>(
-    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH',
     path: string,
     body?: Record<string, unknown>
   ): Promise<T> {
@@ -128,13 +128,31 @@ export class DatabricksAppsClient {
       throw new Error(`Databricks API error (${response.status}): ${errorText}`);
     }
 
-    // DELETE の場合は空レスポンスの可能性があるので、テキストを確認
-    if (method === 'DELETE') {
-      const text = await response.text();
-      return (text ? JSON.parse(text) : {}) as T;
+    return response.json() as Promise<T>;
+  }
+
+  /**
+   * Databricks API を呼び出す（レスポンスなし、DELETE 用）
+   */
+  private async callApiNoContent(path: string): Promise<void> {
+    const token = await this.getToken();
+    if (!token) {
+      throw new Error('Access token is not available');
     }
 
-    return response.json() as Promise<T>;
+    const url = new URL(path, this.host);
+    const response = await fetch(url.toString(), {
+      method: 'DELETE',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Databricks API error (${response.status}): ${errorText}`);
+    }
   }
 
   /**
@@ -191,7 +209,7 @@ export class DatabricksAppsClient {
    * @param appName - アプリ名
    */
   async delete(appName: string): Promise<void> {
-    await this.callApi<void>('DELETE', `/api/2.0/apps/${appName}`);
+    await this.callApiNoContent(`/api/2.0/apps/${appName}`);
   }
 
   /**
