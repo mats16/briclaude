@@ -411,7 +411,7 @@ export async function createSession(
       fastify.config.DATABRICKS_HOST,
       fastify.config.DATABRICKS_CLIENT_ID,
       fastify.config.DATABRICKS_CLIENT_SECRET,
-      ctx.email
+      ctx.userName
     );
 
     // allowedTools を構築（MCP ツールは allowedTools で制御）
@@ -792,7 +792,7 @@ export async function sendMessageToSession(
       fastify.config.DATABRICKS_HOST,
       fastify.config.DATABRICKS_CLIENT_ID,
       fastify.config.DATABRICKS_CLIENT_SECRET,
-      ctx.email
+      ctx.userName
     );
 
     // allowedTools を構築（MCP ツールは allowedTools で制御）

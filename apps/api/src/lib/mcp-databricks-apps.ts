@@ -55,7 +55,7 @@ export function createDbAppsMcpServer(
   host: string,
   clientId: string,
   clientSecret: string,
-  userEmail: string
+  userName: string
 ) {
   // アプリ名を生成（app-{suffix} 形式）
   const appName = `app-${sessionId.getSuffix()}`;
@@ -92,7 +92,7 @@ This operation typically takes about 2 minutes to complete. After creating, you 
 
           // ユーザーに CAN_USE 権限を付与
           await client.setPermissions(appName, [
-            { user_name: userEmail, permission_level: 'CAN_USE' },
+            { user_name: userName, permission_level: 'CAN_USE' },
           ]);
 
           return {
