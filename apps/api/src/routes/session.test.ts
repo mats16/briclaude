@@ -34,9 +34,11 @@ vi.mock('../lib/user-context.js', () => ({
   createUserContext: vi.fn(() => ({
     userId: 'test-user',
     userHome: '/home/test-user',
-    getPat: vi.fn().mockResolvedValue('test-pat-token'),
-    getSpAccessToken: vi.fn().mockResolvedValue(null),
-    getAccessToken: vi.fn().mockResolvedValue('test-pat-token'),
+    getAuthProvider: vi.fn().mockResolvedValue({
+      type: 'pat',
+      getEnvVars: vi.fn(),
+      getToken: vi.fn().mockResolvedValue('test-pat-token'),
+    }),
     oboAccessToken: undefined,
   })),
 }));

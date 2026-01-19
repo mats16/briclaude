@@ -83,3 +83,22 @@ export interface DbAppsGetResponse {
 export interface DbAppsListDeploymentsResponse {
   deployments: AppDeployment[];
 }
+
+/**
+ * mcp__dbapps__list_logs のリクエスト
+ */
+export interface DbAppsListLogsRequest {
+  /** 末尾から取得する行数（デフォルト: 100） */
+  tail_lines?: number;
+  /** ログをフィルタリングするパターン */
+  search?: string;
+  /** ログソースでフィルタリング: APP（アプリケーションログ）または SYSTEM（システムログ） */
+  source?: 'APP' | 'SYSTEM';
+}
+
+/**
+ * mcp__dbapps__list_logs のレスポンス
+ */
+export interface DbAppsListLogsResponse {
+  logs: string;
+}

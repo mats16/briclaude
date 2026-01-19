@@ -10,15 +10,17 @@ const jobsRoute: FastifyPluginAsync = async fastify => {
     Querystring: JobsListQuerystring;
   }>('/jobs/list', async (request, reply) => {
     const ctx = createUserContext(fastify, request);
-    const pat = await ctx.getPat();
+    const authProvider = await ctx.getAuthProvider();
 
-    if (!pat) {
+    if (authProvider.type !== 'pat') {
       return reply.status(401).send({
         error: 'Unauthorized',
         message: 'PAT is not registered',
         statusCode: 401,
       });
     }
+
+    const pat = await authProvider.getToken();
 
     const url = new URL('/api/2.2/jobs/list', `https://${databricksHost}`);
 
@@ -45,15 +47,17 @@ const jobsRoute: FastifyPluginAsync = async fastify => {
     Querystring: JobRunsListQuerystring;
   }>('/jobs/runs/list', async (request, reply) => {
     const ctx = createUserContext(fastify, request);
-    const pat = await ctx.getPat();
+    const authProvider = await ctx.getAuthProvider();
 
-    if (!pat) {
+    if (authProvider.type !== 'pat') {
       return reply.status(401).send({
         error: 'Unauthorized',
         message: 'PAT is not registered',
         statusCode: 401,
       });
     }
+
+    const pat = await authProvider.getToken();
 
     const url = new URL('/api/2.2/jobs/runs/list', `https://${databricksHost}`);
 

@@ -28,15 +28,17 @@ const reposRoute: FastifyPluginAsync = async fastify => {
     }
 
     const ctx = createUserContext(fastify, request);
-    const pat = await ctx.getPat();
+    const authProvider = await ctx.getAuthProvider();
 
-    if (!pat) {
+    if (authProvider.type !== 'pat') {
       return reply.status(401).send({
         error: 'Unauthorized',
         message: 'PAT is not registered',
         statusCode: 401,
       });
     }
+
+    const pat = await authProvider.getToken();
 
     const apiUrl = new URL('/api/2.0/repos', `https://${databricksHost}`);
 

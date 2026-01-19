@@ -163,6 +163,9 @@ export default fp(
                 path: path.join(__dirname, '../../../../.env'), // -> project root .env
               },
       });
+      // Add bin directory to PATH (for databricks-cli and jq)
+      fastify.config.PATH = `${fastify.config.HOME}/bin:${fastify.config.PATH}`;
+      // Set Anthropic base URL
       fastify.config.ANTHROPIC_BASE_URL = `https://${fastify.config.DATABRICKS_HOST}/serving-endpoints/anthropic`;
       fastify.log.info('Configuration loaded and validated');
     } catch (error) {
