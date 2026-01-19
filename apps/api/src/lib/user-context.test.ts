@@ -3,23 +3,25 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { UserContext, createUserContext } from './user-context.js';
 
 // Mock databricks-auth
-vi.mock('../utils/databricks-auth.js', () => ({
-  getUserPAT: vi.fn(),
-  getServicePrincipalTokenFromConfig: vi.fn(),
+vi.mock('./databricks-auth.js', () => ({
+  getAuthProvider: vi.fn(),
 }));
 
-import { getUserPAT, getServicePrincipalTokenFromConfig } from '../utils/databricks-auth.js';
+import { getAuthProvider } from './databricks-auth.js';
 
-const mockGetUserPAT = getUserPAT as ReturnType<typeof vi.fn>;
-const mockGetServicePrincipalTokenFromConfig = getServicePrincipalTokenFromConfig as ReturnType<
-  typeof vi.fn
->;
+const mockGetAuthProvider = getAuthProvider as ReturnType<typeof vi.fn>;
 
 describe('UserContext', () => {
   const createMockFastify = (): FastifyInstance => {
     return {
       config: {
         USER_BASE_DIR: '/home/app/users',
+        DATABRICKS_HOST: 'example.databricks.com',
+        DATABRICKS_CLIENT_ID: 'test-client-id',
+        DATABRICKS_CLIENT_SECRET: 'test-client-secret',
+      },
+      log: {
+        error: vi.fn(),
       },
     } as unknown as FastifyInstance;
   };
@@ -85,42 +87,65 @@ describe('UserContext', () => {
     });
   });
 
-  describe('getPat', () => {
-    it('should fetch PAT from database and cache it', async () => {
-      mockGetUserPAT.mockResolvedValue('user-pat-token');
+  describe('getAuthProvider', () => {
+    it('should fetch AuthProvider and cache it', async () => {
+      const mockAuthProvider = {
+        type: 'pat' as const,
+        getEnvVars: vi.fn(),
+        getAccessToken: vi.fn().mockResolvedValue('user-pat-token'),
+      };
+      mockGetAuthProvider.mockResolvedValue(mockAuthProvider);
       const fastify = createMockFastify();
       const request = createMockRequest();
 
       const ctx = new UserContext(fastify, request);
 
-      // First call - fetches from DB
-      const pat1 = await ctx.getPat();
-      expect(pat1).toBe('user-pat-token');
-      expect(mockGetUserPAT).toHaveBeenCalledTimes(1);
-      expect(mockGetUserPAT).toHaveBeenCalledWith(fastify, 'test-user@example.com');
+      // First call - fetches AuthProvider
+      const provider1 = await ctx.getAuthProvider();
+      expect(provider1).toBe(mockAuthProvider);
+      expect(mockGetAuthProvider).toHaveBeenCalledTimes(1);
+      expect(mockGetAuthProvider).toHaveBeenCalledWith(fastify, 'test-user@example.com');
 
       // Second call - should use cache
-      const pat2 = await ctx.getPat();
-      expect(pat2).toBe('user-pat-token');
-      expect(mockGetUserPAT).toHaveBeenCalledTimes(1); // Still only 1 call
+      const provider2 = await ctx.getAuthProvider();
+      expect(provider2).toBe(mockAuthProvider);
+      expect(mockGetAuthProvider).toHaveBeenCalledTimes(1); // Still only 1 call
     });
 
-    it('should cache undefined result', async () => {
-      mockGetUserPAT.mockResolvedValue(undefined);
+    it('should return PAT type AuthProvider when PAT is available', async () => {
+      const mockAuthProvider = {
+        type: 'pat' as const,
+        getEnvVars: vi.fn(),
+        getAccessToken: vi.fn().mockResolvedValue('user-pat-token'),
+      };
+      mockGetAuthProvider.mockResolvedValue(mockAuthProvider);
       const fastify = createMockFastify();
       const request = createMockRequest();
 
       const ctx = new UserContext(fastify, request);
+      const provider = await ctx.getAuthProvider();
 
-      // First call
-      const pat1 = await ctx.getPat();
-      expect(pat1).toBeUndefined();
-      expect(mockGetUserPAT).toHaveBeenCalledTimes(1);
+      expect(provider.type).toBe('pat');
+      const token = await provider.getAccessToken();
+      expect(token).toBe('user-pat-token');
+    });
 
-      // Second call - should still use cached undefined
-      const pat2 = await ctx.getPat();
-      expect(pat2).toBeUndefined();
-      expect(mockGetUserPAT).toHaveBeenCalledTimes(1);
+    it('should return oauth-m2m type AuthProvider when PAT is not available', async () => {
+      const mockAuthProvider = {
+        type: 'oauth-m2m' as const,
+        getEnvVars: vi.fn(),
+        getAccessToken: vi.fn().mockResolvedValue('sp-token'),
+      };
+      mockGetAuthProvider.mockResolvedValue(mockAuthProvider);
+      const fastify = createMockFastify();
+      const request = createMockRequest();
+
+      const ctx = new UserContext(fastify, request);
+      const provider = await ctx.getAuthProvider();
+
+      expect(provider.type).toBe('oauth-m2m');
+      const token = await provider.getAccessToken();
+      expect(token).toBe('sp-token');
     });
   });
 
@@ -150,80 +175,6 @@ describe('UserContext', () => {
       const ctx = new UserContext(fastify, request);
 
       expect(ctx.oboAccessToken).toBeUndefined();
-    });
-  });
-
-  describe('getSpAccessToken', () => {
-    it('should fetch SP token directly (no request-scope caching)', async () => {
-      mockGetServicePrincipalTokenFromConfig.mockResolvedValue('sp-token-123');
-      const fastify = createMockFastify();
-      const request = createMockRequest();
-
-      const ctx = new UserContext(fastify, request);
-
-      // First call
-      const token1 = await ctx.getSpAccessToken();
-      expect(token1).toBe('sp-token-123');
-      expect(mockGetServicePrincipalTokenFromConfig).toHaveBeenCalledTimes(1);
-
-      // Second call - should call service again (no request-scope caching)
-      const token2 = await ctx.getSpAccessToken();
-      expect(token2).toBe('sp-token-123');
-      expect(mockGetServicePrincipalTokenFromConfig).toHaveBeenCalledTimes(2);
-    });
-
-    it('should return undefined when SP token is not available', async () => {
-      mockGetServicePrincipalTokenFromConfig.mockResolvedValue(undefined);
-      const fastify = createMockFastify();
-      const request = createMockRequest();
-
-      const ctx = new UserContext(fastify, request);
-      const token = await ctx.getSpAccessToken();
-
-      expect(token).toBeUndefined();
-    });
-  });
-
-  describe('getAccessToken', () => {
-    it('should return PAT when available', async () => {
-      mockGetUserPAT.mockResolvedValue('pat-token');
-      mockGetServicePrincipalTokenFromConfig.mockResolvedValue('sp-token');
-      const fastify = createMockFastify();
-      const request = createMockRequest();
-
-      const ctx = new UserContext(fastify, request);
-      const token = await ctx.getAccessToken();
-
-      expect(token).toBe('pat-token');
-      expect(mockGetUserPAT).toHaveBeenCalled();
-      // SP token should not be fetched since PAT is available
-      expect(mockGetServicePrincipalTokenFromConfig).not.toHaveBeenCalled();
-    });
-
-    it('should fallback to SP token when PAT is undefined', async () => {
-      mockGetUserPAT.mockResolvedValue(undefined);
-      mockGetServicePrincipalTokenFromConfig.mockResolvedValue('sp-token');
-      const fastify = createMockFastify();
-      const request = createMockRequest();
-
-      const ctx = new UserContext(fastify, request);
-      const token = await ctx.getAccessToken();
-
-      expect(token).toBe('sp-token');
-      expect(mockGetUserPAT).toHaveBeenCalled();
-      expect(mockGetServicePrincipalTokenFromConfig).toHaveBeenCalled();
-    });
-
-    it('should return undefined when both PAT and SP are unavailable', async () => {
-      mockGetUserPAT.mockResolvedValue(undefined);
-      mockGetServicePrincipalTokenFromConfig.mockResolvedValue(undefined);
-      const fastify = createMockFastify();
-      const request = createMockRequest();
-
-      const ctx = new UserContext(fastify, request);
-      const token = await ctx.getAccessToken();
-
-      expect(token).toBeUndefined();
     });
   });
 

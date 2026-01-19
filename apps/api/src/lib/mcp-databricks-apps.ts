@@ -3,6 +3,7 @@ import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { SessionId } from '../models/session.model.js';
 import { DatabricksAppsClient } from './databricks-apps-client.js';
+import type { AuthProvider } from './databricks-auth.js';
 
 /**
  * Databricks Apps 管理用 MCP サーバー
@@ -29,17 +30,15 @@ import { DatabricksAppsClient } from './databricks-apps-client.js';
  *
  * ```typescript
  * import { createDbAppsMcpServer } from '../lib/mcp-databricks-apps.js';
+ * import { getAuthProvider } from '../lib/databricks-auth.js';
+ *
+ * const authProvider = await getAuthProvider(fastify, userId);
  *
  * const response = query({
  *   prompt,
  *   options: {
  *     mcpServers: {
- *       dbapps: createDbAppsMcpServer(
- *         sessionId,
- *         host,
- *         clientId,
- *         clientSecret
- *       ),
+ *       dbapps: createDbAppsMcpServer(sessionId, authProvider, userName),
  *     },
  *     allowedTools: [
  *       'mcp__dbapps__create_app',
@@ -54,16 +53,14 @@ import { DatabricksAppsClient } from './databricks-apps-client.js';
  */
 export function createDbAppsMcpServer(
   sessionId: SessionId,
-  host: string,
-  clientId: string,
-  clientSecret: string,
+  authProvider: AuthProvider,
   userName: string
 ) {
   // アプリ名を生成（app-{suffix} 形式）
   const appName = `app-${sessionId.getSuffix()}`;
 
   // クライアントを作成
-  const client = new DatabricksAppsClient(host, clientId, clientSecret);
+  const client = new DatabricksAppsClient(authProvider);
 
   const createApp = tool(
     'create_app',

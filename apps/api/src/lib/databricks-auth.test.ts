@@ -1,12 +1,7 @@
-// apps/api/src/utils/databricks-auth.test.ts
+// apps/api/src/lib/databricks-auth.test.ts
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import {
-  getServicePrincipalToken,
-  getServicePrincipalTokenFromConfig,
-  getUserPAT,
-  clearSpTokenCache,
-} from './databricks-auth.js';
+import { getServicePrincipalToken, getUserPAT, clearSpTokenCache } from './databricks-auth.js';
 
 describe('databricks-auth', () => {
   const originalEnv = { ...process.env };
@@ -212,61 +207,6 @@ describe('databricks-auth', () => {
       );
 
       expect(token).toBe('second-token');
-    });
-  });
-
-  describe('getServicePrincipalTokenFromConfig', () => {
-    it('should get token using fastify config', async () => {
-      const mockResponse = {
-        access_token: 'config-token',
-        token_type: 'Bearer',
-        expires_in: 3600,
-      };
-
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-      });
-
-      const mockFastify = {
-        config: {
-          DATABRICKS_HOST: 'example.databricks.com',
-          DATABRICKS_CLIENT_ID: 'config-client-id',
-          DATABRICKS_CLIENT_SECRET: 'config-client-secret',
-        },
-        log: {
-          error: vi.fn(),
-        },
-      } as unknown as FastifyInstance;
-
-      const token = await getServicePrincipalTokenFromConfig(mockFastify);
-
-      expect(token).toBe('config-token');
-    });
-
-    it('should return undefined and log error when fetch fails', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 401,
-        text: () => Promise.resolve('Unauthorized'),
-      });
-
-      const mockLogError = vi.fn();
-      const mockFastify = {
-        config: {
-          DATABRICKS_HOST: 'example.databricks.com',
-          DATABRICKS_CLIENT_ID: 'client-id',
-          DATABRICKS_CLIENT_SECRET: 'client-secret',
-        },
-        log: {
-          error: mockLogError,
-        },
-      } as unknown as FastifyInstance;
-
-      const token = await getServicePrincipalTokenFromConfig(mockFastify);
-
-      expect(token).toBeUndefined();
-      expect(mockLogError).toHaveBeenCalled();
     });
   });
 

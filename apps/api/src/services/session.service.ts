@@ -30,6 +30,7 @@ import { createDbAppsMcpServer } from '../lib/mcp-databricks-apps.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 import { ensureDirectory, removeDirectory } from '../utils/directory.js';
 import { DatabricksAppsClient } from '../lib/databricks-apps-client.js';
+import { getAuthProvider } from '../lib/databricks-auth.js';
 import { wsManager } from './websocket-manager.service.js';
 import { SessionId } from '../models/session.model.js';
 import type { UserContext } from '../lib/user-context.js';
@@ -339,9 +340,10 @@ export async function createSession(
   });
 
   // 7. アクセストークンを取得（PAT → SP フォールバック）
-  let accessToken: string | undefined;
+  let accessToken: string;
   try {
-    accessToken = await ctx.getAccessToken();
+    const authProvider = await ctx.getAuthProvider();
+    accessToken = await authProvider.getAccessToken();
   } catch (tokenError) {
     fastify.log.error(
       { sessionId: sessionId.toString(), userId, error: tokenError },
@@ -351,14 +353,6 @@ export async function createSession(
       'アクセストークンの取得中にエラーが発生しました。しばらく待ってから再試行してください。'
     ) as CodedError;
     error.code = 'TOKEN_RETRIEVAL_ERROR';
-    throw error;
-  }
-
-  if (!accessToken) {
-    const error = new Error(
-      'アクセストークンが取得できません。PATを登録するか、管理者に連絡してください。'
-    ) as CodedError;
-    error.code = 'NO_ACCESS_TOKEN';
     throw error;
   }
 
@@ -405,14 +399,9 @@ export async function createSession(
       };
     }
 
-    // apps: Databricks Apps MCP サーバーを追加
-    mcpServers.apps = createDbAppsMcpServer(
-      sessionId,
-      fastify.config.DATABRICKS_HOST,
-      fastify.config.DATABRICKS_CLIENT_ID,
-      fastify.config.DATABRICKS_CLIENT_SECRET,
-      ctx.userName
-    );
+    // apps: Databricks Apps MCP サーバーを追加（PAT → SP フォールバック）
+    const authProvider = await getAuthProvider(fastify, ctx.userId);
+    mcpServers.apps = createDbAppsMcpServer(sessionId, authProvider, ctx.userName);
 
     // allowedTools を構築（MCP ツールは allowedTools で制御）
     const allowedTools = [
@@ -722,9 +711,10 @@ export async function sendMessageToSession(
   wsManager.broadcast(sessionId.toString(), userMessage);
 
   // 5. アクセストークンを取得（PAT → SP フォールバック）
-  let accessToken: string | undefined;
+  let accessToken: string;
   try {
-    accessToken = await ctx.getAccessToken();
+    const authProvider = await ctx.getAuthProvider();
+    accessToken = await authProvider.getAccessToken();
   } catch (tokenError) {
     fastify.log.error(
       { sessionId: sessionId.toString(), userId, error: tokenError },
@@ -734,14 +724,6 @@ export async function sendMessageToSession(
       'アクセストークンの取得中にエラーが発生しました。しばらく待ってから再試行してください。'
     ) as CodedError;
     error.code = 'TOKEN_RETRIEVAL_ERROR';
-    throw error;
-  }
-
-  if (!accessToken) {
-    const error = new Error(
-      'アクセストークンが取得できません。PATを登録するか、管理者に連絡してください。'
-    ) as CodedError;
-    error.code = 'NO_ACCESS_TOKEN';
     throw error;
   }
   const { userHome } = ctx;
@@ -786,14 +768,9 @@ export async function sendMessageToSession(
       };
     }
 
-    // apps: Databricks Apps MCP サーバーを追加
-    mcpServers.apps = createDbAppsMcpServer(
-      sessionId,
-      fastify.config.DATABRICKS_HOST,
-      fastify.config.DATABRICKS_CLIENT_ID,
-      fastify.config.DATABRICKS_CLIENT_SECRET,
-      ctx.userName
-    );
+    // apps: Databricks Apps MCP サーバーを追加（PAT → SP フォールバック）
+    const authProvider = await getAuthProvider(fastify, ctx.userId);
+    mcpServers.apps = createDbAppsMcpServer(sessionId, authProvider, ctx.userName);
 
     // allowedTools を構築（MCP ツールは allowedTools で制御）
     const allowedTools = [
@@ -898,7 +875,9 @@ export async function archiveSession(
 ): Promise<SessionResponse | null> {
   // user_home を取得（ベースディレクトリとして使用）
   const { userHome } = ctx;
-  const host = fastify.config.DATABRICKS_HOST;
+
+  // AuthProvider をトランザクション外で取得
+  const authProvider = await getAuthProvider(fastify, ctx.userId);
 
   return fastify.withUserContext(userId, async tx => {
     // 1. セッション情報を取得（cwd を取得するため）
@@ -938,11 +917,7 @@ export async function archiveSession(
     );
     if (appsOutcome?.name) {
       const appName = appsOutcome.name;
-      const appsClient = new DatabricksAppsClient(
-        host,
-        fastify.config.DATABRICKS_CLIENT_ID,
-        fastify.config.DATABRICKS_CLIENT_SECRET
-      );
+      const appsClient = new DatabricksAppsClient(authProvider);
       appsClient
         .delete(appName)
         .then(() => {

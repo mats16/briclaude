@@ -1,7 +1,7 @@
 // apps/api/src/lib/databricks-apps-client.test.ts
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DatabricksAppsClient } from './databricks-apps-client.js';
-import { clearSpTokenCache } from '../utils/databricks-auth.js';
+import type { AuthProvider } from './databricks-auth.js';
 
 // Mock child_process.execFile
 vi.mock('child_process', () => ({
@@ -9,47 +9,36 @@ vi.mock('child_process', () => ({
 }));
 
 describe('DatabricksAppsClient', () => {
-  const host = 'example.databricks.com';
-  const clientId = 'test-client-id';
-  const clientSecret = 'test-client-secret';
   let client: DatabricksAppsClient;
+  let mockAuthProvider: AuthProvider;
 
   beforeEach(() => {
-    clearSpTokenCache();
     vi.restoreAllMocks();
 
-    client = new DatabricksAppsClient(host, clientId, clientSecret);
+    // Mock AuthProvider
+    mockAuthProvider = {
+      type: 'oauth-m2m',
+      getAccessToken: vi.fn().mockResolvedValue('test-token'),
+      getEnvVars: vi.fn().mockReturnValue({
+        DATABRICKS_AUTH_TYPE: 'oauth-m2m',
+        DATABRICKS_HOST: 'https://example.databricks.com',
+        DATABRICKS_CLIENT_ID: 'test-client-id',
+        DATABRICKS_CLIENT_SECRET: 'test-client-secret',
+      }),
+    };
 
-    // Mock getServicePrincipalToken via fetch
+    client = new DatabricksAppsClient(mockAuthProvider);
+
+    // Mock fetch for API calls
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () =>
-        Promise.resolve({
-          access_token: 'test-token',
-          token_type: 'Bearer',
-          expires_in: 3600,
-        }),
+      json: () => Promise.resolve({}),
     });
   });
 
   describe('constructor', () => {
-    it('should normalize host with https:// prefix', () => {
-      const clientWithHttps = new DatabricksAppsClient(
-        'https://example.databricks.com',
-        clientId,
-        clientSecret
-      );
-      // The host is normalized internally, we can verify by calling a method
-      expect(clientWithHttps).toBeDefined();
-    });
-
-    it('should handle host without protocol', () => {
-      const clientWithoutProtocol = new DatabricksAppsClient(
-        'example.databricks.com',
-        clientId,
-        clientSecret
-      );
-      expect(clientWithoutProtocol).toBeDefined();
+    it('should get host from authProvider.getEnvVars()', () => {
+      expect(mockAuthProvider.getEnvVars).toHaveBeenCalled();
     });
   });
 
@@ -61,48 +50,25 @@ describe('DatabricksAppsClient', () => {
         status: 'IDLE',
       };
 
-      global.fetch = vi
-        .fn()
-        // First call for token
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              access_token: 'test-token',
-              token_type: 'Bearer',
-              expires_in: 3600,
-            }),
-        })
-        // Second call for create app
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(mockApp),
-        });
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockApp),
+      });
 
       const app = await client.create('test-app', 'Test description');
 
       expect(app).toEqual(mockApp);
-      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(mockAuthProvider.getAccessToken).toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalledTimes(1);
     });
 
     it('should create an app without description', async () => {
       const mockApp = { name: 'test-app' };
 
-      global.fetch = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              access_token: 'test-token',
-              token_type: 'Bearer',
-              expires_in: 3600,
-            }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(mockApp),
-        });
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockApp),
+      });
 
       const app = await client.create('test-app');
       expect(app).toEqual(mockApp);
@@ -116,21 +82,10 @@ describe('DatabricksAppsClient', () => {
         status: 'PENDING',
       };
 
-      global.fetch = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              access_token: 'test-token',
-              token_type: 'Bearer',
-              expires_in: 3600,
-            }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(mockDeployment),
-        });
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockDeployment),
+      });
 
       const deployment = await client.deploy('test-app', '/Workspace/Users/user@example.com/app');
 
@@ -146,21 +101,10 @@ describe('DatabricksAppsClient', () => {
         status: 'RUNNING',
       };
 
-      global.fetch = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              access_token: 'test-token',
-              token_type: 'Bearer',
-              expires_in: 3600,
-            }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(mockApp),
-        });
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockApp),
+      });
 
       const app = await client.get('test-app');
 
@@ -177,21 +121,10 @@ describe('DatabricksAppsClient', () => {
         ],
       };
 
-      global.fetch = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              access_token: 'test-token',
-              token_type: 'Bearer',
-              expires_in: 3600,
-            }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(mockResponse),
-        });
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
 
       const response = await client.listDeployments('test-app');
 
@@ -201,41 +134,19 @@ describe('DatabricksAppsClient', () => {
 
   describe('delete', () => {
     it('should delete an app', async () => {
-      global.fetch = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              access_token: 'test-token',
-              token_type: 'Bearer',
-              expires_in: 3600,
-            }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-        });
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+      });
 
       await expect(client.delete('test-app')).resolves.toBeUndefined();
     });
 
     it('should throw error when delete fails', async () => {
-      global.fetch = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              access_token: 'test-token',
-              token_type: 'Bearer',
-              expires_in: 3600,
-            }),
-        })
-        .mockResolvedValueOnce({
-          ok: false,
-          status: 404,
-          text: () => Promise.resolve('App not found'),
-        });
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        text: () => Promise.resolve('App not found'),
+      });
 
       await expect(client.delete('non-existent-app')).rejects.toThrow(
         'Databricks API error (404): App not found'
@@ -256,21 +167,10 @@ describe('DatabricksAppsClient', () => {
         ],
       };
 
-      global.fetch = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              access_token: 'test-token',
-              token_type: 'Bearer',
-              expires_in: 3600,
-            }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(mockResponse),
-        });
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
 
       const result = await client.updatePermissions('test-app', [
         { user_name: 'user@example.com', permission_level: 'CAN_MANAGE' },
@@ -282,22 +182,11 @@ describe('DatabricksAppsClient', () => {
 
   describe('error handling', () => {
     it('should throw error when API returns error', async () => {
-      global.fetch = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              access_token: 'test-token',
-              token_type: 'Bearer',
-              expires_in: 3600,
-            }),
-        })
-        .mockResolvedValueOnce({
-          ok: false,
-          status: 404,
-          text: () => Promise.resolve('App not found'),
-        });
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        text: () => Promise.resolve('App not found'),
+      });
 
       await expect(client.get('non-existent-app')).rejects.toThrow(
         'Databricks API error (404): App not found'
@@ -305,13 +194,46 @@ describe('DatabricksAppsClient', () => {
     });
 
     it('should throw error when token is not available', async () => {
+      const failingAuthProvider: AuthProvider = {
+        type: 'oauth-m2m',
+        getAccessToken: vi.fn().mockRejectedValue(new Error('Token not available')),
+        getEnvVars: vi.fn().mockReturnValue({
+          DATABRICKS_AUTH_TYPE: 'oauth-m2m',
+          DATABRICKS_HOST: 'https://example.databricks.com',
+          DATABRICKS_CLIENT_ID: 'test-client-id',
+          DATABRICKS_CLIENT_SECRET: 'test-client-secret',
+        }),
+      };
+
+      const failingClient = new DatabricksAppsClient(failingAuthProvider);
+
+      await expect(failingClient.get('test-app')).rejects.toThrow('Token not available');
+    });
+  });
+
+  describe('AuthProvider types', () => {
+    it('should work with PAT auth provider', async () => {
+      const patAuthProvider: AuthProvider = {
+        type: 'pat',
+        getAccessToken: vi.fn().mockResolvedValue('pat-token'),
+        getEnvVars: vi.fn().mockReturnValue({
+          DATABRICKS_AUTH_TYPE: 'pat',
+          DATABRICKS_HOST: 'https://example.databricks.com',
+          DATABRICKS_TOKEN: 'pat-token',
+        }),
+      };
+
+      const patClient = new DatabricksAppsClient(patAuthProvider);
+
+      const mockApp = { name: 'test-app' };
       global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 401,
-        text: () => Promise.resolve('Unauthorized'),
+        ok: true,
+        json: () => Promise.resolve(mockApp),
       });
 
-      await expect(client.get('test-app')).rejects.toThrow('Failed to fetch SP token');
+      const app = await patClient.get('test-app');
+      expect(app).toEqual(mockApp);
+      expect(patAuthProvider.getAccessToken).toHaveBeenCalled();
     });
   });
 });

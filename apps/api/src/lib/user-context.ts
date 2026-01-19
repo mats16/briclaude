@@ -1,12 +1,12 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import path from 'node:path';
-import { getUserPAT, getServicePrincipalTokenFromConfig } from '../utils/databricks-auth.js';
+import { getAuthProvider, type AuthProvider } from './databricks-auth.js';
 
 /**
  * ユーザーコンテキスト
  *
  * リクエストごとのユーザー情報とトークンを管理する。
- * トークンは遅延評価（Lazy getter）で、必要な場合のみ取得される。
+ * 認証は AuthProvider に委譲し、遅延評価でキャッシュされる。
  */
 export class UserContext {
   /** ユーザー ID */
@@ -16,8 +16,8 @@ export class UserContext {
   /** ユーザーのホームディレクトリ */
   readonly userHome: string;
 
-  /** PAT キャッシュ（リクエストスコープ）: null = 未取得 */
-  private _pat: string | undefined | null = null;
+  /** AuthProvider キャッシュ（リクエストスコープ）: null = 未取得 */
+  private _authProvider: AuthProvider | null = null;
 
   constructor(
     private readonly fastify: FastifyInstance,
@@ -33,14 +33,14 @@ export class UserContext {
   }
 
   /**
-   * PAT を取得（遅延評価、リクエストスコープでキャッシュ）
-   * DB から取得するため非同期
+   * AuthProvider を取得（遅延評価、リクエストスコープでキャッシュ）
+   * PAT が登録されていれば PAT、なければ SP を使用
    */
-  async getPat(): Promise<string | undefined> {
-    if (this._pat === null) {
-      this._pat = await getUserPAT(this.fastify, this.userId);
+  async getAuthProvider(): Promise<AuthProvider> {
+    if (this._authProvider === null) {
+      this._authProvider = await getAuthProvider(this.fastify, this.userId);
     }
-    return this._pat;
+    return this._authProvider;
   }
 
   /**
@@ -50,21 +50,6 @@ export class UserContext {
   get oboAccessToken(): string | undefined {
     const token = this.request.ctx?.user.oboAccessToken;
     return token && token !== '' ? token : undefined;
-  }
-
-  /**
-   * SP トークンを取得（グローバルキャッシュあり）
-   * OAuth から取得するため非同期
-   */
-  async getSpAccessToken(): Promise<string | undefined> {
-    return getServicePrincipalTokenFromConfig(this.fastify);
-  }
-
-  /**
-   * PAT → SP のフォールバック付きでトークンを取得
-   */
-  async getAccessToken(): Promise<string | undefined> {
-    return (await this.getPat()) ?? (await this.getSpAccessToken());
   }
 }
 

@@ -53,15 +53,17 @@ const workspaceRoute: FastifyPluginAsync = async fastify => {
     if (!validatePath(request.query.path, reply)) return;
 
     const ctx = createUserContext(fastify, request);
-    const pat = await ctx.getPat();
+    const authProvider = await ctx.getAuthProvider();
 
-    if (!pat) {
+    if (authProvider.type !== 'pat') {
       return reply.status(401).send({
         error: 'Unauthorized',
         message: 'PAT is not registered',
         statusCode: 401,
       });
     }
+
+    const pat = await authProvider.getAccessToken();
 
     const url = new URL('/api/2.0/workspace/list', `https://${databricksHost}`);
     url.searchParams.set('path', request.query.path);
@@ -85,15 +87,17 @@ const workspaceRoute: FastifyPluginAsync = async fastify => {
     if (!validatePath(request.query.path, reply)) return;
 
     const ctx = createUserContext(fastify, request);
-    const pat = await ctx.getPat();
+    const authProvider = await ctx.getAuthProvider();
 
-    if (!pat) {
+    if (authProvider.type !== 'pat') {
       return reply.status(401).send({
         error: 'Unauthorized',
         message: 'PAT is not registered',
         statusCode: 401,
       });
     }
+
+    const pat = await authProvider.getAccessToken();
 
     const url = new URL('/api/2.0/workspace/get-status', `https://${databricksHost}`);
     url.searchParams.set('path', request.query.path);
@@ -117,15 +121,17 @@ const workspaceRoute: FastifyPluginAsync = async fastify => {
     if (!validatePath(request.body.path, reply)) return;
 
     const ctx = createUserContext(fastify, request);
-    const pat = await ctx.getPat();
+    const authProvider = await ctx.getAuthProvider();
 
-    if (!pat) {
+    if (authProvider.type !== 'pat') {
       return reply.status(401).send({
         error: 'Unauthorized',
         message: 'PAT is not registered',
         statusCode: 401,
       });
     }
+
+    const pat = await authProvider.getAccessToken();
 
     const url = new URL('/api/2.0/workspace/mkdirs', `https://${databricksHost}`);
 

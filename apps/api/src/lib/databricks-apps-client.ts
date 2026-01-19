@@ -2,12 +2,11 @@
  * Databricks Apps API クライアント
  *
  * Databricks Apps の作成、デプロイ、削除などの操作を行うクライアントです。
- * Service Principal を使用して認証します。
+ * AuthProvider を使用して認証します（PAT または Service Principal）。
  */
 
 import type { DatabricksApp, AppDeployment } from '@repo/types';
-import { getServicePrincipalToken } from '../utils/databricks-auth.js';
-import { normalizeHost } from '../utils/normalize-host.js';
+import type { AuthProvider } from './databricks-auth.js';
 import { execFile } from 'child_process';
 
 export interface ListDeploymentsResponse {
@@ -65,11 +64,10 @@ export interface ObjectPermissions {
  *
  * @example
  * ```typescript
- * const client = new DatabricksAppsClient(
- *   'my-workspace.databricks.com',
- *   'client-id',
- *   'client-secret'
- * );
+ * import { getAuthProvider } from './databricks-auth.js';
+ *
+ * const authProvider = await getAuthProvider(fastify, userId);
+ * const client = new DatabricksAppsClient(authProvider);
  *
  * // アプリ作成
  * const app = await client.create('my-app', 'My app description');
@@ -85,19 +83,15 @@ export class DatabricksAppsClient {
   /** Databricks ワークスペースホスト (e.g. https://dbc-123456789.cloud.databricks.com) */
   private readonly host: string;
 
-  constructor(
-    host: string,
-    private readonly clientId: string,
-    private readonly clientSecret: string
-  ) {
-    this.host = `https://${normalizeHost(host)}`;
+  constructor(private readonly authProvider: AuthProvider) {
+    this.host = authProvider.getEnvVars().DATABRICKS_HOST;
   }
 
   /**
-   * Service Principal トークンを取得
+   * アクセストークンを取得
    */
-  private getToken(): Promise<string | undefined> {
-    return getServicePrincipalToken(this.host, this.clientId, this.clientSecret);
+  private getToken(): Promise<string> {
+    return this.authProvider.getAccessToken();
   }
 
   /**
@@ -109,9 +103,6 @@ export class DatabricksAppsClient {
     body?: Record<string, unknown>
   ): Promise<T> {
     const token = await this.getToken();
-    if (!token) {
-      throw new Error('Access token is not available');
-    }
 
     const url = new URL(path, this.host);
     const response = await fetch(url.toString(), {
@@ -136,9 +127,6 @@ export class DatabricksAppsClient {
    */
   private async callApiNoContent(path: string): Promise<void> {
     const token = await this.getToken();
-    if (!token) {
-      throw new Error('Access token is not available');
-    }
 
     const url = new URL(path, this.host);
     const response = await fetch(url.toString(), {
@@ -252,14 +240,14 @@ export class DatabricksAppsClient {
       args.push('--source', source);
     }
 
+    // AuthProvider から環境変数を取得
+    const envVars = this.authProvider.getEnvVars();
+
     const { stdout, stderr } = await execFileAsync('databricks', args, {
       env: {
         PATH: `${process.env.HOME}/bin:${process.env.PATH}`,
         HOME: process.env.HOME,
-        DATABRICKS_HOST: this.host,
-        DATABRICKS_CLIENT_ID: this.clientId,
-        DATABRICKS_CLIENT_SECRET: this.clientSecret,
-        DATABRICKS_AUTH_TYPE: 'oauth-m2m',
+        ...envVars,
       },
     });
 

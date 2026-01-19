@@ -8,7 +8,7 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, and } from 'drizzle-orm';
 import { oauthTokens } from '../db/schema.js';
-import { normalizeHost } from './normalize-host.js';
+import { normalizeHost } from '../utils/normalize-host.js';
 
 interface CachedToken {
   accessToken: string;
@@ -91,29 +91,6 @@ export function clearSpTokenCache(): void {
 }
 
 /**
- * Fastify の config から Service Principal トークンを取得
- *
- * @param fastify - Fastify インスタンス
- * @returns アクセストークン（認証情報がない場合や取得に失敗した場合は undefined）
- */
-export async function getServicePrincipalTokenFromConfig(
-  fastify: FastifyInstance
-): Promise<string | undefined> {
-  const { DATABRICKS_HOST, DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET } = fastify.config;
-
-  try {
-    return await getServicePrincipalToken(
-      DATABRICKS_HOST,
-      DATABRICKS_CLIENT_ID,
-      DATABRICKS_CLIENT_SECRET
-    );
-  } catch (error) {
-    fastify.log.error(error, 'Failed to get Service Principal token');
-    return undefined;
-  }
-}
-
-/**
  * DB からユーザーの Personal Access Token (PAT) を取得
  *
  * @param fastify - Fastify インスタンス
@@ -147,4 +124,82 @@ export async function getUserPAT(
   }
 
   return undefined;
+}
+
+// ----- AuthProvider 型と Factory -----
+
+interface AuthEnvVars {
+  /** Auth type (pat or oauth-m2m) */
+  DATABRICKS_AUTH_TYPE: 'pat' | 'oauth-m2m';
+  /** Databricks Workspace URL (e.g. https://dbc-123456789.cloud.databricks.com) */
+  DATABRICKS_HOST: string;
+}
+
+export interface PatEnvVars extends AuthEnvVars {
+  DATABRICKS_AUTH_TYPE: 'pat';
+  DATABRICKS_TOKEN: string;
+}
+
+export interface ServicePrincipalEnvVars extends AuthEnvVars {
+  DATABRICKS_AUTH_TYPE: 'oauth-m2m';
+  DATABRICKS_CLIENT_ID: string;
+  DATABRICKS_CLIENT_SECRET: string;
+}
+
+export type AuthProvider =
+  | { type: 'pat'; getEnvVars(): PatEnvVars; getAccessToken(): Promise<string> }
+  | {
+      type: 'oauth-m2m';
+      getEnvVars(): ServicePrincipalEnvVars;
+      getAccessToken(): Promise<string>;
+    };
+
+/**
+ * ユーザーの認証プロバイダーを取得
+ *
+ * PAT が登録されている場合は PAT を使用し、なければ Service Principal を使用します。
+ *
+ * @param fastify - Fastify インスタンス
+ * @param userId - ユーザー ID
+ * @returns AuthProvider
+ */
+export async function getAuthProvider(
+  fastify: FastifyInstance,
+  userId: string
+): Promise<AuthProvider> {
+  const host = `https://${fastify.config.DATABRICKS_HOST}`;
+  const token = await getUserPAT(fastify, userId);
+
+  if (token) {
+    return {
+      type: 'pat',
+      getEnvVars: () => ({
+        DATABRICKS_AUTH_TYPE: 'pat',
+        DATABRICKS_HOST: host,
+        DATABRICKS_TOKEN: token,
+      }),
+      getAccessToken: async () => token,
+    };
+  }
+
+  return {
+    type: 'oauth-m2m',
+    getEnvVars: () => ({
+      DATABRICKS_AUTH_TYPE: 'oauth-m2m',
+      DATABRICKS_HOST: host,
+      DATABRICKS_CLIENT_ID: fastify.config.DATABRICKS_CLIENT_ID,
+      DATABRICKS_CLIENT_SECRET: fastify.config.DATABRICKS_CLIENT_SECRET,
+    }),
+    getAccessToken: async () => {
+      const spToken = await getServicePrincipalToken(
+        host,
+        fastify.config.DATABRICKS_CLIENT_ID,
+        fastify.config.DATABRICKS_CLIENT_SECRET
+      );
+      if (!spToken) {
+        throw new Error('Service Principal token is not available');
+      }
+      return spToken;
+    },
+  };
 }

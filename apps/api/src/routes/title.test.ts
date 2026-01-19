@@ -20,17 +20,13 @@ vi.mock('openai', () => {
 });
 
 // Mock UserContext
-const mockGetPat = vi.fn();
-const mockGetSpAccessToken = vi.fn();
-const mockGetAccessToken = vi.fn();
+const mockGetAuthProvider = vi.fn();
 
 vi.mock('../lib/user-context.js', () => ({
   createUserContext: vi.fn(() => ({
     userId: 'test-user',
     userHome: '/home/test-user',
-    getPat: mockGetPat,
-    getSpAccessToken: mockGetSpAccessToken,
-    getAccessToken: mockGetAccessToken,
+    getAuthProvider: mockGetAuthProvider,
     oboAccessToken: undefined,
   })),
 }));
@@ -57,10 +53,12 @@ describe('title route', () => {
     // Reset mocks
     vi.clearAllMocks();
 
-    // Default: return PAT token via getAccessToken
-    mockGetPat.mockResolvedValue('test-pat-token');
-    mockGetSpAccessToken.mockResolvedValue(null);
-    mockGetAccessToken.mockResolvedValue('test-pat-token');
+    // Default: return PAT auth provider
+    mockGetAuthProvider.mockResolvedValue({
+      type: 'pat',
+      getEnvVars: vi.fn(),
+      getAccessToken: vi.fn().mockResolvedValue('test-pat-token'),
+    });
   });
 
   afterEach(async () => {
@@ -165,11 +163,15 @@ describe('title route', () => {
       expect(body.error).toBe('ValidationError');
     });
 
-    it('should return 401 when no token is available (PAT and SP both missing)', async () => {
-      // Mock: No PAT and no SP token
-      mockGetPat.mockResolvedValue(null);
-      mockGetSpAccessToken.mockResolvedValue(null);
-      mockGetAccessToken.mockResolvedValue(undefined);
+    it('should return 401 when no token is available (SP token fetch fails)', async () => {
+      // Mock: SP auth provider that throws on getAccessToken
+      mockGetAuthProvider.mockResolvedValue({
+        type: 'oauth-m2m',
+        getEnvVars: vi.fn(),
+        getAccessToken: vi
+          .fn()
+          .mockRejectedValue(new Error('Service Principal token is not available')),
+      });
 
       await registerPlugins();
 
@@ -188,10 +190,12 @@ describe('title route', () => {
     });
 
     it('should use SP token when PAT is not available', async () => {
-      // Mock: No PAT, but SP token is available
-      mockGetPat.mockResolvedValue(null);
-      mockGetSpAccessToken.mockResolvedValue('test-sp-token');
-      mockGetAccessToken.mockResolvedValue('test-sp-token');
+      // Mock: SP auth provider
+      mockGetAuthProvider.mockResolvedValue({
+        type: 'oauth-m2m',
+        getEnvVars: vi.fn(),
+        getAccessToken: vi.fn().mockResolvedValue('test-sp-token'),
+      });
 
       mockCreate.mockResolvedValue({
         choices: [
@@ -218,11 +222,14 @@ describe('title route', () => {
       expect(body.title).toBe('SP Token Test');
     });
 
-    it('should prefer PAT over SP token', async () => {
-      // Mock: Both PAT and SP token available - getAccessToken returns PAT
-      mockGetPat.mockResolvedValue('test-pat-token');
-      mockGetSpAccessToken.mockResolvedValue('test-sp-token');
-      mockGetAccessToken.mockResolvedValue('test-pat-token');
+    it('should use PAT auth provider when available', async () => {
+      // Mock: PAT auth provider
+      const mockAccessToken = vi.fn().mockResolvedValue('test-pat-token');
+      mockGetAuthProvider.mockResolvedValue({
+        type: 'pat',
+        getEnvVars: vi.fn(),
+        getAccessToken: mockAccessToken,
+      });
 
       mockCreate.mockResolvedValue({
         choices: [
@@ -248,8 +255,8 @@ describe('title route', () => {
       const body = response.json();
       expect(body.title).toBe('PAT Priority Test');
 
-      // Verify that getAccessToken was called (which returns PAT first)
-      expect(mockGetAccessToken).toHaveBeenCalled();
+      // Verify that getAccessToken was called
+      expect(mockAccessToken).toHaveBeenCalled();
     });
 
     it('should return 500 with ApiError when LLM call fails', async () => {

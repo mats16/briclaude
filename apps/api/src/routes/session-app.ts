@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { SessionId } from '../models/session.model.js';
 import { getSession } from '../services/session.service.js';
 import { DatabricksAppsClient } from '../lib/databricks-apps-client.js';
+import { getAuthProvider } from '../lib/databricks-auth.js';
 
 /**
  * session_id (TypeID) の suffix から app_name を生成
@@ -12,13 +13,6 @@ function generateAppName(sessionId: SessionId): string {
 }
 
 const sessionAppRoute: FastifyPluginAsync = async fastify => {
-  // DatabricksAppsClient を作成
-  const appsClient = new DatabricksAppsClient(
-    fastify.config.DATABRICKS_HOST,
-    fastify.config.DATABRICKS_CLIENT_ID,
-    fastify.config.DATABRICKS_CLIENT_SECRET
-  );
-
   /**
    * GET /sessions/:session_id/app
    * セッションに関連付けられた Databricks App を取得
@@ -72,7 +66,11 @@ const sessionAppRoute: FastifyPluginAsync = async fastify => {
       });
     }
 
-    // 4. app_name を生成して Databricks Apps API を呼び出し
+    // 4. AuthProvider を取得してクライアントを作成（PAT → SP フォールバック）
+    const authProvider = await getAuthProvider(fastify, user.id);
+    const appsClient = new DatabricksAppsClient(authProvider);
+
+    // 5. app_name を生成して Databricks Apps API を呼び出し
     const appName = generateAppName(sessionId);
 
     try {
