@@ -245,14 +245,16 @@ Use this to grant access to users or groups.
           },
           required: ['permission_level'],
         },
-        handler: async (params: Record<string, unknown>) => {
+        handler: async (args: Record<string, unknown>) => {
+          // MCP SDK passes arguments in a nested structure
+          const params = (args.params ?? args.arguments ?? args) as Record<string, unknown>;
           const userName = params.user_name as string | undefined;
           const groupName = params.group_name as string | undefined;
           const permissionLevel = params.permission_level as 'CAN_USE' | 'CAN_MANAGE';
 
           if (!userName && !groupName) {
             throw new Error(
-              `Either user_name or group_name must be specified. Received params: ${JSON.stringify(params)}`
+              `Either user_name or group_name must be specified. Received: args keys=${Object.keys(args)}, params keys=${Object.keys(params)}`
             );
           }
           if (userName && groupName) {
