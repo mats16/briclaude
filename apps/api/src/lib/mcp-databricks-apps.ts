@@ -77,10 +77,12 @@ This operation typically takes about 2 minutes to complete. After creating, you 
     async ({ description }) => {
       const app = await client.create(appName, description);
 
-      // ユーザーに CAN_MANAGE 権限を付与
-      await client.updatePermissions(appName, [
-        { user_name: userName, permission_level: 'CAN_MANAGE' },
-      ]);
+      if (authProvider.type === 'oauth-m2m') {
+        // ユーザーに CAN_MANAGE 権限を付与
+        await client.updatePermissions(appName, [
+          { user_name: userName, permission_level: 'CAN_MANAGE' },
+        ]);
+      }
 
       return {
         content: [{ type: 'text' as const, text: JSON.stringify(app) }],
