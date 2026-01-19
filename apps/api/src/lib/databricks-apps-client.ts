@@ -103,7 +103,7 @@ export class DatabricksAppsClient {
    * Databricks API を呼び出すヘルパー関数
    */
   private async callApi<T>(
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     path: string,
     body?: Record<string, unknown>
   ): Promise<T> {
@@ -204,7 +204,7 @@ export class DatabricksAppsClient {
     appName: string,
     accessControlList: AccessControlItem[]
   ): Promise<ObjectPermissions> {
-    return this.callApi<ObjectPermissions>('POST', `/api/2.0/permissions/apps/${appName}`, {
+    return this.callApi<ObjectPermissions>('PATCH', `/api/2.0/permissions/apps/${appName}`, {
       access_control_list: accessControlList,
     });
   }
