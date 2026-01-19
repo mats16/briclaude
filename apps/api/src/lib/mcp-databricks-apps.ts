@@ -1,7 +1,7 @@
-// apps/api/src/mcp/dbapps.ts
+// apps/api/src/lib/mcp-databricks-apps.ts
 import { createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk';
-import type { DatabricksApp, AppDeployment } from '@repo/types';
 import { SessionId } from '../models/session.model.js';
+import { DatabricksAppsClient } from './databricks-apps-client.js';
 
 /**
  * Databricks Apps 管理用 MCP サーバー
@@ -27,7 +27,7 @@ import { SessionId } from '../models/session.model.js';
  * ## 使用例
  *
  * ```typescript
- * import { createDbAppsMcpServer } from '../mcp/dbapps.js';
+ * import { createDbAppsMcpServer } from '../lib/mcp-databricks-apps.js';
  *
  * const response = query({
  *   prompt,
@@ -35,9 +35,9 @@ import { SessionId } from '../models/session.model.js';
  *     mcpServers: {
  *       dbapps: createDbAppsMcpServer(
  *         sessionId,
- *         databricksHost,
- *         workspacePath,
- *         () => ctx.getAccessToken()
+ *         host,
+ *         clientId,
+ *         clientSecret
  *       ),
  *     },
  *     allowedTools: [
@@ -52,44 +52,15 @@ import { SessionId } from '../models/session.model.js';
  */
 export function createDbAppsMcpServer(
   sessionId: SessionId,
-  databricksHost: string,
-  workspacePath: string,
-  getAccessToken: () => Promise<string | undefined>
+  host: string,
+  clientId: string,
+  clientSecret: string
 ) {
   // アプリ名を生成（app-{suffix} 形式）
   const appName = `app-${sessionId.getSuffix()}`;
-  const baseUrl = `https://${databricksHost}`;
 
-  /**
-   * Databricks API を呼び出すヘルパー関数
-   */
-  async function callDatabricksApi<T>(
-    method: 'GET' | 'POST' | 'DELETE',
-    path: string,
-    body?: Record<string, unknown>
-  ): Promise<T> {
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-      throw new Error('Access token is not available');
-    }
-
-    const url = new URL(path, baseUrl);
-    const response = await fetch(url.toString(), {
-      method,
-      headers: {
-        'content-type': 'application/json',
-        authorization: `Bearer ${accessToken}`,
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Databricks API error (${response.status}): ${errorText}`);
-    }
-
-    return response.json() as Promise<T>;
-  }
+  // クライアントを作成
+  const client = new DatabricksAppsClient(host, clientId, clientSecret);
 
   return createSdkMcpServer({
     name: 'apps',
@@ -116,16 +87,7 @@ This operation typically takes about 2 minutes to complete. After creating, you 
         },
         handler: async (params: Record<string, unknown>) => {
           const { description } = params as { description?: string };
-
-          const requestBody: Record<string, unknown> = {
-            name: appName,
-          };
-          if (description) {
-            requestBody.description = description;
-          }
-
-          const app = await callDatabricksApi<DatabricksApp>('POST', '/api/2.0/apps', requestBody);
-
+          const app = await client.create(appName, description);
           return {
             content: [{ type: 'text' as const, text: JSON.stringify(app) }],
           };
@@ -136,19 +98,22 @@ This operation typically takes about 2 minutes to complete. After creating, you 
         description: `Deploy the Databricks App.
 
 - App name: **${appName}**
-- Source code path: **${workspacePath}**`,
+
+You must specify the source code path in the Databricks Workspace where the app code is located.`,
         inputSchema: {
           type: 'object' as const,
-          properties: {},
-          required: [],
+          properties: {
+            source_code_path: {
+              type: 'string',
+              description:
+                'The Databricks Workspace path where the app source code is located (e.g., /Workspace/Users/user@example.com/my-app)',
+            },
+          },
+          required: ['source_code_path'],
         },
-        handler: async () => {
-          const deployment = await callDatabricksApi<AppDeployment>(
-            'POST',
-            `/api/2.0/apps/${appName}/deployments`,
-            { source_code_path: workspacePath }
-          );
-
+        handler: async (params: Record<string, unknown>) => {
+          const { source_code_path } = params as { source_code_path: string };
+          const deployment = await client.deploy(appName, source_code_path);
           return {
             content: [{ type: 'text' as const, text: JSON.stringify(deployment) }],
           };
@@ -167,8 +132,7 @@ Returns app details including status, URL, and deployment information.`,
           required: [],
         },
         handler: async () => {
-          const app = await callDatabricksApi<DatabricksApp>('GET', `/api/2.0/apps/${appName}`);
-
+          const app = await client.get(appName);
           return {
             content: [{ type: 'text' as const, text: JSON.stringify(app) }],
           };
@@ -187,15 +151,7 @@ Returns all deployments for the app, including their status and timestamps.`,
           required: [],
         },
         handler: async () => {
-          interface ListDeploymentsResponse {
-            deployments?: AppDeployment[];
-          }
-
-          const response = await callDatabricksApi<ListDeploymentsResponse>(
-            'GET',
-            `/api/2.0/apps/${appName}/deployments`
-          );
-
+          const response = await client.listDeployments(appName);
           return {
             content: [{ type: 'text' as const, text: JSON.stringify(response) }],
           };
@@ -233,43 +189,18 @@ Options:
           required: [],
         },
         handler: async (params: Record<string, unknown>) => {
-          const {
-            tail_lines = 100,
-            search,
-            source,
-          } = params as {
+          const { tail_lines, search, source } = params as {
             tail_lines?: number;
             search?: string;
             source?: 'APP' | 'SYSTEM';
           };
-          const accessToken = await getAccessToken();
-          if (!accessToken) {
-            throw new Error('Access token is not available');
-          }
-
-          const { exec } = await import('child_process');
-          const { promisify } = await import('util');
-          const execAsync = promisify(exec);
-
-          // コマンド引数を構築
-          const args = ['apps', 'logs', appName, '--tail-lines', String(tail_lines), '--no-color'];
-          if (search) {
-            args.push('--search', search);
-          }
-          if (source) {
-            args.push('--source', source);
-          }
-
-          const { stdout, stderr } = await execAsync(`databricks ${args.join(' ')}`, {
-            env: {
-              ...process.env,
-              DATABRICKS_HOST: baseUrl,
-              DATABRICKS_TOKEN: accessToken,
-            },
+          const logs = await client.getLogs(appName, {
+            tailLines: tail_lines,
+            search,
+            source,
           });
-
           return {
-            content: [{ type: 'text' as const, text: stdout || stderr }],
+            content: [{ type: 'text' as const, text: logs }],
           };
         },
       },

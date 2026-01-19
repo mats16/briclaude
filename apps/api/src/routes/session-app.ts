@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { createUserContext } from '../lib/user-context.js';
 import { SessionId } from '../models/session.model.js';
 import { getSession } from '../services/session.service.js';
+import { DatabricksAppsClient } from '../lib/databricks-apps-client.js';
 
 /**
  * session_id (TypeID) の suffix から app_name を生成
@@ -12,7 +12,12 @@ function generateAppName(sessionId: SessionId): string {
 }
 
 const sessionAppRoute: FastifyPluginAsync = async fastify => {
-  const databricksHost = fastify.config.DATABRICKS_HOST;
+  // DatabricksAppsClient を作成
+  const appsClient = new DatabricksAppsClient(
+    fastify.config.DATABRICKS_HOST,
+    fastify.config.DATABRICKS_CLIENT_ID,
+    fastify.config.DATABRICKS_CLIENT_SECRET
+  );
 
   /**
    * GET /sessions/:session_id/app
@@ -67,32 +72,23 @@ const sessionAppRoute: FastifyPluginAsync = async fastify => {
       });
     }
 
-    // 4. SP トークンを取得
-    const ctx = createUserContext(fastify, request);
-    const accessToken = await ctx.getSpAccessToken();
+    // 4. app_name を生成して Databricks Apps API を呼び出し
+    const appName = generateAppName(sessionId);
 
-    if (!accessToken) {
-      return reply.status(401).send({
-        error: 'Unauthorized',
-        message: 'Service Principal token is not available',
-        statusCode: 401,
+    try {
+      const app = await appsClient.get(appName);
+      return reply.send(app);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      // API エラーからステータスコードを抽出
+      const statusMatch = message.match(/\((\d+)\)/);
+      const statusCode = statusMatch ? parseInt(statusMatch[1], 10) : 500;
+      return reply.status(statusCode).send({
+        error: statusCode === 404 ? 'NotFound' : 'InternalServerError',
+        message,
+        statusCode,
       });
     }
-
-    // 5. app_name を生成して Databricks Apps API にプロキシ
-    const appName = generateAppName(sessionId);
-    const url = new URL(`/api/2.0/apps/${appName}`, `https://${databricksHost}`);
-
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        'content-type': 'application/json',
-        authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    const data = await response.json();
-    return reply.status(response.status).send(data);
   });
 };
 

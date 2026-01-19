@@ -26,9 +26,10 @@ import type {
 import { ClaudeSettings } from '../models/claude-settings.model.js';
 import { buildSystemPromptConfig } from '../utils/system-prompt.helper.js';
 import { sessions } from '../db/schema.js';
-import { createDbAppsMcpServer } from '../mcp/dbapps.js';
+import { createDbAppsMcpServer } from '../lib/mcp-databricks-apps.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 import { ensureDirectory, removeDirectory } from '../utils/directory.js';
+import { DatabricksAppsClient } from '../lib/databricks-apps-client.js';
 import { wsManager } from './websocket-manager.service.js';
 import { SessionId } from '../models/session.model.js';
 import type { UserContext } from '../lib/user-context.js';
@@ -404,15 +405,13 @@ export async function createSession(
       };
     }
 
-    // apps: workspacePath がある場合に固定で追加
-    if (workspaceSources[0]?.path) {
-      mcpServers.apps = createDbAppsMcpServer(
-        sessionId,
-        fastify.config.DATABRICKS_HOST,
-        workspaceSources[0].path,
-        () => ctx.getAccessToken()
-      );
-    }
+    // apps: Databricks Apps MCP サーバーを追加
+    mcpServers.apps = createDbAppsMcpServer(
+      sessionId,
+      fastify.config.DATABRICKS_HOST,
+      fastify.config.DATABRICKS_CLIENT_ID,
+      fastify.config.DATABRICKS_CLIENT_SECRET
+    );
 
     // allowedTools を構築（MCP ツールは allowedTools で制御）
     const allowedTools = [
@@ -786,15 +785,13 @@ export async function sendMessageToSession(
       };
     }
 
-    // apps: workspacePath がある場合に固定で追加
-    if (workspacePath) {
-      mcpServers.apps = createDbAppsMcpServer(
-        sessionId,
-        fastify.config.DATABRICKS_HOST,
-        workspacePath,
-        () => ctx.getAccessToken()
-      );
-    }
+    // apps: Databricks Apps MCP サーバーを追加
+    mcpServers.apps = createDbAppsMcpServer(
+      sessionId,
+      fastify.config.DATABRICKS_HOST,
+      fastify.config.DATABRICKS_CLIENT_ID,
+      fastify.config.DATABRICKS_CLIENT_SECRET
+    );
 
     // allowedTools を構築（MCP ツールは allowedTools で制御）
     const allowedTools = [
@@ -899,7 +896,7 @@ export async function archiveSession(
 ): Promise<SessionResponse | null> {
   // user_home を取得（ベースディレクトリとして使用）
   const { userHome } = ctx;
-  const databricksHost = fastify.config.DATABRICKS_HOST;
+  const host = fastify.config.DATABRICKS_HOST;
 
   return fastify.withUserContext(userId, async tx => {
     // 1. セッション情報を取得（cwd を取得するため）
@@ -939,37 +936,18 @@ export async function archiveSession(
     );
     if (appsOutcome?.name) {
       const appName = appsOutcome.name;
-      ctx
-        .getPat()
-        .then(pat => {
-          if (!pat) {
-            fastify.log.warn(
-              { sessionId: sessionId.toString(), appName },
-              'Cannot delete Databricks App: PAT not available'
-            );
-            return;
-          }
-          const url = new URL(`/api/2.0/apps/${appName}`, `https://${databricksHost}`);
-          return fetch(url.toString(), {
-            method: 'DELETE',
-            headers: {
-              'content-type': 'application/json',
-              authorization: `Bearer ${pat}`,
-            },
-          });
-        })
-        .then(response => {
-          if (response && !response.ok) {
-            fastify.log.warn(
-              { sessionId: sessionId.toString(), appName, status: response.status },
-              'Failed to delete Databricks App'
-            );
-          } else if (response) {
-            fastify.log.info(
-              { sessionId: sessionId.toString(), appName },
-              'Databricks App deleted successfully'
-            );
-          }
+      const appsClient = new DatabricksAppsClient(
+        host,
+        fastify.config.DATABRICKS_CLIENT_ID,
+        fastify.config.DATABRICKS_CLIENT_SECRET
+      );
+      appsClient
+        .delete(appName)
+        .then(() => {
+          fastify.log.info(
+            { sessionId: sessionId.toString(), appName },
+            'Databricks App deleted successfully'
+          );
         })
         .catch(error => {
           fastify.log.error(
