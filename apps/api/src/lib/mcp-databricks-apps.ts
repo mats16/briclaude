@@ -211,66 +211,6 @@ Options:
           };
         },
       },
-      {
-        name: 'update_permissions',
-        description: `Update permissions for the Databricks App.
-
-The app name is: **${appName}**
-
-Use this to grant access to users or groups.
-
-**Permission levels:**
-- CAN_USE: Can view and run the app
-- CAN_MANAGE: Can view, run, and manage the app
-
-**Examples:**
-- Grant access to all users: \`{ "group_name": "users", "permission_level": "CAN_USE" }\`
-- Grant access to a specific user: \`{ "user_name": "user@example.com", "permission_level": "CAN_MANAGE" }\``,
-        inputSchema: {
-          type: 'object' as const,
-          properties: {
-            user_name: {
-              type: 'string',
-              description: 'User name to grant permission (mutually exclusive with group_name)',
-            },
-            group_name: {
-              type: 'string',
-              description: 'Group name to grant permission (e.g., "users"). Mutually exclusive with user_name',
-            },
-            permission_level: {
-              type: 'string',
-              enum: ['CAN_USE', 'CAN_MANAGE'],
-              description: 'Permission level to grant',
-            },
-          },
-          required: ['permission_level'],
-        },
-        handler: async (args: Record<string, unknown>) => {
-          // MCP SDK passes arguments in a nested structure
-          const params = (args.params ?? args.arguments ?? args) as Record<string, unknown>;
-          const userName = params.user_name as string | undefined;
-          const groupName = params.group_name as string | undefined;
-          const permissionLevel = params.permission_level as 'CAN_USE' | 'CAN_MANAGE';
-
-          if (!userName && !groupName) {
-            throw new Error(
-              `Either user_name or group_name must be specified. Received: args keys=${Object.keys(args)}, params keys=${Object.keys(params)}`
-            );
-          }
-          if (userName && groupName) {
-            throw new Error('Only one of user_name or group_name can be specified');
-          }
-
-          const accessControlItem = userName
-            ? { user_name: userName, permission_level: permissionLevel }
-            : { group_name: groupName, permission_level: permissionLevel };
-
-          const result = await client.updatePermissions(appName, [accessControlItem]);
-          return {
-            content: [{ type: 'text' as const, text: JSON.stringify(result) }],
-          };
-        },
-      },
     ],
   });
 }
