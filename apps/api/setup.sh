@@ -13,7 +13,12 @@ echo "Creating bin directory: $TARGET"
 mkdir -p "$TARGET"
 
 # Install databricks-cli
-curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | DATABRICKS_RUNTIME_VERSION=1 sh
+if [ ! -f "$TARGET/databricks" ]; then
+    echo "Installing databricks-cli..."
+    curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | DATABRICKS_RUNTIME_VERSION=1 sh
+else
+    echo "databricks-cli already installed"
+fi
 
 # Install jq
 JQ_VERSION="1.7.1"

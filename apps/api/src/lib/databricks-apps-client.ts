@@ -254,7 +254,7 @@ export class DatabricksAppsClient {
 
     const { stdout, stderr } = await execFileAsync('databricks', args, {
       env: {
-        PATH: process.env.PATH,
+        PATH: `${process.env.HOME}/bin:${process.env.PATH}`,
         HOME: process.env.HOME,
         DATABRICKS_HOST: this.host,
         DATABRICKS_CLIENT_ID: this.clientId,
