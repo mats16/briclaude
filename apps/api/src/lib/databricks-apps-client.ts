@@ -263,6 +263,6 @@ export class DatabricksAppsClient {
       },
     });
 
-    return stdout || stderr;
+    return stdout.trim() || stderr.trim();
   }
 }

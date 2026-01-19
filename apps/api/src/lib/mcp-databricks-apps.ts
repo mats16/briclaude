@@ -77,7 +77,7 @@ This operation typically takes about 2 minutes to complete. After creating, you 
 
 **Note**: You don't need to specify an app name - it's automatically derived from the session ID.`,
         inputSchema: {
-          type: 'object' as const,
+          type: 'object',
           properties: {
             description: {
               type: 'string',
@@ -96,7 +96,8 @@ This operation typically takes about 2 minutes to complete. After creating, you 
           ]);
 
           return {
-            content: [{ type: 'text' as const, text: JSON.stringify(app) }],
+            content: [{ type: 'text', text: JSON.stringify(app) }],
+            structuredContent: app,
           };
         },
       },
@@ -108,7 +109,7 @@ This operation typically takes about 2 minutes to complete. After creating, you 
 
 You must specify the source code path in the Databricks Workspace where the app code is located.`,
         inputSchema: {
-          type: 'object' as const,
+          type: 'object',
           properties: {
             source_code_path: {
               type: 'string',
@@ -122,7 +123,8 @@ You must specify the source code path in the Databricks Workspace where the app 
           const { source_code_path } = params as { source_code_path: string };
           const deployment = await client.deploy(appName, source_code_path);
           return {
-            content: [{ type: 'text' as const, text: JSON.stringify(deployment) }],
+            content: [{ type: 'text', text: JSON.stringify(deployment) }],
+            structuredContent: deployment,
           };
         },
       },
@@ -134,14 +136,15 @@ The app name is: **${appName}**
 
 Returns app details including status, URL, and deployment information.`,
         inputSchema: {
-          type: 'object' as const,
+          type: 'object',
           properties: {},
           required: [],
         },
         handler: async () => {
           const app = await client.get(appName);
           return {
-            content: [{ type: 'text' as const, text: JSON.stringify(app) }],
+            content: [{ type: 'text', text: JSON.stringify(app) }],
+            structuredContent: app,
           };
         },
       },
@@ -153,14 +156,15 @@ The app name is: **${appName}**
 
 Returns all deployments for the app, including their status and timestamps.`,
         inputSchema: {
-          type: 'object' as const,
+          type: 'object',
           properties: {},
           required: [],
         },
         handler: async () => {
           const response = await client.listDeployments(appName);
           return {
-            content: [{ type: 'text' as const, text: JSON.stringify(response) }],
+            content: [{ type: 'text', text: JSON.stringify(response) }],
+            structuredContent: response,
           };
         },
       },
@@ -207,7 +211,8 @@ Options:
             source,
           });
           return {
-            content: [{ type: 'text' as const, text: logs }],
+            content: [{ type: 'text', text: logs }],
+            structuredContent: { logs: logs.split('\n') },
           };
         },
       },
