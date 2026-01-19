@@ -11,6 +11,8 @@ import { getUserPAT, getServicePrincipalToken } from '../services/token-resolver
 export class UserContext {
   /** ユーザー ID */
   readonly userId: string;
+  /** ユーザーのメールアドレス */
+  readonly email: string;
   /** ユーザーのホームディレクトリ */
   readonly userHome: string;
 
@@ -26,6 +28,7 @@ export class UserContext {
     }
     const user = request.ctx.user;
     this.userId = user.id;
+    this.email = user.email;
     this.userHome = path.join(fastify.config.USER_BASE_DIR, user.id.split('@')[0]);
   }
 

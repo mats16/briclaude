@@ -22,6 +22,43 @@ export interface GetLogsOptions {
   source?: 'APP' | 'SYSTEM';
 }
 
+/** Permission level for Databricks Apps */
+export type AppPermissionLevel = 'CAN_USE' | 'CAN_MANAGE';
+
+export interface AccessControlItem {
+  /** User name (email) to grant permission */
+  user_name?: string;
+  /** Group name to grant permission */
+  group_name?: string;
+  /** Service principal name to grant permission */
+  service_principal_name?: string;
+  /** Permission level */
+  permission_level: AppPermissionLevel;
+}
+
+export interface SetPermissionsRequest {
+  access_control_list: AccessControlItem[];
+}
+
+export interface PermissionInfo {
+  permission_level: AppPermissionLevel;
+  inherited: boolean;
+  inherited_from_object?: string[];
+}
+
+export interface AccessControlListItem {
+  user_name?: string;
+  group_name?: string;
+  service_principal_name?: string;
+  all_permissions: PermissionInfo[];
+}
+
+export interface ObjectPermissions {
+  object_id?: string;
+  object_type?: string;
+  access_control_list: AccessControlListItem[];
+}
+
 /**
  * Databricks Apps API クライアント
  *
@@ -66,7 +103,7 @@ export class DatabricksAppsClient {
    * Databricks API を呼び出すヘルパー関数
    */
   private async callApi<T>(
-    method: 'GET' | 'POST' | 'DELETE',
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     path: string,
     body?: Record<string, unknown>
   ): Promise<T> {
@@ -154,6 +191,22 @@ export class DatabricksAppsClient {
    */
   async delete(appName: string): Promise<void> {
     await this.callApi<Record<string, never>>('DELETE', `/api/2.0/apps/${appName}`);
+  }
+
+  /**
+   * Databricks App の権限を設定
+   *
+   * @param appName - アプリ名
+   * @param accessControlList - アクセス制御リスト
+   * @returns 設定された権限情報
+   */
+  async setPermissions(
+    appName: string,
+    accessControlList: AccessControlItem[]
+  ): Promise<ObjectPermissions> {
+    return this.callApi<ObjectPermissions>('PUT', `/api/2.0/permissions/apps/${appName}`, {
+      access_control_list: accessControlList,
+    });
   }
 
   /**
