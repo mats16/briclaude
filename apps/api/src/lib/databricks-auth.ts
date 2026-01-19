@@ -128,9 +128,11 @@ export async function getUserPAT(
 
 // ----- AuthProvider 型と Factory -----
 
+type AuthType = 'pat' | 'oauth-m2m';
+
 interface AuthEnvVars {
   /** Auth type (pat or oauth-m2m) */
-  DATABRICKS_AUTH_TYPE: 'pat' | 'oauth-m2m';
+  DATABRICKS_AUTH_TYPE: AuthType;
   /** Databricks Workspace URL (e.g. https://dbc-123456789.cloud.databricks.com) */
   DATABRICKS_HOST: string;
 }
@@ -147,11 +149,11 @@ export interface ServicePrincipalEnvVars extends AuthEnvVars {
 }
 
 export type AuthProvider =
-  | { type: 'pat'; getEnvVars(): PatEnvVars; getAccessToken(): Promise<string> }
+  | { type: 'pat'; getEnvVars(): PatEnvVars; getToken(): Promise<string> }
   | {
       type: 'oauth-m2m';
       getEnvVars(): ServicePrincipalEnvVars;
-      getAccessToken(): Promise<string>;
+      getToken(): Promise<string>;
     };
 
 /**
@@ -178,7 +180,7 @@ export async function getAuthProvider(
         DATABRICKS_HOST: host,
         DATABRICKS_TOKEN: token,
       }),
-      getAccessToken: async () => token,
+      getToken: async () => token,
     };
   }
 
@@ -190,7 +192,7 @@ export async function getAuthProvider(
       DATABRICKS_CLIENT_ID: fastify.config.DATABRICKS_CLIENT_ID,
       DATABRICKS_CLIENT_SECRET: fastify.config.DATABRICKS_CLIENT_SECRET,
     }),
-    getAccessToken: async () => {
+    getToken: async () => {
       const spToken = await getServicePrincipalToken(
         host,
         fastify.config.DATABRICKS_CLIENT_ID,

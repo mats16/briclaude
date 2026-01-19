@@ -20,7 +20,7 @@ const jobsRoute: FastifyPluginAsync = async fastify => {
       });
     }
 
-    const pat = await authProvider.getAccessToken();
+    const pat = await authProvider.getToken();
 
     const url = new URL('/api/2.2/jobs/list', `https://${databricksHost}`);
 
@@ -57,7 +57,7 @@ const jobsRoute: FastifyPluginAsync = async fastify => {
       });
     }
 
-    const pat = await authProvider.getAccessToken();
+    const pat = await authProvider.getToken();
 
     const url = new URL('/api/2.2/jobs/runs/list', `https://${databricksHost}`);
 

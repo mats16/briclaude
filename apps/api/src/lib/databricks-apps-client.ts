@@ -91,7 +91,7 @@ export class DatabricksAppsClient {
    * アクセストークンを取得
    */
   private getToken(): Promise<string> {
-    return this.authProvider.getAccessToken();
+    return this.authProvider.getToken();
   }
 
   /**

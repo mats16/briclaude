@@ -343,7 +343,7 @@ export async function createSession(
   let accessToken: string;
   try {
     const authProvider = await ctx.getAuthProvider();
-    accessToken = await authProvider.getAccessToken();
+    accessToken = await authProvider.getToken();
   } catch (tokenError) {
     fastify.log.error(
       { sessionId: sessionId.toString(), userId, error: tokenError },
@@ -714,7 +714,7 @@ export async function sendMessageToSession(
   let accessToken: string;
   try {
     const authProvider = await ctx.getAuthProvider();
-    accessToken = await authProvider.getAccessToken();
+    accessToken = await authProvider.getToken();
   } catch (tokenError) {
     fastify.log.error(
       { sessionId: sessionId.toString(), userId, error: tokenError },

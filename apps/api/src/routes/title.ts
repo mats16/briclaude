@@ -30,7 +30,7 @@ const titleRoute: FastifyPluginAsync = async fastify => {
     const authProvider = await ctx.getAuthProvider();
     let accessToken: string;
     try {
-      accessToken = await authProvider.getAccessToken();
+      accessToken = await authProvider.getToken();
     } catch {
       const error: ApiError = {
         error: 'Unauthorized',

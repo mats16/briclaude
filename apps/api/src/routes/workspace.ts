@@ -63,7 +63,7 @@ const workspaceRoute: FastifyPluginAsync = async fastify => {
       });
     }
 
-    const pat = await authProvider.getAccessToken();
+    const pat = await authProvider.getToken();
 
     const url = new URL('/api/2.0/workspace/list', `https://${databricksHost}`);
     url.searchParams.set('path', request.query.path);
@@ -97,7 +97,7 @@ const workspaceRoute: FastifyPluginAsync = async fastify => {
       });
     }
 
-    const pat = await authProvider.getAccessToken();
+    const pat = await authProvider.getToken();
 
     const url = new URL('/api/2.0/workspace/get-status', `https://${databricksHost}`);
     url.searchParams.set('path', request.query.path);
@@ -131,7 +131,7 @@ const workspaceRoute: FastifyPluginAsync = async fastify => {
       });
     }
 
-    const pat = await authProvider.getAccessToken();
+    const pat = await authProvider.getToken();
 
     const url = new URL('/api/2.0/workspace/mkdirs', `https://${databricksHost}`);
 

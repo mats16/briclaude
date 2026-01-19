@@ -18,7 +18,7 @@ describe('DatabricksAppsClient', () => {
     // Mock AuthProvider
     mockAuthProvider = {
       type: 'oauth-m2m',
-      getAccessToken: vi.fn().mockResolvedValue('test-token'),
+      getToken: vi.fn().mockResolvedValue('test-token'),
       getEnvVars: vi.fn().mockReturnValue({
         DATABRICKS_AUTH_TYPE: 'oauth-m2m',
         DATABRICKS_HOST: 'https://example.databricks.com',
@@ -58,7 +58,7 @@ describe('DatabricksAppsClient', () => {
       const app = await client.create('test-app', 'Test description');
 
       expect(app).toEqual(mockApp);
-      expect(mockAuthProvider.getAccessToken).toHaveBeenCalled();
+      expect(mockAuthProvider.getToken).toHaveBeenCalled();
       expect(global.fetch).toHaveBeenCalledTimes(1);
     });
 
@@ -196,7 +196,7 @@ describe('DatabricksAppsClient', () => {
     it('should throw error when token is not available', async () => {
       const failingAuthProvider: AuthProvider = {
         type: 'oauth-m2m',
-        getAccessToken: vi.fn().mockRejectedValue(new Error('Token not available')),
+        getToken: vi.fn().mockRejectedValue(new Error('Token not available')),
         getEnvVars: vi.fn().mockReturnValue({
           DATABRICKS_AUTH_TYPE: 'oauth-m2m',
           DATABRICKS_HOST: 'https://example.databricks.com',
@@ -215,7 +215,7 @@ describe('DatabricksAppsClient', () => {
     it('should work with PAT auth provider', async () => {
       const patAuthProvider: AuthProvider = {
         type: 'pat',
-        getAccessToken: vi.fn().mockResolvedValue('pat-token'),
+        getToken: vi.fn().mockResolvedValue('pat-token'),
         getEnvVars: vi.fn().mockReturnValue({
           DATABRICKS_AUTH_TYPE: 'pat',
           DATABRICKS_HOST: 'https://example.databricks.com',
@@ -233,7 +233,7 @@ describe('DatabricksAppsClient', () => {
 
       const app = await patClient.get('test-app');
       expect(app).toEqual(mockApp);
-      expect(patAuthProvider.getAccessToken).toHaveBeenCalled();
+      expect(patAuthProvider.getToken).toHaveBeenCalled();
     });
   });
 });

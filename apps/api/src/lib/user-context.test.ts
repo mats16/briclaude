@@ -92,7 +92,7 @@ describe('UserContext', () => {
       const mockAuthProvider = {
         type: 'pat' as const,
         getEnvVars: vi.fn(),
-        getAccessToken: vi.fn().mockResolvedValue('user-pat-token'),
+        getToken: vi.fn().mockResolvedValue('user-pat-token'),
       };
       mockGetAuthProvider.mockResolvedValue(mockAuthProvider);
       const fastify = createMockFastify();
@@ -116,7 +116,7 @@ describe('UserContext', () => {
       const mockAuthProvider = {
         type: 'pat' as const,
         getEnvVars: vi.fn(),
-        getAccessToken: vi.fn().mockResolvedValue('user-pat-token'),
+        getToken: vi.fn().mockResolvedValue('user-pat-token'),
       };
       mockGetAuthProvider.mockResolvedValue(mockAuthProvider);
       const fastify = createMockFastify();
@@ -126,7 +126,7 @@ describe('UserContext', () => {
       const provider = await ctx.getAuthProvider();
 
       expect(provider.type).toBe('pat');
-      const token = await provider.getAccessToken();
+      const token = await provider.getToken();
       expect(token).toBe('user-pat-token');
     });
 
@@ -134,7 +134,7 @@ describe('UserContext', () => {
       const mockAuthProvider = {
         type: 'oauth-m2m' as const,
         getEnvVars: vi.fn(),
-        getAccessToken: vi.fn().mockResolvedValue('sp-token'),
+        getToken: vi.fn().mockResolvedValue('sp-token'),
       };
       mockGetAuthProvider.mockResolvedValue(mockAuthProvider);
       const fastify = createMockFastify();
@@ -144,7 +144,7 @@ describe('UserContext', () => {
       const provider = await ctx.getAuthProvider();
 
       expect(provider.type).toBe('oauth-m2m');
-      const token = await provider.getAccessToken();
+      const token = await provider.getToken();
       expect(token).toBe('sp-token');
     });
   });
