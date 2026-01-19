@@ -249,6 +249,7 @@ export class DatabricksAppsClient {
         HOME: process.env.HOME,
         ...envVars,
       },
+      timeout: 30000,
     });
 
     return stdout.trim() || stderr.trim();

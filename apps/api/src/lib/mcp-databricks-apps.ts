@@ -68,7 +68,7 @@ export function createDbAppsMcpServer(
 
 The app name is automatically generated as: **${appName}**
 
-This operation typically takes about 2 minutes to complete. After creating, you should deploy the app using the deploy tool.
+This operation typically takes about 3 minutes to complete. After creating, you should deploy the app using the deploy tool.
 
 **Note**: You don't need to specify an app name - it's automatically derived from the session ID.`,
     {
@@ -101,6 +101,7 @@ You must specify the source code path in the Databricks Workspace where the app 
     {
       source_code_path: z
         .string()
+        .startsWith('/Workspace/')
         .describe(
           'The Databricks Workspace path where the app source code is located (e.g., /Workspace/Users/user@example.com/my-app)'
         ),
