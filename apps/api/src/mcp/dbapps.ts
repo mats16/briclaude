@@ -17,6 +17,7 @@ import { SessionId } from '../models/session.model.js';
  * | `mcp__dbapps__deploy` | アプリをデプロイ（自動的に outcomes の URL を更新） |
  * | `mcp__dbapps__get` | アプリ情報を取得 |
  * | `mcp__dbapps__list_deployments` | アプリのデプロイ履歴を取得 |
+ * | `mcp__dbapps__list_logs` | アプリのランタイムログを取得 |
  *
  * ## アプリ名
  *
@@ -197,6 +198,78 @@ Returns all deployments for the app, including their status and timestamps.`,
 
           return {
             content: [{ type: 'text' as const, text: JSON.stringify(response) }],
+          };
+        },
+      },
+      {
+        name: 'list_logs',
+        description: `Get runtime logs for the Databricks App.
+
+The app name is: **${appName}**
+
+Returns stdout/stderr logs from the running app. Note: Logs are not persisted when app compute shuts down.
+
+Options:
+- tail_lines: Number of lines to retrieve from the end (default: 100)
+- search: Filter logs by pattern
+- source: Filter by log source (APP or SYSTEM)`,
+        inputSchema: {
+          type: 'object' as const,
+          properties: {
+            tail_lines: {
+              type: 'number',
+              description: 'Number of lines to retrieve from the end (default: 100)',
+            },
+            search: {
+              type: 'string',
+              description: 'Filter logs by pattern',
+            },
+            source: {
+              type: 'string',
+              enum: ['APP', 'SYSTEM'],
+              description: 'Filter by log source: APP (application logs) or SYSTEM (system logs)',
+            },
+          },
+          required: [],
+        },
+        handler: async (params: Record<string, unknown>) => {
+          const {
+            tail_lines = 100,
+            search,
+            source,
+          } = params as {
+            tail_lines?: number;
+            search?: string;
+            source?: 'APP' | 'SYSTEM';
+          };
+          const accessToken = await getAccessToken();
+          if (!accessToken) {
+            throw new Error('Access token is not available');
+          }
+
+          const { exec } = await import('child_process');
+          const { promisify } = await import('util');
+          const execAsync = promisify(exec);
+
+          // コマンド引数を構築
+          const args = ['apps', 'logs', appName, '--tail-lines', String(tail_lines), '--no-color'];
+          if (search) {
+            args.push('--search', search);
+          }
+          if (source) {
+            args.push('--source', source);
+          }
+
+          const { stdout, stderr } = await execAsync(`databricks ${args.join(' ')}`, {
+            env: {
+              ...process.env,
+              DATABRICKS_HOST: baseUrl,
+              DATABRICKS_TOKEN: accessToken,
+            },
+          });
+
+          return {
+            content: [{ type: 'text' as const, text: stdout || stderr }],
           };
         },
       },
