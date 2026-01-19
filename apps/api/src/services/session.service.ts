@@ -401,7 +401,7 @@ export async function createSession(
 
     // apps: Databricks Apps MCP サーバーを追加（PAT → SP フォールバック）
     const authProvider = await getAuthProvider(fastify, ctx.userId);
-    mcpServers.apps = createDbAppsMcpServer(sessionId, authProvider, ctx.userName);
+    mcpServers.apps = createDbAppsMcpServer(authProvider, sessionId, ctx.userName);
 
     // allowedTools を構築（MCP ツールは allowedTools で制御）
     const allowedTools = [
@@ -770,7 +770,7 @@ export async function sendMessageToSession(
 
     // apps: Databricks Apps MCP サーバーを追加（PAT → SP フォールバック）
     const authProvider = await getAuthProvider(fastify, ctx.userId);
-    mcpServers.apps = createDbAppsMcpServer(sessionId, authProvider, ctx.userName);
+    mcpServers.apps = createDbAppsMcpServer(authProvider, sessionId, ctx.userName);
 
     // allowedTools を構築（MCP ツールは allowedTools で制御）
     const allowedTools = [

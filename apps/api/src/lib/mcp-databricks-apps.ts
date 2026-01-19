@@ -38,7 +38,7 @@ import type { AuthProvider } from './databricks-auth.js';
  *   prompt,
  *   options: {
  *     mcpServers: {
- *       dbapps: createDbAppsMcpServer(sessionId, authProvider, userName),
+ *       dbapps: createDbAppsMcpServer(authProvider, sessionId, userName),
  *     },
  *     allowedTools: [
  *       'mcp__dbapps__create_app',
@@ -52,8 +52,8 @@ import type { AuthProvider } from './databricks-auth.js';
  * ```
  */
 export function createDbAppsMcpServer(
-  sessionId: SessionId,
   authProvider: AuthProvider,
+  sessionId: SessionId,
   userName: string
 ) {
   // アプリ名を生成（app-{suffix} 形式）
