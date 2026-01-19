@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import path from 'node:path';
-import { getUserPAT, getServicePrincipalToken } from '../services/token-resolver.service.js';
+import { getUserPAT, getServicePrincipalTokenFromConfig } from '../utils/databricks-auth.js';
 
 /**
  * ユーザーコンテキスト
@@ -53,11 +53,11 @@ export class UserContext {
   }
 
   /**
-   * SP トークンを取得（キャッシュなし - token-resolver.service 側でグローバルキャッシュあり）
+   * SP トークンを取得（グローバルキャッシュあり）
    * OAuth から取得するため非同期
    */
   async getSpAccessToken(): Promise<string | undefined> {
-    return getServicePrincipalToken(this.fastify);
+    return getServicePrincipalTokenFromConfig(this.fastify);
   }
 
   /**

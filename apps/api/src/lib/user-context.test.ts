@@ -2,16 +2,16 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { UserContext, createUserContext } from './user-context.js';
 
-// Mock token-resolver.service
-vi.mock('../services/token-resolver.service.js', () => ({
+// Mock databricks-auth
+vi.mock('../utils/databricks-auth.js', () => ({
   getUserPAT: vi.fn(),
-  getServicePrincipalToken: vi.fn(),
+  getServicePrincipalTokenFromConfig: vi.fn(),
 }));
 
-import { getUserPAT, getServicePrincipalToken } from '../services/token-resolver.service.js';
+import { getUserPAT, getServicePrincipalTokenFromConfig } from '../utils/databricks-auth.js';
 
 const mockGetUserPAT = getUserPAT as ReturnType<typeof vi.fn>;
-const mockGetServicePrincipalToken = getServicePrincipalToken as ReturnType<typeof vi.fn>;
+const mockGetServicePrincipalTokenFromConfig = getServicePrincipalTokenFromConfig as ReturnType<typeof vi.fn>;
 
 describe('UserContext', () => {
   const createMockFastify = (): FastifyInstance => {
@@ -153,7 +153,7 @@ describe('UserContext', () => {
 
   describe('getSpAccessToken', () => {
     it('should fetch SP token directly (no request-scope caching)', async () => {
-      mockGetServicePrincipalToken.mockResolvedValue('sp-token-123');
+      mockGetServicePrincipalTokenFromConfig.mockResolvedValue('sp-token-123');
       const fastify = createMockFastify();
       const request = createMockRequest();
 
@@ -162,16 +162,16 @@ describe('UserContext', () => {
       // First call
       const token1 = await ctx.getSpAccessToken();
       expect(token1).toBe('sp-token-123');
-      expect(mockGetServicePrincipalToken).toHaveBeenCalledTimes(1);
+      expect(mockGetServicePrincipalTokenFromConfig).toHaveBeenCalledTimes(1);
 
       // Second call - should call service again (no request-scope caching)
       const token2 = await ctx.getSpAccessToken();
       expect(token2).toBe('sp-token-123');
-      expect(mockGetServicePrincipalToken).toHaveBeenCalledTimes(2);
+      expect(mockGetServicePrincipalTokenFromConfig).toHaveBeenCalledTimes(2);
     });
 
     it('should return undefined when SP token is not available', async () => {
-      mockGetServicePrincipalToken.mockResolvedValue(undefined);
+      mockGetServicePrincipalTokenFromConfig.mockResolvedValue(undefined);
       const fastify = createMockFastify();
       const request = createMockRequest();
 
@@ -185,7 +185,7 @@ describe('UserContext', () => {
   describe('getAccessToken', () => {
     it('should return PAT when available', async () => {
       mockGetUserPAT.mockResolvedValue('pat-token');
-      mockGetServicePrincipalToken.mockResolvedValue('sp-token');
+      mockGetServicePrincipalTokenFromConfig.mockResolvedValue('sp-token');
       const fastify = createMockFastify();
       const request = createMockRequest();
 
@@ -195,12 +195,12 @@ describe('UserContext', () => {
       expect(token).toBe('pat-token');
       expect(mockGetUserPAT).toHaveBeenCalled();
       // SP token should not be fetched since PAT is available
-      expect(mockGetServicePrincipalToken).not.toHaveBeenCalled();
+      expect(mockGetServicePrincipalTokenFromConfig).not.toHaveBeenCalled();
     });
 
     it('should fallback to SP token when PAT is undefined', async () => {
       mockGetUserPAT.mockResolvedValue(undefined);
-      mockGetServicePrincipalToken.mockResolvedValue('sp-token');
+      mockGetServicePrincipalTokenFromConfig.mockResolvedValue('sp-token');
       const fastify = createMockFastify();
       const request = createMockRequest();
 
@@ -209,12 +209,12 @@ describe('UserContext', () => {
 
       expect(token).toBe('sp-token');
       expect(mockGetUserPAT).toHaveBeenCalled();
-      expect(mockGetServicePrincipalToken).toHaveBeenCalled();
+      expect(mockGetServicePrincipalTokenFromConfig).toHaveBeenCalled();
     });
 
     it('should return undefined when both PAT and SP are unavailable', async () => {
       mockGetUserPAT.mockResolvedValue(undefined);
-      mockGetServicePrincipalToken.mockResolvedValue(undefined);
+      mockGetServicePrincipalTokenFromConfig.mockResolvedValue(undefined);
       const fastify = createMockFastify();
       const request = createMockRequest();
 
