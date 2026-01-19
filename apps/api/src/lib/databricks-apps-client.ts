@@ -191,7 +191,7 @@ export class DatabricksAppsClient {
    * @param appName - アプリ名
    */
   async delete(appName: string): Promise<void> {
-    await this.callApi<Record<string, never>>('DELETE', `/api/2.0/apps/${appName}`);
+    await this.callApi<void>('DELETE', `/api/2.0/apps/${appName}`);
   }
 
   /**
