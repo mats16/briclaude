@@ -8,6 +8,7 @@
 import type { DatabricksApp, AppDeployment } from '@repo/types';
 import { getServicePrincipalToken } from '../utils/databricks-auth.js';
 import { normalizeHost } from '../utils/normalize-host.js';
+import { execFile } from 'child_process';
 
 export interface ListDeploymentsResponse {
   deployments?: AppDeployment[];
@@ -221,11 +222,10 @@ export class DatabricksAppsClient {
   async getLogs(appName: string, options: GetLogsOptions = {}): Promise<string> {
     const { tailLines = 100, search, source } = options;
 
-    const { exec } = await import('child_process');
     const { promisify } = await import('util');
-    const execAsync = promisify(exec);
+    const execFileAsync = promisify(execFile);
 
-    // コマンド引数を構築
+    // コマンド引数を構築（execFile は引数を配列で受け取るためコマンドインジェクションを防止）
     const args = ['apps', 'logs', appName, '--tail-lines', String(tailLines)];
     if (search) {
       args.push('--search', search);
@@ -234,7 +234,7 @@ export class DatabricksAppsClient {
       args.push('--source', source);
     }
 
-    const { stdout, stderr } = await execAsync(`databricks ${args.join(' ')}`, {
+    const { stdout, stderr } = await execFileAsync('databricks', args, {
       env: {
         PATH: process.env.PATH,
         HOME: process.env.HOME,
