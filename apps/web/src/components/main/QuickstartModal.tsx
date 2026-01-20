@@ -24,7 +24,8 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { jobsService, reposService } from '@/services';
 import { useUser } from '@/hooks/useUser';
-import type { JobRun } from '@repo/types';
+import { extractNameFromPath } from '@/lib/workspace';
+import type { JobRun, WorkspaceSelection } from '@repo/types';
 
 export type QuickstartType = 'lakeflow' | 'databricksApps' | 'tbd';
 
@@ -32,7 +33,11 @@ interface QuickstartModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   quickstartType: QuickstartType | null;
-  onFillPrompt?: (prompt: string, workspacePath?: string, enableDatabricksApps?: boolean) => void;
+  onFillPrompt?: (
+    prompt: string,
+    workspaceSelection?: WorkspaceSelection,
+    enableDatabricksApps?: boolean
+  ) => void;
 }
 
 /** GitHub API content item */
@@ -322,7 +327,11 @@ function DatabricksAppsContent({
   onFillPrompt,
   onClose,
 }: {
-  onFillPrompt?: (prompt: string, workspacePath?: string, enableDatabricksApps?: boolean) => void;
+  onFillPrompt?: (
+    prompt: string,
+    workspaceSelection?: WorkspaceSelection,
+    enableDatabricksApps?: boolean
+  ) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -394,14 +403,20 @@ function DatabricksAppsContent({
       });
 
       // Clone successful - fill prompt and workspace path
-      // sparse_checkout でテンプレートのみクローンしているので、実際のパスは <repo_path>/<template_name>
-      const templatePath = `${response.path}/${selectedTemplate.name}`;
+      // repos API レスポンスから直接 id を取得（追加の API 呼び出し不要）
       const prompt = t('quickstart.databricksApps.presetPrompt', {
         templateName: selectedTemplate.name,
-        path: templatePath,
+        path: response.path,
       });
 
-      onFillPrompt(prompt, templatePath, true);
+      const workspaceSelection: WorkspaceSelection = {
+        path: response.path,
+        name: extractNameFromPath(response.path),
+        object_type: 'REPO',
+        object_id: response.id,
+      };
+
+      onFillPrompt(prompt, workspaceSelection, true);
       onClose();
     } catch (err) {
       console.error('Failed to clone template:', err);

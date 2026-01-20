@@ -7,7 +7,7 @@ const STORAGE_KEY = 'recent-workspaces';
 
 interface UseRecentWorkspacesReturn {
   recentWorkspaces: RecentWorkspace[];
-  addRecentWorkspace: (path: string, objectType?: WorkspaceObjectType) => void;
+  addRecentWorkspace: (path: string, objectId: number, objectType: WorkspaceObjectType) => void;
   clearRecentWorkspaces: () => void;
 }
 
@@ -23,7 +23,7 @@ export function useRecentWorkspaces(): UseRecentWorkspacesReturn {
   );
 
   const addRecentWorkspace = useCallback(
-    (path: string, objectType?: WorkspaceObjectType) => {
+    (path: string, objectId: number, objectType: WorkspaceObjectType) => {
       setRecentWorkspaces(current => {
         const now = Date.now();
         const name = extractNameFromPath(path);
@@ -33,7 +33,7 @@ export function useRecentWorkspaces(): UseRecentWorkspacesReturn {
 
         // 新しいエントリを先頭に追加
         const updated: RecentWorkspace[] = [
-          { path, name, last_used_at: now, object_type: objectType },
+          { path, name, last_used_at: now, object_type: objectType, object_id: objectId },
           ...filtered,
         ];
 

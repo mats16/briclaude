@@ -7,6 +7,7 @@ import type {
   SessionOutcome,
   DatabricksAppsOutcome,
   DatabricksWorkspaceSource,
+  WorkspaceSelection,
 } from '@repo/types';
 import { MainHeader } from './MainHeader';
 import { MessageArea } from './MessageArea';
@@ -94,7 +95,7 @@ export function MainArea({
   const handleNewSession = async (
     content: UserMessageContentBlock[],
     modelId: string,
-    workspacePath: string | null,
+    workspaceSelection: WorkspaceSelection | null,
     enableDatabricksApps: boolean
   ) => {
     try {
@@ -105,8 +106,12 @@ export function MainArea({
 
       // outcomes の構築
       const outcomes: SessionOutcome[] = [];
-      if (workspacePath) {
-        outcomes.push({ type: 'databricks_workspace', path: workspacePath });
+      if (workspaceSelection) {
+        outcomes.push({
+          type: 'databricks_workspace',
+          path: workspaceSelection.path,
+          id: workspaceSelection.object_id,
+        });
       }
       if (enableDatabricksApps) {
         outcomes.push({ type: 'databricks_apps' });
@@ -131,7 +136,15 @@ export function MainArea({
         ],
         session_context: {
           model: modelId as 'opus' | 'sonnet' | 'haiku',
-          sources: workspacePath ? [{ type: 'databricks_workspace', path: workspacePath }] : [],
+          sources: workspaceSelection
+            ? [
+                {
+                  type: 'databricks_workspace',
+                  path: workspaceSelection.path,
+                  id: workspaceSelection.object_id,
+                },
+              ]
+            : [],
           outcomes: outcomes,
         },
       };
@@ -185,8 +198,7 @@ export function MainArea({
         <FloatingButtons
           sessionId={sessionId}
           showAppButton={!!databricksAppsOutcome}
-          showWorkspaceButton={!!databricksWorkspaceOutcome}
-          workspacePath={databricksWorkspaceOutcome?.path}
+          workspaceObjectId={databricksWorkspaceOutcome?.id}
         />
       )}
     </div>

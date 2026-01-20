@@ -75,11 +75,14 @@ export function WorkspaceBrowserModal({
 }: WorkspaceBrowserModalProps) {
   const { t } = useTranslation();
   const [currentPath, setCurrentPath] = useState(initialPath);
-  // currentPath の object_type を追跡（ナビゲーション時に更新）
+  // currentPath の object_type と object_id を追跡（ナビゲーション時に更新）
   const [currentObjectType, setCurrentObjectType] = useState<WorkspaceObjectType>('DIRECTORY');
+  const [currentObjectId, setCurrentObjectId] = useState<number | undefined>(undefined);
   const [objects, setObjects] = useState<WorkspaceObjectInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSelecting, setIsSelecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectError, setSelectError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<WorkspaceObjectInfo | null>(null);
 
   // モーダルが開いた時にパスをリセット
@@ -87,8 +90,10 @@ export function WorkspaceBrowserModal({
     if (open) {
       setCurrentPath(initialPath);
       setCurrentObjectType('DIRECTORY'); // 初期パスは通常 DIRECTORY
+      setCurrentObjectId(undefined);
       setSelectedItem(null);
       setError(null);
+      setSelectError(null);
     }
   }, [open, initialPath]);
 
@@ -102,9 +107,10 @@ export function WorkspaceBrowserModal({
       setSelectedItem(null);
 
       try {
-        const response = await workspaceService.listWorkspace(currentPath);
+        const listResponse = await workspaceService.listWorkspace(currentPath);
+
         // パスでソート（ディレクトリを先に、その後名前順）
-        const sorted = (response.objects ?? []).sort((a, b) => {
+        const sorted = (listResponse.objects ?? []).sort((a, b) => {
           // ディレクトリを先に
           if (a.object_type === 'DIRECTORY' && b.object_type !== 'DIRECTORY') return -1;
           if (a.object_type !== 'DIRECTORY' && b.object_type === 'DIRECTORY') return 1;
@@ -131,9 +137,10 @@ export function WorkspaceBrowserModal({
   }, [open, currentPath, t]);
 
   const handleNavigate = useCallback(
-    (path: string, objectType: WorkspaceObjectType = 'DIRECTORY') => {
+    (path: string, objectType: WorkspaceObjectType = 'DIRECTORY', objectId?: number) => {
       setCurrentPath(safeSanitizePath(path));
       setCurrentObjectType(objectType);
+      setCurrentObjectId(objectId);
     },
     []
   );
@@ -142,7 +149,7 @@ export function WorkspaceBrowserModal({
     (item: WorkspaceObjectInfo) => {
       // ディレクトリまたはリポジトリの場合はナビゲート
       if (item.object_type === 'DIRECTORY' || item.object_type === 'REPO') {
-        handleNavigate(item.path, item.object_type);
+        handleNavigate(item.path, item.object_type, item.object_id);
         return;
       }
 
@@ -152,6 +159,7 @@ export function WorkspaceBrowserModal({
           path: item.path,
           name: extractNameFromPath(item.path),
           object_type: item.object_type,
+          object_id: item.object_id,
         });
         onOpenChange(false);
       }
@@ -237,7 +245,7 @@ export function WorkspaceBrowserModal({
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 shrink-0"
-                          onClick={() => handleNavigate(item.path, item.object_type)}
+                          onClick={() => handleNavigate(item.path, item.object_type, item.object_id)}
                           aria-label={t('workspace.open')}
                         >
                           <ChevronRight className="h-4 w-4" />
@@ -265,23 +273,79 @@ export function WorkspaceBrowserModal({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            {t('workspace.cancel')}
-          </Button>
+        <DialogFooter className="flex-col gap-2 sm:flex-row sm:gap-0">
+          {selectError && (
+            <p className="text-sm text-destructive w-full sm:w-auto sm:flex-1 sm:mr-2">
+              {selectError}
+            </p>
+          )}
+          <div className="flex gap-2 sm:gap-0">
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              {t('workspace.cancel')}
+            </Button>
           <Button
-            onClick={() => {
-              const pathToSelect = selectedItem?.path ?? currentPath;
-              onSelect({
-                path: pathToSelect,
-                name: extractNameFromPath(pathToSelect),
-                object_type: selectedItem?.object_type ?? currentObjectType,
-              });
-              onOpenChange(false);
+            onClick={async () => {
+              // リストから選択されたアイテムがある場合はそのまま使用
+              if (selectedItem) {
+                onSelect({
+                  path: selectedItem.path,
+                  name: extractNameFromPath(selectedItem.path),
+                  object_type: selectedItem.object_type,
+                  object_id: selectedItem.object_id,
+                });
+                onOpenChange(false);
+                return;
+              }
+
+              // 現在のフォルダを選択する場合
+              // object_id が既にある場合（ナビゲーション経由）はそのまま使用
+              if (currentObjectId !== undefined) {
+                onSelect({
+                  path: currentPath,
+                  name: extractNameFromPath(currentPath),
+                  object_type: currentObjectType,
+                  object_id: currentObjectId,
+                });
+                onOpenChange(false);
+                return;
+              }
+
+              // 初期パスで object_id がない場合は getStatus で取得
+              setIsSelecting(true);
+              setSelectError(null); // エラーをクリアして再試行可能に
+              try {
+                const statusResponse = await workspaceService.getStatus(currentPath);
+                setCurrentObjectId(statusResponse.object_id);
+                setCurrentObjectType(statusResponse.object_type);
+                onSelect({
+                  path: currentPath,
+                  name: extractNameFromPath(currentPath),
+                  object_type: statusResponse.object_type,
+                  object_id: statusResponse.object_id,
+                });
+                onOpenChange(false);
+              } catch (err) {
+                if (err instanceof ApiClientError) {
+                  setSelectError(err.message);
+                } else {
+                  setSelectError(t('workspace.error'));
+                }
+              } finally {
+                setIsSelecting(false);
+              }
             }}
+            disabled={isSelecting}
           >
-            {t('workspace.selectCurrentFolder')}
+            {isSelecting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                {t('workspace.loading')}
+              </>
+            ) : (
+              t('workspace.selectCurrentFolder')
+            )}
           </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -23,13 +23,13 @@ import { useRecentWorkspaces } from '@/hooks/useRecentWorkspaces';
 import { useUser } from '@/hooks/useUser';
 import { buildMessageContent } from '@/lib/content-builder';
 import { SESSION_MODELS, DEFAULT_SESSION_MODEL, TEXTAREA_MAX_HEIGHT_MAIN } from '@/constants';
-import type { UserMessageContentBlock } from '@repo/types';
+import type { UserMessageContentBlock, WorkspaceSelection } from '@repo/types';
 
 interface WelcomeScreenProps {
   onNewSession?: (
     content: UserMessageContentBlock[],
     modelId: string,
-    workspacePath: string | null,
+    workspaceSelection: WorkspaceSelection | null,
     enableDatabricksApps: boolean
   ) => Promise<void> | void;
   sessionError?: string | null;
@@ -43,7 +43,7 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
     defaultValue: '',
   });
   const [selectedModel, setSelectedModel] = useState(DEFAULT_SESSION_MODEL);
-  const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(null);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<WorkspaceSelection | null>(null);
   const [enableDatabricksApps, setEnableDatabricksApps] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -82,7 +82,11 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
       const messageContent = buildMessageContent(content.trim(), images);
       // Workspace選択があれば履歴に追加
       if (selectedWorkspace) {
-        addRecentWorkspace(selectedWorkspace);
+        addRecentWorkspace(
+          selectedWorkspace.path,
+          selectedWorkspace.object_id,
+          selectedWorkspace.object_type
+        );
       }
       await onNewSession?.(
         messageContent,
@@ -334,11 +338,15 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
         open={selectedQuickstart !== null}
         onOpenChange={open => !open && setSelectedQuickstart(null)}
         quickstartType={selectedQuickstart}
-        onFillPrompt={(prompt, workspacePath, enableApps) => {
+        onFillPrompt={(prompt, workspaceSelection, enableApps) => {
           setContent(prompt);
-          if (workspacePath) {
-            setSelectedWorkspace(workspacePath);
-            addRecentWorkspace(workspacePath);
+          if (workspaceSelection) {
+            setSelectedWorkspace(workspaceSelection);
+            addRecentWorkspace(
+              workspaceSelection.path,
+              workspaceSelection.object_id,
+              workspaceSelection.object_type
+            );
           }
           if (enableApps) {
             setEnableDatabricksApps(true);
