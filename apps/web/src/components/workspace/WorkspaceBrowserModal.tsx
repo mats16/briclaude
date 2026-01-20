@@ -245,7 +245,9 @@ export function WorkspaceBrowserModal({
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 shrink-0"
-                          onClick={() => handleNavigate(item.path, item.object_type, item.object_id)}
+                          onClick={() =>
+                            handleNavigate(item.path, item.object_type, item.object_id)
+                          }
                           aria-label={t('workspace.open')}
                         >
                           <ChevronRight className="h-4 w-4" />
@@ -283,68 +285,68 @@ export function WorkspaceBrowserModal({
             <Button variant="ghost" onClick={() => onOpenChange(false)}>
               {t('workspace.cancel')}
             </Button>
-          <Button
-            onClick={async () => {
-              // リストから選択されたアイテムがある場合はそのまま使用
-              if (selectedItem) {
-                onSelect({
-                  path: selectedItem.path,
-                  name: extractNameFromPath(selectedItem.path),
-                  object_type: selectedItem.object_type,
-                  object_id: selectedItem.object_id,
-                });
-                onOpenChange(false);
-                return;
-              }
-
-              // 現在のフォルダを選択する場合
-              // object_id が既にある場合（ナビゲーション経由）はそのまま使用
-              if (currentObjectId !== undefined) {
-                onSelect({
-                  path: currentPath,
-                  name: extractNameFromPath(currentPath),
-                  object_type: currentObjectType,
-                  object_id: currentObjectId,
-                });
-                onOpenChange(false);
-                return;
-              }
-
-              // 初期パスで object_id がない場合は getStatus で取得
-              setIsSelecting(true);
-              setSelectError(null); // エラーをクリアして再試行可能に
-              try {
-                const statusResponse = await workspaceService.getStatus(currentPath);
-                setCurrentObjectId(statusResponse.object_id);
-                setCurrentObjectType(statusResponse.object_type);
-                onSelect({
-                  path: currentPath,
-                  name: extractNameFromPath(currentPath),
-                  object_type: statusResponse.object_type,
-                  object_id: statusResponse.object_id,
-                });
-                onOpenChange(false);
-              } catch (err) {
-                if (err instanceof ApiClientError) {
-                  setSelectError(err.message);
-                } else {
-                  setSelectError(t('workspace.error'));
+            <Button
+              onClick={async () => {
+                // リストから選択されたアイテムがある場合はそのまま使用
+                if (selectedItem) {
+                  onSelect({
+                    path: selectedItem.path,
+                    name: extractNameFromPath(selectedItem.path),
+                    object_type: selectedItem.object_type,
+                    object_id: selectedItem.object_id,
+                  });
+                  onOpenChange(false);
+                  return;
                 }
-              } finally {
-                setIsSelecting(false);
-              }
-            }}
-            disabled={isSelecting}
-          >
-            {isSelecting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                {t('workspace.loading')}
-              </>
-            ) : (
-              t('workspace.selectCurrentFolder')
-            )}
-          </Button>
+
+                // 現在のフォルダを選択する場合
+                // object_id が既にある場合（ナビゲーション経由）はそのまま使用
+                if (currentObjectId !== undefined) {
+                  onSelect({
+                    path: currentPath,
+                    name: extractNameFromPath(currentPath),
+                    object_type: currentObjectType,
+                    object_id: currentObjectId,
+                  });
+                  onOpenChange(false);
+                  return;
+                }
+
+                // 初期パスで object_id がない場合は getStatus で取得
+                setIsSelecting(true);
+                setSelectError(null); // エラーをクリアして再試行可能に
+                try {
+                  const statusResponse = await workspaceService.getStatus(currentPath);
+                  setCurrentObjectId(statusResponse.object_id);
+                  setCurrentObjectType(statusResponse.object_type);
+                  onSelect({
+                    path: currentPath,
+                    name: extractNameFromPath(currentPath),
+                    object_type: statusResponse.object_type,
+                    object_id: statusResponse.object_id,
+                  });
+                  onOpenChange(false);
+                } catch (err) {
+                  if (err instanceof ApiClientError) {
+                    setSelectError(err.message);
+                  } else {
+                    setSelectError(t('workspace.error'));
+                  }
+                } finally {
+                  setIsSelecting(false);
+                }
+              }}
+              disabled={isSelecting}
+            >
+              {isSelecting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  {t('workspace.loading')}
+                </>
+              ) : (
+                t('workspace.selectCurrentFolder')
+              )}
+            </Button>
           </div>
         </DialogFooter>
       </DialogContent>
