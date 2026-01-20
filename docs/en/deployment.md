@@ -184,7 +184,7 @@ The health endpoint also verifies database connectivity. If there are database i
 
 ### Migration Failures
 
-1. Ensure you're using an admin user for migrations
+1. Ensure the database user has owner privileges
 2. Check for existing objects that might conflict
 3. Review the migration SQL files for errors
 
