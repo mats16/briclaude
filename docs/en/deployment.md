@@ -116,7 +116,13 @@ databricks bundle validate --target [dev|prod]
 databricks bundle deploy --target [dev|prod]
 ```
 
-### 3.3 Verify Deployment
+### 3.3 Start Application
+
+```bash
+databricks bundle run --target [dev|prod] briclaude_app
+```
+
+### 3.4 Verify Deployment
 
 After deployment, check the application status:
 

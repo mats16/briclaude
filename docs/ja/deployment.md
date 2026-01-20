@@ -116,7 +116,13 @@ databricks bundle validate --target [dev|prod]
 databricks bundle deploy --target [dev|prod]
 ```
 
-### 3.3 デプロイの確認
+### 3.3 アプリケーションの起動
+
+```bash
+databricks bundle run --target [dev|prod] briclaude_app
+```
+
+### 3.4 デプロイの確認
 
 デプロイ後、アプリケーションのステータスを確認します。
 
