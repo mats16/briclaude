@@ -198,7 +198,6 @@ export function MainArea({
         <FloatingButtons
           sessionId={sessionId}
           showAppButton={!!databricksAppsOutcome}
-          showWorkspaceButton={!!databricksWorkspaceOutcome}
           workspaceObjectId={databricksWorkspaceOutcome?.id}
         />
       )}

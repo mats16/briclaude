@@ -10,7 +10,7 @@ import type { DatabricksApp } from '@repo/types';
 interface FloatingButtonsProps {
   sessionId: string;
   showAppButton: boolean;
-  showWorkspaceButton: boolean;
+  /** Workspace object ID - ボタン表示は id の有無で判定 */
   workspaceObjectId?: number;
 }
 
@@ -19,9 +19,10 @@ type AppStateType = 'RUNNING' | 'DEPLOYING' | 'CRASHED' | 'UNAVAILABLE' | 'UNKNO
 export function FloatingButtons({
   sessionId,
   showAppButton,
-  showWorkspaceButton,
   workspaceObjectId,
 }: FloatingButtonsProps) {
+  // workspaceObjectId が存在する場合のみ Workspace ボタンを表示
+  const showWorkspaceButton = workspaceObjectId !== undefined;
   const { t } = useTranslation();
   const { databricksHost } = useUser();
   const [appInfo, setAppInfo] = useState<DatabricksApp | null>(null);
@@ -179,7 +180,7 @@ export function FloatingButtons({
 
         {/* 右側: Workspace ボタン */}
         <div>
-          {showWorkspaceButton && workspaceObjectId && (
+          {showWorkspaceButton && (
             <div className="flex items-center h-8 px-3 rounded-lg shadow-lg bg-background border">
               <button
                 className="flex items-center gap-1 hover:opacity-70"
