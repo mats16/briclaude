@@ -17,27 +17,27 @@ Databricks Lakebase または外部の PostgreSQL インスタンスを用意し
 - **Databricks Lakebase（推奨）:** Databricks コンソールから Lakebase インスタンスを作成
 - **外部の PostgreSQL:** ネットワーク設定により、Databricks Apps からアクセス可能であることを確認
 
-### 1.2 データベースの作成
+### 1.2 アプリケーション用ユーザーの作成
 
-PostgreSQL インスタンスに接続し、アプリケーション用のデータベースを作成します。
-
-```sql
-CREATE DATABASE briclaude;
-```
-
-### 1.3 アプリケーション用ユーザーの作成
-
-アプリケーション専用のデータベースユーザーを作成し、データベースの owner 権限を付与します。
+アプリケーション専用のデータベースユーザーを作成します。
 
 ```sql
 -- アプリケーションユーザーを作成（RLS バイパスを明示的に無効化）
-CREATE USER briclaude_user WITH PASSWORD 'your-secure-password' NOBYPASSRLS;
+CREATE ROLE briclaude_user WITH LOGIN PASSWORD 'your-secure-password' NOBYPASSRLS;
 
--- データベースの owner 権限を付与
-ALTER DATABASE briclaude OWNER TO briclaude_user;
+-- 現在のユーザーにロールの権限を付与（データベース作成に必要）
+GRANT briclaude_user TO CURRENT_USER WITH SET TRUE;
 ```
 
 **重要:** このアプリケーションは Row-Level Security (RLS) を使用し、`current_setting('app.user_id', true)` でユーザーを識別します。アプリケーションは各リクエストでこのセッション変数を設定し、ユーザー分離を強制します。`NOBYPASSRLS` オプションにより、アプリケーションユーザーが RLS ポリシーをバイパスできないことが保証され、追加のセキュリティレイヤーが提供されます。
+
+### 1.3 データベースの作成
+
+アプリケーション用のデータベースを作成し、オーナーを設定します。
+
+```sql
+CREATE DATABASE briclaude OWNER briclaude_user;
+```
 
 ### 1.4 データベースマイグレーション
 

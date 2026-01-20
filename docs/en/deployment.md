@@ -17,27 +17,27 @@ Prepare a Databricks Lakebase or external PostgreSQL instance.
 - **Databricks Lakebase (recommended):** Create a Lakebase instance from the Databricks console
 - **External PostgreSQL:** Ensure it is accessible from Databricks Apps via network configuration
 
-### 1.2 Create Database
+### 1.2 Create Application User
 
-Connect to the PostgreSQL instance and create the application database.
-
-```sql
-CREATE DATABASE briclaude;
-```
-
-### 1.3 Create Application User
-
-Create a dedicated database user for the application and grant database owner privileges.
+Create a dedicated database user for the application.
 
 ```sql
 -- Create application user with RLS bypass explicitly disabled
-CREATE USER briclaude_user WITH PASSWORD 'your-secure-password' NOBYPASSRLS;
+CREATE ROLE briclaude_user WITH LOGIN PASSWORD 'your-secure-password' NOBYPASSRLS;
 
--- Grant database owner privileges
-ALTER DATABASE briclaude OWNER TO briclaude_user;
+-- Grant role privileges to current user (required for database creation)
+GRANT briclaude_user TO CURRENT_USER WITH SET TRUE;
 ```
 
 **Important:** The application uses Row-Level Security (RLS) with `current_setting('app.user_id', true)`. The application sets this session variable for each request to enforce user isolation. The `NOBYPASSRLS` option ensures the application user cannot bypass RLS policies, providing an additional layer of security.
+
+### 1.3 Create Database
+
+Create the application database and set the owner.
+
+```sql
+CREATE DATABASE briclaude OWNER briclaude_user;
+```
 
 ### 1.4 Database Migrations
 
