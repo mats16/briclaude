@@ -22,9 +22,9 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { jobsService, reposService } from '@/services';
+import { jobsService, reposService, workspaceService } from '@/services';
 import { useUser } from '@/hooks/useUser';
-import type { JobRun } from '@repo/types';
+import type { JobRun, WorkspaceSelection } from '@repo/types';
 
 export type QuickstartType = 'lakeflow' | 'databricksApps' | 'tbd';
 
@@ -32,7 +32,11 @@ interface QuickstartModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   quickstartType: QuickstartType | null;
-  onFillPrompt?: (prompt: string, workspacePath?: string, enableDatabricksApps?: boolean) => void;
+  onFillPrompt?: (
+    prompt: string,
+    workspaceSelection?: WorkspaceSelection,
+    enableDatabricksApps?: boolean
+  ) => void;
 }
 
 /** GitHub API content item */
@@ -322,7 +326,11 @@ function DatabricksAppsContent({
   onFillPrompt,
   onClose,
 }: {
-  onFillPrompt?: (prompt: string, workspacePath?: string, enableDatabricksApps?: boolean) => void;
+  onFillPrompt?: (
+    prompt: string,
+    workspaceSelection?: WorkspaceSelection,
+    enableDatabricksApps?: boolean
+  ) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -396,12 +404,30 @@ function DatabricksAppsContent({
       // Clone successful - fill prompt and workspace path
       // sparse_checkout でテンプレートのみクローンしているので、実際のパスは <repo_path>/<template_name>
       const templatePath = `${response.path}/${selectedTemplate.name}`;
+
+      // Workspace API から object_id を取得
+      let objectId: number | undefined;
+      try {
+        const statusResponse = await workspaceService.getStatus(templatePath);
+        objectId = statusResponse.object_id;
+      } catch {
+        // object_id が取得できなくても続行（Workspace リンクが機能しないだけ）
+        console.warn('Failed to get object_id for workspace path:', templatePath);
+      }
+
       const prompt = t('quickstart.databricksApps.presetPrompt', {
         templateName: selectedTemplate.name,
         path: templatePath,
       });
 
-      onFillPrompt(prompt, templatePath, true);
+      const workspaceSelection: WorkspaceSelection = {
+        path: templatePath,
+        name: selectedTemplate.name,
+        object_type: 'DIRECTORY',
+        object_id: objectId,
+      };
+
+      onFillPrompt(prompt, workspaceSelection, true);
       onClose();
     } catch (err) {
       console.error('Failed to clone template:', err);

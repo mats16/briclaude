@@ -22,7 +22,6 @@ import { useDragDrop } from '@/hooks/useDragDrop';
 import { useRecentWorkspaces } from '@/hooks/useRecentWorkspaces';
 import { useUser } from '@/hooks/useUser';
 import { buildMessageContent } from '@/lib/content-builder';
-import { extractNameFromPath } from '@/lib/workspace';
 import { SESSION_MODELS, DEFAULT_SESSION_MODEL, TEXTAREA_MAX_HEIGHT_MAIN } from '@/constants';
 import type { UserMessageContentBlock, WorkspaceSelection } from '@repo/types';
 
@@ -339,18 +338,15 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
         open={selectedQuickstart !== null}
         onOpenChange={open => !open && setSelectedQuickstart(null)}
         quickstartType={selectedQuickstart}
-        onFillPrompt={(prompt, workspacePath, enableApps) => {
+        onFillPrompt={(prompt, workspaceSelection, enableApps) => {
           setContent(prompt);
-          if (workspacePath) {
-            // QuickstartModal からは path のみ渡されるため、WorkspaceSelection を構築
-            const selection: WorkspaceSelection = {
-              path: workspacePath,
-              name: extractNameFromPath(workspacePath),
-              object_type: 'DIRECTORY',
-              // object_id は不明なので省略
-            };
-            setSelectedWorkspace(selection);
-            addRecentWorkspace(workspacePath, 'DIRECTORY');
+          if (workspaceSelection) {
+            setSelectedWorkspace(workspaceSelection);
+            addRecentWorkspace(
+              workspaceSelection.path,
+              workspaceSelection.object_type,
+              workspaceSelection.object_id
+            );
           }
           if (enableApps) {
             setEnableDatabricksApps(true);
