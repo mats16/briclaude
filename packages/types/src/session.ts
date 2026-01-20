@@ -34,14 +34,16 @@ export interface SessionCreateContext {
   model: 'opus' | 'sonnet' | 'haiku';
   sources: SessionSource[];
   outcomes: SessionOutcome[];
+  allowed_tools?: string[];
+  disallowed_tools?: string[];
 }
 
 /**
  * セッションレスポンス用のコンテキスト（DBに保存される形式）
  */
 export interface SessionContextResponse {
-  allowed_tools: string[];
-  disallowed_tools: string[];
+  allowed_tools?: string[];
+  disallowed_tools?: string[];
   cwd: string;
   model: string;
   sources: SessionSource[];

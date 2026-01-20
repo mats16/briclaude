@@ -1,7 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import useLocalStorageState from 'use-local-storage-state';
 import { useTranslation } from 'react-i18next';
-import { Send, Image, ChevronDown, Check, Loader2, Bug, Rocket, Construction } from 'lucide-react';
+import {
+  Send,
+  Image,
+  ChevronDown,
+  Check,
+  Loader2,
+  Bug,
+  Rocket,
+  Construction,
+  DatabaseZap,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -30,7 +40,8 @@ interface WelcomeScreenProps {
     content: UserMessageContentBlock[],
     modelId: string,
     workspaceSelection: WorkspaceSelection | null,
-    enableDatabricksApps: boolean
+    enableDatabricksApps: boolean,
+    enableDatabricksSql: boolean
   ) => Promise<void> | void;
   sessionError?: string | null;
 }
@@ -45,6 +56,7 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
   const [selectedModel, setSelectedModel] = useState(DEFAULT_SESSION_MODEL);
   const [selectedWorkspace, setSelectedWorkspace] = useState<WorkspaceSelection | null>(null);
   const [enableDatabricksApps, setEnableDatabricksApps] = useState(false);
+  const [enableDatabricksSql, setEnableDatabricksSql] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -92,7 +104,8 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
         messageContent,
         selectedModel.id,
         selectedWorkspace,
-        enableDatabricksApps
+        enableDatabricksApps,
+        enableDatabricksSql
       );
       setContent('');
       clearImages();
@@ -239,6 +252,35 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>{t('welcome.databricksAppsToggle')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'h-8 w-8 shrink-0',
+                        enableDatabricksSql && 'bg-yellow-500/10'
+                      )}
+                      onClick={() => setEnableDatabricksSql(prev => !prev)}
+                      disabled={isSubmitting}
+                    >
+                      <DatabaseZap
+                        className={cn(
+                          'h-4 w-4',
+                          enableDatabricksSql
+                            ? 'text-yellow-500 stroke-[2.5]'
+                            : 'text-muted-foreground'
+                        )}
+                      />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('welcome.databricksSqlToggle')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

@@ -307,8 +307,8 @@ export async function createSession(
   });
 
   const sessionContext: SessionContextResponse = {
-    allowed_tools: [],
-    disallowed_tools: [],
+    allowed_tools: session_context.allowed_tools,
+    disallowed_tools: session_context.disallowed_tools,
     cwd,
     model: session_context.model,
     sources: session_context.sources,
@@ -415,8 +415,8 @@ export async function createSession(
           type: 'preset',
           preset: 'claude_code',
         },
-        //allowedTools,
-        disallowedTools: ['mcp__sql__execute_sql'],
+        allowedTools: sessionContext.allowed_tools,
+        disallowedTools: sessionContext.disallowed_tools,
         env: {
           PATH: fastify.config.PATH,
           HOME: userHome,
@@ -761,8 +761,8 @@ export async function sendMessageToSession(
           type: 'preset',
           preset: 'claude_code',
         },
-        //allowedTools,
-        disallowedTools: ['mcp__sql__execute_sql'],
+        allowedTools: sessionContext?.allowed_tools,
+        disallowedTools: sessionContext?.disallowed_tools,
         env: {
           PATH: fastify.config.PATH,
           HOME: userHome,
