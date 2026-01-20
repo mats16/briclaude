@@ -56,8 +56,7 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
   const [selectedModelId, setSelectedModelId] = useLocalStorageState('selected-model-id', {
     defaultValue: DEFAULT_SESSION_MODEL.id,
   });
-  const selectedModel =
-    SESSION_MODELS.find(m => m.id === selectedModelId) ?? DEFAULT_SESSION_MODEL;
+  const selectedModel = SESSION_MODELS.find(m => m.id === selectedModelId) ?? DEFAULT_SESSION_MODEL;
   const [selectedWorkspace, setSelectedWorkspace] = useState<WorkspaceSelection | null>(null);
   const [enableDatabricksApps, setEnableDatabricksApps] = useState(false);
   const [enableDatabricksSqlWrite, setEnableDatabricksSqlWrite] = useState(false);
