@@ -105,7 +105,7 @@ databricks bundle deploy --target [dev|prod]
 ### 3.3 Start Application
 
 ```bash
-databricks bundle run --target [dev|prod] briclaude_app
+databricks bundle run briclaude_app --target [dev|prod]
 ```
 
 ### 3.4 Verify Deployment
