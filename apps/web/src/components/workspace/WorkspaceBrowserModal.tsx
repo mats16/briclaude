@@ -104,9 +104,22 @@ export function WorkspaceBrowserModal({
       setSelectedItem(null);
 
       try {
-        const response = await workspaceService.listWorkspace(currentPath);
+        // 初期パスの場合のみ getStatus で object_id を取得
+        // （ナビゲーション時は handleNavigate で object_id が設定される）
+        const isInitialPath = currentObjectId === undefined;
+        const [listResponse, statusResponse] = await Promise.all([
+          workspaceService.listWorkspace(currentPath),
+          isInitialPath ? workspaceService.getStatus(currentPath) : Promise.resolve(null),
+        ]);
+
+        // 初期パスの場合、object_id と object_type を設定
+        if (statusResponse) {
+          setCurrentObjectId(statusResponse.object_id);
+          setCurrentObjectType(statusResponse.object_type);
+        }
+
         // パスでソート（ディレクトリを先に、その後名前順）
-        const sorted = (response.objects ?? []).sort((a, b) => {
+        const sorted = (listResponse.objects ?? []).sort((a, b) => {
           // ディレクトリを先に
           if (a.object_type === 'DIRECTORY' && b.object_type !== 'DIRECTORY') return -1;
           if (a.object_type !== 'DIRECTORY' && b.object_type === 'DIRECTORY') return 1;
@@ -130,7 +143,7 @@ export function WorkspaceBrowserModal({
     };
 
     fetchObjects();
-  }, [open, currentPath, t]);
+  }, [open, currentPath, currentObjectId, t]);
 
   const handleNavigate = useCallback(
     (path: string, objectType: WorkspaceObjectType = 'DIRECTORY', objectId?: number) => {
