@@ -104,41 +104,19 @@ databricks secrets put-secret briclaude-prod encryption-key --string-value "$ENC
 
 > **Note:** This deployment method using Databricks Asset Bundles is a temporary solution until Lakebase support is available in the bundle configuration. Once Lakebase integration is supported, the database and user creation steps may be automated through bundle resources.
 
-### 3.1 Build the Application
+### 3.1 Validate Bundle Configuration
 
 ```bash
-# Install dependencies
-npm install
-
-# Build all packages
-npm run build
+databricks bundle validate --target [dev|prod]
 ```
 
-### 3.2 Validate Bundle Configuration
+### 3.2 Deploy to Databricks
 
 ```bash
-# Validate development deployment
-databricks bundle validate --target dev
-
-# Validate production deployment
-databricks bundle validate --target prod
+databricks bundle deploy --target [dev|prod]
 ```
 
-### 3.3 Deploy to Databricks
-
-**Development deployment:**
-
-```bash
-databricks bundle deploy --target dev
-```
-
-**Production deployment:**
-
-```bash
-databricks bundle deploy --target prod
-```
-
-### 3.4 Verify Deployment
+### 3.3 Verify Deployment
 
 After deployment, check the application status:
 

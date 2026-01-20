@@ -104,41 +104,19 @@ databricks secrets put-secret briclaude-prod encryption-key --string-value "$ENC
 
 > **注意:** Databricks Asset Bundles を使用したこのデプロイ方法は、Lakebase サポートがバンドル設定で利用可能になるまでの暫定的な対応です。Lakebase 統合がサポートされると、データベースとユーザーの作成手順はバンドルリソースを通じて自動化される可能性があります。
 
-### 3.1 アプリケーションのビルド
+### 3.1 バンドル設定の検証
 
 ```bash
-# 依存関係をインストール
-npm install
-
-# 全パッケージをビルド
-npm run build
+databricks bundle validate --target [dev|prod]
 ```
 
-### 3.2 バンドル設定の検証
+### 3.2 Databricks へのデプロイ
 
 ```bash
-# 開発デプロイを検証
-databricks bundle validate --target dev
-
-# 本番デプロイを検証
-databricks bundle validate --target prod
+databricks bundle deploy --target [dev|prod]
 ```
 
-### 3.3 Databricks へのデプロイ
-
-**開発環境へのデプロイ:**
-
-```bash
-databricks bundle deploy --target dev
-```
-
-**本番環境へのデプロイ:**
-
-```bash
-databricks bundle deploy --target prod
-```
-
-### 3.4 デプロイの確認
+### 3.3 デプロイの確認
 
 デプロイ後、アプリケーションのステータスを確認します。
 
