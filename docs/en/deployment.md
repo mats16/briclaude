@@ -87,7 +87,7 @@ databricks secrets put-secret briclaude-prod database-url --string-value "postgr
 
 **Encryption Key:**
 
-Generate a secure 32-byte encryption key for encrypting sensitive data (OAuth tokens, etc.):
+Generate a secure encryption key for encrypting sensitive data (OAuth tokens, etc.). A 32-byte key (64 hexadecimal characters) is required.
 
 ```bash
 # Generate encryption key

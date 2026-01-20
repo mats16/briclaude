@@ -87,7 +87,7 @@ databricks secrets put-secret briclaude-prod database-url --string-value "postgr
 
 **暗号化キー:**
 
-機密データ（OAuth トークンなど）を暗号化するための安全な 32 バイトの暗号化キーを生成します。
+機密データ（OAuth トークンなど）を暗号化するための安全な暗号化キーを生成します。32 バイト（64 文字の 16 進数）のランダムキーが必要です。
 
 ```bash
 # 暗号化キーを生成
