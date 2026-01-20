@@ -49,7 +49,7 @@ const PRESET_REPOS = [
   },
   {
     label: 'Databricks',
-    url: 'https://github.com/mats16/claude-agent-databricks',
+    url: 'https://github.com/mats16/briclaude',
   },
 ];
 
