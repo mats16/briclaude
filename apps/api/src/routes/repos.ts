@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import type { ReposCreateRequest } from '@repo/types';
+import type { ReposCreateRequest, ReposCreateResponse, ApiError } from '@repo/types';
 import { createUserContext } from '../lib/user-context.js';
 
 const reposRoute: FastifyPluginAsync = async fastify => {
@@ -8,6 +8,7 @@ const reposRoute: FastifyPluginAsync = async fastify => {
   // POST /repos - Create a repo
   fastify.post<{
     Body: ReposCreateRequest;
+    Reply: ReposCreateResponse | ApiError;
   }>('/repos', async (request, reply) => {
     const { url, provider, path, sparse_checkout } = request.body;
 
@@ -55,7 +56,7 @@ const reposRoute: FastifyPluginAsync = async fastify => {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
+    const data = (await response.json()) as ReposCreateResponse | ApiError;
     return reply.status(response.status).send(data);
   });
 };
