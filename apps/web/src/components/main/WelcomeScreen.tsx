@@ -53,7 +53,11 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
   const [content, setContent] = useLocalStorageState('chat-draft-new-session', {
     defaultValue: '',
   });
-  const [selectedModel, setSelectedModel] = useState(DEFAULT_SESSION_MODEL);
+  const [selectedModelId, setSelectedModelId] = useLocalStorageState('selected-model-id', {
+    defaultValue: DEFAULT_SESSION_MODEL.id,
+  });
+  const selectedModel =
+    SESSION_MODELS.find(m => m.id === selectedModelId) ?? DEFAULT_SESSION_MODEL;
   const [selectedWorkspace, setSelectedWorkspace] = useState<WorkspaceSelection | null>(null);
   const [enableDatabricksApps, setEnableDatabricksApps] = useState(false);
   const [enableDatabricksSql, setEnableDatabricksSql] = useState(false);
@@ -302,7 +306,7 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
                   {SESSION_MODELS.map(model => (
                     <DropdownMenuItem
                       key={model.id}
-                      onClick={() => setSelectedModel(model)}
+                      onClick={() => setSelectedModelId(model.id)}
                       className="flex items-start justify-between py-2"
                     >
                       <div className="flex flex-col">
