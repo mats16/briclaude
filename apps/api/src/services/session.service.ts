@@ -307,8 +307,8 @@ export async function createSession(
   });
 
   const sessionContext: SessionContextResponse = {
-    allowed_tools: [],
-    disallowed_tools: [],
+    allowed_tools: session_context.allowed_tools,
+    disallowed_tools: session_context.disallowed_tools,
     cwd,
     model: session_context.model,
     sources: session_context.sources,
@@ -381,9 +381,6 @@ export async function createSession(
     // AbortController を作成（abort 用）
     const abortController = new AbortController();
 
-    // outcomes に databricks_apps があるか確認
-    const hasAppsOutcome = session_context.outcomes.some(o => o.type === 'databricks_apps');
-
     // MCP サーバーを構築（固定で設定、allowedTools で制御）
     const mcpServers: Record<string, McpServerConfig> = {};
 
@@ -403,27 +400,6 @@ export async function createSession(
     const authProvider = await getAuthProvider(fastify, ctx.userId);
     mcpServers.apps = createDbAppsMcpServer(authProvider, sessionId, ctx.userName);
 
-    // allowedTools を構築（MCP ツールは allowedTools で制御）
-    const allowedTools = [
-      'Skill',
-      'Bash',
-      'Read',
-      'Write',
-      'Edit',
-      'Glob',
-      'Grep',
-      'WebSearch',
-      'WebFetch',
-      // mcp__sql は常時許可
-      'mcp__sql__execute_sql_read_only',
-      'mcp__sql__poll_sql_result',
-    ];
-
-    // databricks_apps outcome がある場合は mcp__apps 関連ツールを許可
-    if (hasAppsOutcome) {
-      allowedTools.push('mcp__apps__*');
-    }
-
     const response = query({
       prompt,
       options: {
@@ -434,12 +410,14 @@ export async function createSession(
         settingSources: ['user', 'project', 'local'],
         permissionMode: 'bypassPermissions',
         systemPrompt: systemPromptConfig,
+        mcpServers,
         tools: {
           type: 'preset',
           preset: 'claude_code',
         },
-        mcpServers,
-        allowedTools,
+        allowedTools: sessionContext.allowed_tools,
+        // WebSearch は Anthropic API に依存しているため固定で無効化
+        disallowedTools: ['WebSearch', ...(sessionContext.disallowed_tools ?? [])],
         env: {
           PATH: fastify.config.PATH,
           HOME: userHome,
@@ -459,8 +437,11 @@ export async function createSession(
           DATABRICKS_TOKEN: accessToken,
         },
         sandbox: {
-          // ネットワーク疎通を通せないので無効化しておく
-          enabled: false,
+          enabled: true,
+          autoAllowBashIfSandboxed: true,
+          network: {
+            allowedDomains: ['*'],
+          },
         },
       },
     });
@@ -749,10 +730,6 @@ export async function sendMessageToSession(
       (s): s is DatabricksWorkspaceSource => s.type === 'databricks_workspace'
     )?.path;
 
-    // outcomes に databricks_apps があるか確認
-    const hasAppsOutcome =
-      sessionContext.outcomes?.some(o => o.type === 'databricks_apps') ?? false;
-
     // MCP サーバーを構築（固定で設定、allowedTools で制御）
     const mcpServers: Record<string, McpServerConfig> = {};
 
@@ -772,27 +749,6 @@ export async function sendMessageToSession(
     const authProvider = await getAuthProvider(fastify, ctx.userId);
     mcpServers.apps = createDbAppsMcpServer(authProvider, sessionId, ctx.userName);
 
-    // allowedTools を構築（MCP ツールは allowedTools で制御）
-    const allowedTools = [
-      'Skill',
-      'Bash',
-      'Read',
-      'Write',
-      'Edit',
-      'Glob',
-      'Grep',
-      'WebSearch',
-      'WebFetch',
-      // mcp__sql は常時許可
-      'mcp__sql__execute_sql_read_only',
-      'mcp__sql__poll_sql_result',
-    ];
-
-    // databricks_apps outcome がある場合は mcp__apps 関連ツールを許可
-    if (hasAppsOutcome) {
-      allowedTools.push('mcp__apps__*');
-    }
-
     const response = query({
       prompt,
       options: {
@@ -804,12 +760,14 @@ export async function sendMessageToSession(
         settingSources: ['user', 'project', 'local'],
         permissionMode: 'bypassPermissions',
         systemPrompt: systemPromptConfig,
+        mcpServers,
         tools: {
           type: 'preset',
           preset: 'claude_code',
         },
-        mcpServers,
-        allowedTools,
+        allowedTools: sessionContext?.allowed_tools,
+        // WebSearch は Anthropic API に依存しているため固定で無効化
+        disallowedTools: ['WebSearch', ...(sessionContext?.disallowed_tools ?? [])],
         env: {
           PATH: fastify.config.PATH,
           HOME: userHome,
@@ -830,8 +788,11 @@ export async function sendMessageToSession(
           DATABRICKS_TOKEN: accessToken,
         },
         sandbox: {
-          // ネットワーク疎通を通せないので無効化しておく
-          enabled: false,
+          enabled: true,
+          autoAllowBashIfSandboxed: true,
+          network: {
+            allowedDomains: ['*'],
+          },
         },
       },
     });

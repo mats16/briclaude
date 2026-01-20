@@ -1,7 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import useLocalStorageState from 'use-local-storage-state';
 import { useTranslation } from 'react-i18next';
-import { Send, Image, ChevronDown, Check, Loader2, Bug, Rocket, Construction } from 'lucide-react';
+import {
+  Send,
+  Image,
+  ChevronDown,
+  Check,
+  Loader2,
+  Bug,
+  Rocket,
+  Construction,
+  DatabaseZap,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -30,7 +40,8 @@ interface WelcomeScreenProps {
     content: UserMessageContentBlock[],
     modelId: string,
     workspaceSelection: WorkspaceSelection | null,
-    enableDatabricksApps: boolean
+    enableDatabricksApps: boolean,
+    enableDatabricksSqlWrite: boolean
   ) => Promise<void> | void;
   sessionError?: string | null;
 }
@@ -42,9 +53,14 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
   const [content, setContent] = useLocalStorageState('chat-draft-new-session', {
     defaultValue: '',
   });
-  const [selectedModel, setSelectedModel] = useState(DEFAULT_SESSION_MODEL);
+  const [selectedModelId, setSelectedModelId] = useLocalStorageState('selected-model-id', {
+    defaultValue: DEFAULT_SESSION_MODEL.id,
+  });
+  const selectedModel =
+    SESSION_MODELS.find(m => m.id === selectedModelId) ?? DEFAULT_SESSION_MODEL;
   const [selectedWorkspace, setSelectedWorkspace] = useState<WorkspaceSelection | null>(null);
   const [enableDatabricksApps, setEnableDatabricksApps] = useState(false);
+  const [enableDatabricksSqlWrite, setEnableDatabricksSqlWrite] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -92,7 +108,8 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
         messageContent,
         selectedModel.id,
         selectedWorkspace,
-        enableDatabricksApps
+        enableDatabricksApps,
+        enableDatabricksSqlWrite
       );
       setContent('');
       clearImages();
@@ -242,6 +259,35 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'h-8 w-8 shrink-0',
+                        enableDatabricksSqlWrite && 'bg-orange-500/10'
+                      )}
+                      onClick={() => setEnableDatabricksSqlWrite(prev => !prev)}
+                      disabled={isSubmitting}
+                    >
+                      <DatabaseZap
+                        className={cn(
+                          'h-4 w-4',
+                          enableDatabricksSqlWrite
+                            ? 'text-orange-500 stroke-[2.5]'
+                            : 'text-muted-foreground'
+                        )}
+                      />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('welcome.databricksSqlWriteToggle')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
 
             <div className="flex items-center gap-2">
@@ -260,7 +306,7 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
                   {SESSION_MODELS.map(model => (
                     <DropdownMenuItem
                       key={model.id}
-                      onClick={() => setSelectedModel(model)}
+                      onClick={() => setSelectedModelId(model.id)}
                       className="flex items-start justify-between py-2"
                     >
                       <div className="flex flex-col">
