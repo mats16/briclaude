@@ -436,8 +436,11 @@ export async function createSession(
           DATABRICKS_TOKEN: accessToken,
         },
         sandbox: {
-          // ネットワーク疎通を通せないので無効化しておく
-          enabled: false,
+          enabled: true,
+          autoAllowBashIfSandboxed: true,
+          network: {
+            allowedDomains: ['*'],
+          },
         },
       },
     });
@@ -783,8 +786,11 @@ export async function sendMessageToSession(
           DATABRICKS_TOKEN: accessToken,
         },
         sandbox: {
-          // ネットワーク疎通を通せないので無効化しておく
-          enabled: false,
+          enabled: true,
+          autoAllowBashIfSandboxed: true,
+          network: {
+            allowedDomains: ['*'],
+          },
         },
       },
     });
