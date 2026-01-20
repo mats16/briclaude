@@ -1,6 +1,6 @@
 # デプロイガイド
 
-このガイドでは、BriClaude を Databricks Apps にデプロイする方法を説明します。
+このガイドでは、Briclaude を Databricks Apps にデプロイする方法を説明します。
 
 ## 前提条件
 

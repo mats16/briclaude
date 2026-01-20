@@ -1,6 +1,6 @@
 # Local Development Guide
 
-This guide explains how to set up and run BriClaude locally for development.
+This guide explains how to set up and run Briclaude locally for development.
 
 ## Prerequisites
 

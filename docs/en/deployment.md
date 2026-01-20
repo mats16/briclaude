@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide explains how to deploy BriClaude to Databricks Apps.
+This guide explains how to deploy Briclaude to Databricks Apps.
 
 ## Prerequisites
 
