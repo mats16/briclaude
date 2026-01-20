@@ -33,7 +33,7 @@
 ### 1.1 リポジトリのクローン
 
 ```bash
-git clone https://github.com/your-org/briclaude.git
+git clone https://github.com/mats16/briclaude.git
 cd briclaude
 ```
 

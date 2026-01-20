@@ -33,7 +33,7 @@ In local development, the application runs with two servers:
 ### 1.1 Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/briclaude.git
+git clone https://github.com/mats16/briclaude.git
 cd briclaude
 ```
 
