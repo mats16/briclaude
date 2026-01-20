@@ -416,7 +416,8 @@ export async function createSession(
           preset: 'claude_code',
         },
         allowedTools: sessionContext.allowed_tools,
-        disallowedTools: sessionContext.disallowed_tools,
+        // WebSearch は Anthropic API に依存しているため固定で無効化
+        disallowedTools: ['WebSearch', ...(sessionContext.disallowed_tools ?? [])],
         env: {
           PATH: fastify.config.PATH,
           HOME: userHome,
@@ -765,7 +766,8 @@ export async function sendMessageToSession(
           preset: 'claude_code',
         },
         allowedTools: sessionContext?.allowed_tools,
-        disallowedTools: sessionContext?.disallowed_tools,
+        // WebSearch は Anthropic API に依存しているため固定で無効化
+        disallowedTools: ['WebSearch', ...(sessionContext?.disallowed_tools ?? [])],
         env: {
           PATH: fastify.config.PATH,
           HOME: userHome,
