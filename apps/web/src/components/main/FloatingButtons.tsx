@@ -20,9 +20,11 @@ interface FloatingButtonsProps {
 }
 
 type ComputeStateType =
+  | 'ACTIVE'
   | 'STARTING'
-  | 'RUNNING'
   | 'STOPPING'
+  | 'UPDATING'
+  | 'DELETING'
   | 'STOPPED'
   | 'ERROR'
   | 'UNKNOWN';
@@ -79,10 +81,12 @@ export function FloatingButtons({
 
   const getRocketIconClass = () => {
     switch (computeState) {
-      case 'RUNNING':
+      case 'ACTIVE':
         return 'text-green-500';
       case 'STARTING':
       case 'STOPPING':
+      case 'UPDATING':
+      case 'DELETING':
         return 'text-yellow-500 animate-spin';
       case 'ERROR':
         return 'text-red-500';
@@ -94,7 +98,7 @@ export function FloatingButtons({
 
   const getBadgeVariant = (): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (computeState) {
-      case 'RUNNING':
+      case 'ACTIVE':
         return 'default';
       case 'ERROR':
         return 'destructive';
@@ -105,10 +109,12 @@ export function FloatingButtons({
 
   const getBadgeClass = () => {
     switch (computeState) {
-      case 'RUNNING':
+      case 'ACTIVE':
         return 'bg-green-500 hover:bg-green-500';
       case 'STARTING':
       case 'STOPPING':
+      case 'UPDATING':
+      case 'DELETING':
         return 'bg-yellow-500 hover:bg-yellow-500 text-black';
       case 'ERROR':
         return 'bg-red-500 hover:bg-red-500';
