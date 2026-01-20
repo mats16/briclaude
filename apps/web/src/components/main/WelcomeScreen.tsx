@@ -264,7 +264,7 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
                       size="icon"
                       className={cn(
                         'h-8 w-8 shrink-0',
-                        enableDatabricksSql && 'bg-yellow-500/10'
+                        enableDatabricksSql && 'bg-orange-500/10'
                       )}
                       onClick={() => setEnableDatabricksSql(prev => !prev)}
                       disabled={isSubmitting}
@@ -273,7 +273,7 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
                         className={cn(
                           'h-4 w-4',
                           enableDatabricksSql
-                            ? 'text-yellow-500 stroke-[2.5]'
+                            ? 'text-orange-500 stroke-[2.5]'
                             : 'text-muted-foreground'
                         )}
                       />
