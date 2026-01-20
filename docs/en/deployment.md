@@ -31,10 +31,10 @@ Create a dedicated database user for the application and grant database owner pr
 
 ```sql
 -- Create application user with RLS bypass explicitly disabled
-CREATE USER briclaude_app WITH PASSWORD 'your-secure-password' NOBYPASSRLS;
+CREATE USER briclaude_user WITH PASSWORD 'your-secure-password' NOBYPASSRLS;
 
 -- Grant database owner privileges
-ALTER DATABASE briclaude OWNER TO briclaude_app;
+ALTER DATABASE briclaude OWNER TO briclaude_user;
 ```
 
 **Important:** The application uses Row-Level Security (RLS) with `current_setting('app.user_id', true)`. The application sets this session variable for each request to enforce user isolation. The `NOBYPASSRLS` option ensures the application user cannot bypass RLS policies, providing an additional layer of security.
@@ -79,10 +79,10 @@ databricks secrets create-scope briclaude-prod
 
 ```bash
 # Development
-databricks secrets put-secret briclaude-dev database-url --string-value "postgresql://briclaude_app:password@host:5432/briclaude"
+databricks secrets put-secret briclaude-dev database-url --string-value "postgresql://briclaude_user:password@host:5432/briclaude"
 
 # Production
-databricks secrets put-secret briclaude-prod database-url --string-value "postgresql://briclaude_app:password@host:5432/briclaude"
+databricks secrets put-secret briclaude-prod database-url --string-value "postgresql://briclaude_user:password@host:5432/briclaude"
 ```
 
 **Encryption Key:**

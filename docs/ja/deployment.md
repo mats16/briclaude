@@ -31,10 +31,10 @@ CREATE DATABASE briclaude;
 
 ```sql
 -- アプリケーションユーザーを作成（RLS バイパスを明示的に無効化）
-CREATE USER briclaude_app WITH PASSWORD 'your-secure-password' NOBYPASSRLS;
+CREATE USER briclaude_user WITH PASSWORD 'your-secure-password' NOBYPASSRLS;
 
 -- データベースの owner 権限を付与
-ALTER DATABASE briclaude OWNER TO briclaude_app;
+ALTER DATABASE briclaude OWNER TO briclaude_user;
 ```
 
 **重要:** このアプリケーションは Row-Level Security (RLS) を使用し、`current_setting('app.user_id', true)` でユーザーを識別します。アプリケーションは各リクエストでこのセッション変数を設定し、ユーザー分離を強制します。`NOBYPASSRLS` オプションにより、アプリケーションユーザーが RLS ポリシーをバイパスできないことが保証され、追加のセキュリティレイヤーが提供されます。
@@ -79,10 +79,10 @@ databricks secrets create-scope briclaude-prod
 
 ```bash
 # 開発環境
-databricks secrets put-secret briclaude-dev database-url --string-value "postgresql://briclaude_app:password@host:5432/briclaude"
+databricks secrets put-secret briclaude-dev database-url --string-value "postgresql://briclaude_user:password@host:5432/briclaude"
 
 # 本番環境
-databricks secrets put-secret briclaude-prod database-url --string-value "postgresql://briclaude_app:password@host:5432/briclaude"
+databricks secrets put-secret briclaude-prod database-url --string-value "postgresql://briclaude_user:password@host:5432/briclaude"
 ```
 
 **暗号化キー:**
