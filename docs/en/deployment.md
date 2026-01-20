@@ -1,0 +1,225 @@
+# Deployment Guide
+
+This guide explains how to deploy BriClaude to Databricks Apps.
+
+## Prerequisites
+
+- Databricks CLI installed and configured
+- Access to a Databricks workspace with Apps enabled
+- PostgreSQL-compatible database (Lakebase recommended)
+
+## 1. Database Setup
+
+### 1.1 Create Database
+
+Create a PostgreSQL-compatible database in Lakebase or an external PostgreSQL instance.
+
+**Using Databricks Lakebase (recommended):**
+
+```sql
+-- Create database
+CREATE DATABASE briclaude;
+```
+
+**Using external PostgreSQL:**
+
+Ensure the database is accessible from Databricks Apps via network configuration.
+
+### 1.2 Create Application User
+
+Create a dedicated database user for the application with appropriate permissions.
+
+```sql
+-- Create application user
+CREATE USER briclaude_app WITH PASSWORD 'your-secure-password';
+
+-- Grant connect permission
+GRANT CONNECT ON DATABASE briclaude TO briclaude_app;
+
+-- Grant schema permissions
+GRANT USAGE ON SCHEMA public TO briclaude_app;
+
+-- Grant table permissions (after migration)
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO briclaude_app;
+
+-- Grant sequence permissions
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO briclaude_app;
+
+-- Set default privileges for future tables
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO briclaude_app;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT USAGE, SELECT ON SEQUENCES TO briclaude_app;
+```
+
+**Important:** The application uses Row-Level Security (RLS) with `current_setting('app.user_id', true)`. The application sets this session variable for each request to enforce user isolation.
+
+### 1.3 Run Database Migrations
+
+Set the `DATABASE_URL` environment variable and run migrations:
+
+```bash
+# Set database URL (use admin user for migrations)
+export DATABASE_URL="postgresql://admin:password@host:5432/briclaude"
+
+# Navigate to api directory
+cd apps/api
+
+# Generate migration files (if schema changed)
+npm run db:generate
+
+# Apply migrations
+npm run db:migrate
+```
+
+## 2. Configure Secrets
+
+Create a Databricks secret scope and add required secrets.
+
+### 2.1 Create Secret Scope
+
+```bash
+# For development environment
+databricks secrets create-scope briclaude-dev
+
+# For production environment
+databricks secrets create-scope briclaude-prod
+```
+
+### 2.2 Add Required Secrets
+
+**Database URL:**
+
+```bash
+# Development
+databricks secrets put-secret briclaude-dev database-url --string-value "postgresql://briclaude_app:password@host:5432/briclaude"
+
+# Production
+databricks secrets put-secret briclaude-prod database-url --string-value "postgresql://briclaude_app:password@host:5432/briclaude"
+```
+
+**Encryption Key:**
+
+Generate a secure 32-byte encryption key for encrypting sensitive data (OAuth tokens, etc.):
+
+```bash
+# Generate encryption key
+ENCRYPTION_KEY=$(openssl rand -hex 32)
+
+# Development
+databricks secrets put-secret briclaude-dev encryption-key --string-value "$ENCRYPTION_KEY"
+
+# Production
+databricks secrets put-secret briclaude-prod encryption-key --string-value "$ENCRYPTION_KEY"
+```
+
+## 3. Deploy with Asset Bundles
+
+> **Note:** This deployment method using Databricks Asset Bundles is a temporary solution until Lakebase support is available in the bundle configuration. Once Lakebase integration is supported, the database and user creation steps may be automated through bundle resources.
+
+### 3.1 Build the Application
+
+```bash
+# Install dependencies
+npm install
+
+# Build all packages
+npm run build
+```
+
+### 3.2 Validate Bundle Configuration
+
+```bash
+# Validate development deployment
+databricks bundle validate --target dev
+
+# Validate production deployment
+databricks bundle validate --target prod
+```
+
+### 3.3 Deploy to Databricks
+
+**Development deployment:**
+
+```bash
+databricks bundle deploy --target dev
+```
+
+**Production deployment:**
+
+```bash
+databricks bundle deploy --target prod
+```
+
+### 3.4 Verify Deployment
+
+After deployment, check the application status:
+
+```bash
+# List deployed apps
+databricks apps list
+
+# Get app details
+databricks apps get briclaude-dev-<user-id>
+```
+
+## 4. Post-Deployment Verification
+
+### 4.1 Check Application Health
+
+Access the health endpoint to verify the application is running:
+
+```bash
+curl https://<workspace-url>/apps/<app-name>/api/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-01-20T00:00:00.000Z",
+  "service": "briclaude-api"
+}
+```
+
+### 4.2 Check Database Connection
+
+The health endpoint also verifies database connectivity. If there are database issues, the status will indicate an error.
+
+## Troubleshooting
+
+### Database Connection Issues
+
+1. Verify the database URL in secrets is correct
+2. Check network connectivity between Databricks Apps and the database
+3. Ensure the database user has appropriate permissions
+
+### Migration Failures
+
+1. Ensure you're using an admin user for migrations
+2. Check for existing objects that might conflict
+3. Review the migration SQL files for errors
+
+### Application Startup Issues
+
+1. Check application logs in Databricks Apps console
+2. Verify all required secrets are configured
+3. Ensure the build completed successfully before deployment
+
+## Environment-Specific Configuration
+
+| Setting | Development | Production |
+|---------|-------------|------------|
+| Bundle Target | `dev` | `prod` |
+| Secret Scope | `briclaude-dev` | `briclaude-prod` |
+| App Name | `briclaude-dev-<user-id>` | `briclaude-prod` |
+| Workspace Path | `/Workspace/Users/<user>/.bundle/...` | `/Workspace/Shared/.bundle/...` |
+
+## Security Considerations
+
+1. **Database credentials:** Always use dedicated application users, not admin accounts
+2. **Encryption keys:** Generate unique keys for each environment
+3. **Secret scopes:** Restrict access to secret scopes appropriately
+4. **Network security:** Configure private endpoints where possible
