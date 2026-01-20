@@ -51,7 +51,7 @@ Automatic migrations are disabled in the following cases:
 
 ```bash
 # Set database URL
-export DATABASE_URL="postgresql://admin:password@host:5432/briclaude"
+export DATABASE_URL="postgresql://briclaude_user:password@host:5432/briclaude"
 
 # Navigate to api directory
 cd apps/api

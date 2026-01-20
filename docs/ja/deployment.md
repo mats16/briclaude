@@ -51,7 +51,7 @@ CREATE DATABASE briclaude OWNER briclaude_user;
 
 ```bash
 # データベース URL を設定
-export DATABASE_URL="postgresql://admin:password@host:5432/briclaude"
+export DATABASE_URL="postgresql://briclaude_user:password@host:5432/briclaude"
 
 # api ディレクトリに移動
 cd apps/api
