@@ -110,7 +110,7 @@ export function MainArea({
         outcomes.push({
           type: 'databricks_workspace',
           path: workspaceSelection.path,
-          object_id: workspaceSelection.object_id,
+          id: workspaceSelection.object_id,
         });
       }
       if (enableDatabricksApps) {
@@ -141,7 +141,7 @@ export function MainArea({
                 {
                   type: 'databricks_workspace',
                   path: workspaceSelection.path,
-                  object_id: workspaceSelection.object_id,
+                  id: workspaceSelection.object_id,
                 },
               ]
             : [],
@@ -199,7 +199,7 @@ export function MainArea({
           sessionId={sessionId}
           showAppButton={!!databricksAppsOutcome}
           showWorkspaceButton={!!databricksWorkspaceOutcome}
-          workspaceObjectId={databricksWorkspaceOutcome?.object_id}
+          workspaceObjectId={databricksWorkspaceOutcome?.id}
         />
       )}
     </div>

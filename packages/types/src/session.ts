@@ -11,7 +11,7 @@ export type SessionStatus = 'init' | 'running' | 'idle' | 'error' | 'archived';
 export interface DatabricksWorkspaceSource {
   type: 'databricks_workspace';
   path: string;
-  object_id: number;
+  id: number;
 }
 
 export interface DatabricksAppsOutcome {

@@ -101,7 +101,7 @@ describe('buildSystemPromptConfig', () => {
 
   it('should return config with Workspace instruction for workspace-only outcome', () => {
     const outcomes: SessionOutcome[] = [
-      { type: 'databricks_workspace', path: '/Workspace/test', object_id: 12345 },
+      { type: 'databricks_workspace', path: '/Workspace/test', id: 12345 },
     ];
 
     const result = buildSystemPromptConfig(outcomes);
@@ -117,7 +117,7 @@ describe('buildSystemPromptConfig', () => {
 
   it('should return config with Apps instruction when both workspace and apps outcomes exist', () => {
     const outcomes: SessionOutcome[] = [
-      { type: 'databricks_workspace', path: '/Workspace/test', object_id: 12345 },
+      { type: 'databricks_workspace', path: '/Workspace/test', id: 12345 },
       { type: 'databricks_apps' },
     ];
 
@@ -138,7 +138,7 @@ describe('buildSystemPromptConfig', () => {
 
   it('should return Apps instruction even when databricks_apps has no name initially', () => {
     const outcomes: SessionOutcome[] = [
-      { type: 'databricks_workspace', path: '/Workspace/test', object_id: 12345 },
+      { type: 'databricks_workspace', path: '/Workspace/test', id: 12345 },
       { type: 'databricks_apps' },
     ];
 
@@ -154,8 +154,8 @@ describe('buildSystemPromptConfig', () => {
 
   it('should use first workspace path when multiple workspaces exist', () => {
     const outcomes: SessionOutcome[] = [
-      { type: 'databricks_workspace', path: '/Workspace/first', object_id: 12345 },
-      { type: 'databricks_workspace', path: '/Workspace/second', object_id: 67890 },
+      { type: 'databricks_workspace', path: '/Workspace/first', id: 12345 },
+      { type: 'databricks_workspace', path: '/Workspace/second', id: 67890 },
     ];
 
     const result = buildSystemPromptConfig(outcomes);
