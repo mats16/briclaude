@@ -10,22 +10,22 @@ This guide explains how to deploy BriClaude to Databricks Apps.
 
 ## 1. Database Setup
 
-### 1.1 Create Database
+### 1.1 Create Database Instance
 
-Create a PostgreSQL-compatible database in Lakebase or an external PostgreSQL instance.
+Prepare a Databricks Lakebase or external PostgreSQL instance.
 
-**Using Databricks Lakebase (recommended):**
+- **Databricks Lakebase (recommended):** Create a Lakebase instance from the Databricks console
+- **External PostgreSQL:** Ensure it is accessible from Databricks Apps via network configuration
+
+### 1.2 Create Database
+
+Connect to the PostgreSQL instance and create the application database.
 
 ```sql
--- Create database
 CREATE DATABASE briclaude;
 ```
 
-**Using external PostgreSQL:**
-
-Ensure the database is accessible from Databricks Apps via network configuration.
-
-### 1.2 Create Application User
+### 1.3 Create Application User
 
 Create a dedicated database user for the application and grant database owner privileges.
 
@@ -39,7 +39,7 @@ ALTER DATABASE briclaude OWNER TO briclaude_user;
 
 **Important:** The application uses Row-Level Security (RLS) with `current_setting('app.user_id', true)`. The application sets this session variable for each request to enforce user isolation. The `NOBYPASSRLS` option ensures the application user cannot bypass RLS policies, providing an additional layer of security.
 
-### 1.3 Database Migrations
+### 1.4 Database Migrations
 
 Database migrations are automatically applied when the server starts. No manual migration steps are required for deployment.
 
