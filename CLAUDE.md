@@ -195,3 +195,16 @@ See each app's CLAUDE.md for detailed guidelines:
   - Drizzle ORM and database operations
   - Claude Agent SDK usage
   - Plugin system
+
+## Additional Documentation
+
+- **Local Development**: [docs/en/development.md](./docs/en/development.md) ([日本語](./docs/ja/development.md))
+  - Prerequisites and environment setup
+  - Database configuration
+  - Authentication emulation
+  - Troubleshooting
+
+- **Deployment**: [docs/en/deployment.md](./docs/en/deployment.md) ([日本語](./docs/ja/deployment.md))
+  - Databricks Apps deployment
+  - Secret configuration
+  - Asset Bundles usage
