@@ -150,7 +150,8 @@ export function WorkspaceBrowserModal({
       }
 
       // 選択可能なタイプの場合は即座に選択して閉じる
-      if (selectableTypes.includes(item.object_type)) {
+      // object_id が必要
+      if (selectableTypes.includes(item.object_type) && item.object_id !== undefined) {
         onSelect({
           path: item.path,
           name: extractNameFromPath(item.path),
@@ -276,14 +277,17 @@ export function WorkspaceBrowserModal({
           <Button
             onClick={() => {
               const pathToSelect = selectedItem?.path ?? currentPath;
+              const objectIdToSelect = selectedItem?.object_id ?? currentObjectId;
+              if (objectIdToSelect === undefined) return;
               onSelect({
                 path: pathToSelect,
                 name: extractNameFromPath(pathToSelect),
                 object_type: selectedItem?.object_type ?? currentObjectType,
-                object_id: selectedItem?.object_id ?? currentObjectId,
+                object_id: objectIdToSelect,
               });
               onOpenChange(false);
             }}
+            disabled={(selectedItem?.object_id ?? currentObjectId) === undefined}
           >
             {t('workspace.selectCurrentFolder')}
           </Button>

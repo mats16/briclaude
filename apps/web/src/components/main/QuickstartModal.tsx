@@ -406,13 +406,9 @@ function DatabricksAppsContent({
       const templatePath = `${response.path}/${selectedTemplate.name}`;
 
       // Workspace API から object_id を取得
-      let objectId: number | undefined;
-      try {
-        const statusResponse = await workspaceService.getStatus(templatePath);
-        objectId = statusResponse.object_id;
-      } catch {
-        // object_id が取得できなくても続行（Workspace リンクが機能しないだけ）
-        console.warn('Failed to get object_id for workspace path:', templatePath);
+      const statusResponse = await workspaceService.getStatus(templatePath);
+      if (statusResponse.object_id === undefined) {
+        throw new Error('Failed to get object_id for workspace');
       }
 
       const prompt = t('quickstart.databricksApps.presetPrompt', {
@@ -424,7 +420,7 @@ function DatabricksAppsContent({
         path: templatePath,
         name: selectedTemplate.name,
         object_type: 'DIRECTORY',
-        object_id: objectId,
+        object_id: statusResponse.object_id,
       };
 
       onFillPrompt(prompt, workspaceSelection, true);

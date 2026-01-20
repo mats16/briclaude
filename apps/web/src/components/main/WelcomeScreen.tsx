@@ -84,8 +84,8 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
       if (selectedWorkspace) {
         addRecentWorkspace(
           selectedWorkspace.path,
-          selectedWorkspace.object_type,
-          selectedWorkspace.object_id
+          selectedWorkspace.object_id,
+          selectedWorkspace.object_type
         );
       }
       await onNewSession?.(
@@ -344,8 +344,8 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
             setSelectedWorkspace(workspaceSelection);
             addRecentWorkspace(
               workspaceSelection.path,
-              workspaceSelection.object_type,
-              workspaceSelection.object_id
+              workspaceSelection.object_id,
+              workspaceSelection.object_type
             );
           }
           if (enableApps) {

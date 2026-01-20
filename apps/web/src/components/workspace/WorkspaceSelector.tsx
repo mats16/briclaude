@@ -45,7 +45,7 @@ export function WorkspaceSelector({ value, onChange, disabled = false }: Workspa
   const handleSelect = useCallback(
     (selection: WorkspaceSelection) => {
       onChange(selection);
-      addRecentWorkspace(selection.path, selection.object_type, selection.object_id);
+      addRecentWorkspace(selection.path, selection.object_id, selection.object_type);
     },
     [onChange, addRecentWorkspace]
   );
