@@ -4,7 +4,7 @@ This guide explains how to set up and run BriClaude locally for development.
 
 ## Prerequisites
 
-- **Node.js**: 22.16 or higher (LTS)
+- **Node.js**: 22.x (LTS)
 - **npm**: 10.0.0 or higher
 - **PostgreSQL**: 14 or higher (local or remote)
 - **Git**: For version control
