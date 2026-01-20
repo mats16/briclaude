@@ -2,6 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Rocket, FolderCode, Settings, Logs } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { APP_STATUS_POLLING_INTERVAL_MS } from '@/constants';
 import type { DatabricksApp } from '@repo/types';
@@ -13,7 +19,13 @@ interface FloatingButtonsProps {
   workspacePath?: string;
 }
 
-type AppStateType = 'RUNNING' | 'DEPLOYING' | 'CRASHED' | 'UNAVAILABLE' | 'UNKNOWN' | string;
+type ComputeStateType =
+  | 'STARTING'
+  | 'RUNNING'
+  | 'STOPPING'
+  | 'STOPPED'
+  | 'ERROR'
+  | 'UNKNOWN';
 
 export function FloatingButtons({
   sessionId,
@@ -61,28 +73,30 @@ export function FloatingButtons({
     return () => clearInterval(intervalId);
   }, [showAppButton]);
 
-  const appState: AppStateType = appInfo?.app_status?.state ?? 'UNKNOWN';
+  const computeState: ComputeStateType =
+    (appInfo?.compute_status?.state as ComputeStateType) ?? 'UNKNOWN';
+  const computeMessage = appInfo?.compute_status?.message;
 
   const getRocketIconClass = () => {
-    switch (appState) {
+    switch (computeState) {
       case 'RUNNING':
         return 'text-green-500';
-      case 'DEPLOYING':
+      case 'STARTING':
+      case 'STOPPING':
         return 'text-yellow-500 animate-spin';
-      case 'CRASHED':
-      case 'UNAVAILABLE':
+      case 'ERROR':
         return 'text-red-500';
+      case 'STOPPED':
       default:
         return 'text-foreground';
     }
   };
 
   const getBadgeVariant = (): 'default' | 'secondary' | 'destructive' | 'outline' => {
-    switch (appState) {
+    switch (computeState) {
       case 'RUNNING':
         return 'default';
-      case 'CRASHED':
-      case 'UNAVAILABLE':
+      case 'ERROR':
         return 'destructive';
       default:
         return 'secondary';
@@ -90,14 +104,15 @@ export function FloatingButtons({
   };
 
   const getBadgeClass = () => {
-    switch (appState) {
+    switch (computeState) {
       case 'RUNNING':
         return 'bg-green-500 hover:bg-green-500';
-      case 'DEPLOYING':
+      case 'STARTING':
+      case 'STOPPING':
         return 'bg-yellow-500 hover:bg-yellow-500 text-black';
-      case 'CRASHED':
-      case 'UNAVAILABLE':
+      case 'ERROR':
         return 'bg-red-500 hover:bg-red-500';
+      case 'STOPPED':
       default:
         return '';
     }
@@ -149,12 +164,23 @@ export function FloatingButtons({
                 <Rocket className={cn('h-4 w-4', getRocketIconClass())} />
                 <span className="text-sm font-medium">{t('databricksApp.app')}</span>
               </button>
-              <Badge
-                variant={getBadgeVariant()}
-                className={cn('text-xs px-1.5 py-0', getBadgeClass())}
-              >
-                {appState}
-              </Badge>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant={getBadgeVariant()}
+                      className={cn('text-xs px-1.5 py-0 cursor-default', getBadgeClass())}
+                    >
+                      {computeState}
+                    </Badge>
+                  </TooltipTrigger>
+                  {computeMessage && (
+                    <TooltipContent>
+                      <p>{computeMessage}</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
               <span className="text-muted-foreground">|</span>
               <button
                 className="flex items-center gap-1 hover:opacity-70 disabled:opacity-50"
