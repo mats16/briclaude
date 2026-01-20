@@ -180,6 +180,8 @@ npm run clean
 
 For detailed development guidelines, see:
 
+- [Local Development Guide](./docs/en/development.md) - Set up local development environment
+- [Deployment Guide](./docs/en/deployment.md) - Deploy to Databricks Apps
 - [CLAUDE.md](./CLAUDE.md) - Project overview and coding standards
 - [apps/web/CLAUDE.md](./apps/web/CLAUDE.md) - Frontend development guide
 - [apps/api/CLAUDE.md](./apps/api/CLAUDE.md) - Backend development guide
