@@ -43,6 +43,10 @@ ALTER DATABASE briclaude OWNER TO briclaude_user;
 
 データベースマイグレーションはサーバー起動時に自動的に適用されます。デプロイ時に手動でマイグレーションを実行する必要はありません。
 
+以下の場合、自動マイグレーションは無効化されます:
+- 環境変数 `DISABLE_AUTO_MIGRATION=true` が設定されている場合
+- 環境変数 `NODE_ENV=test` が設定されている場合
+
 **ローカル開発または手動マイグレーションの場合:**
 
 ```bash

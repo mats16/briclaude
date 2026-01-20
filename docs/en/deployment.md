@@ -43,6 +43,10 @@ ALTER DATABASE briclaude OWNER TO briclaude_user;
 
 Database migrations are automatically applied when the server starts. No manual migration steps are required for deployment.
 
+Automatic migrations are disabled in the following cases:
+- When environment variable `DISABLE_AUTO_MIGRATION=true` is set
+- When environment variable `NODE_ENV=test` is set
+
 **For local development or manual migration:**
 
 ```bash
