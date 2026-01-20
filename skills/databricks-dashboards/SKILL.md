@@ -1,10 +1,11 @@
 ---
 name: databricks-dashboards
-version: 1.0.0
 description: |
   Create and manage Databricks AI/BI dashboards using lvdash.json format.
   Triggers: create dashboard, dashboard JSON, lvdash.json, visualization dashboard, BI dashboard, build dashboard, dashboard definition, widget layout.
   Outputs dashboard definition files that can be imported via Databricks CLI or API.
+metadata:
+  version: 1.0.0
 ---
 
 # Databricks Dashboards

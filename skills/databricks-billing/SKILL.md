@@ -1,10 +1,11 @@
 ---
 name: databricks-billing
-version: 1.0.0
 description: |
   Databricks billing data analysis and cost calculation using system.billing tables.
   Triggers: cost analysis, billing report, DBU usage, SKU costs, monthly expenses, job costs, warehouse costs, spending breakdown.
   Uses mcp__databricks__run_sql for queries. Cost calculations require joining usage with list_prices.
+metadata:
+  version: 1.0.0
 ---
 
 # Databricks Billing

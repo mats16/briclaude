@@ -1,6 +1,8 @@
 ---
 name: databricks-apps
 description: Databricks Apps deployment, debugging, and configuration management. Use when working with Databricks Apps issues including deployment failures, app configuration (app.yaml), checking logs, granting permissions to SQL warehouses or Unity Catalog resources, troubleshooting app errors, or managing app state (start/stop). Triggered by mentions of SESSION_APP_NAME, app.yaml, deployment errors, or permission issues with Apps.
+metadata:
+  version: 1.0.0
 ---
 
 # Databricks Apps

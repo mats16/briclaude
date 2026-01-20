@@ -1,10 +1,11 @@
 ---
 name: databricks-unity-catalog
-version: 1.0.0
 description: |
   Unity Catalog metadata inspection, data exploration, and permission management.
   Triggers: list catalogs, show tables, describe table, check permissions, grant access, table not found, access denied, explore schema, data lineage, table history, data quality.
   Uses mcp__databricks__run_sql for SQL queries. CLI fallback for operations SQL cannot perform.
+metadata:
+  version: 1.0.0
 ---
 
 # Databricks Unity Catalog

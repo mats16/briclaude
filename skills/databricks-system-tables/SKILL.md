@@ -3,7 +3,8 @@ name: databricks-system-tables
 description: |
   Databricks System Tables の分析・クエリ作成支援。Unity Catalog の system カタログに格納された運用データ（課金、監査ログ、ジョブ実行、クエリ履歴、リネージュ、コンピュートなど）を活用した分析・調査を行う際に使用。
   トリガー例: コスト分析、DBU使用量、課金レポート、監査ログ調査、ジョブ実行履歴、クエリパフォーマンス、テーブルリネージュ、クラスター利用状況の確認。
-version: 0.0.1
+metadata:
+  version: 1.0.0
 ---
 
 ## Overview

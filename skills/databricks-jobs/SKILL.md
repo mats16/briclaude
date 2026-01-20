@@ -1,10 +1,11 @@
 ---
 name: databricks-jobs
-version: 1.0.0
 description: |
   Databricks Jobs management, monitoring, and debugging. Use for job status checks, run history, failure investigation, job execution, and historical analysis.
   Triggers: job status, run history, job failure, debug job, run job, cancel job, repair run, job metrics, failure analysis.
   Real-time operations use CLI (databricks jobs). Historical analysis uses System Tables (system.lakeflow.*).
+metadata:
+  version: 1.0.0
 ---
 
 # Databricks Jobs
