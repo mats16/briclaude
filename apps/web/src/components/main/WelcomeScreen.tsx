@@ -41,7 +41,7 @@ interface WelcomeScreenProps {
     modelId: string,
     workspaceSelection: WorkspaceSelection | null,
     enableDatabricksApps: boolean,
-    enableDatabricksSql: boolean
+    enableDatabricksSqlWrite: boolean
   ) => Promise<void> | void;
   sessionError?: string | null;
 }
@@ -60,7 +60,7 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
     SESSION_MODELS.find(m => m.id === selectedModelId) ?? DEFAULT_SESSION_MODEL;
   const [selectedWorkspace, setSelectedWorkspace] = useState<WorkspaceSelection | null>(null);
   const [enableDatabricksApps, setEnableDatabricksApps] = useState(false);
-  const [enableDatabricksSql, setEnableDatabricksSql] = useState(false);
+  const [enableDatabricksSqlWrite, setEnableDatabricksSqlWrite] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -109,7 +109,7 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
         selectedModel.id,
         selectedWorkspace,
         enableDatabricksApps,
-        enableDatabricksSql
+        enableDatabricksSqlWrite
       );
       setContent('');
       clearImages();
@@ -268,15 +268,15 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
                       size="icon"
                       className={cn(
                         'h-8 w-8 shrink-0',
-                        enableDatabricksSql && 'bg-orange-500/10'
+                        enableDatabricksSqlWrite && 'bg-orange-500/10'
                       )}
-                      onClick={() => setEnableDatabricksSql(prev => !prev)}
+                      onClick={() => setEnableDatabricksSqlWrite(prev => !prev)}
                       disabled={isSubmitting}
                     >
                       <DatabaseZap
                         className={cn(
                           'h-4 w-4',
-                          enableDatabricksSql
+                          enableDatabricksSqlWrite
                             ? 'text-orange-500 stroke-[2.5]'
                             : 'text-muted-foreground'
                         )}

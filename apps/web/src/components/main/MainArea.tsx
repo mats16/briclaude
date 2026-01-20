@@ -97,7 +97,7 @@ export function MainArea({
     modelId: string,
     workspaceSelection: WorkspaceSelection | null,
     enableDatabricksApps: boolean,
-    enableDatabricksSql: boolean
+    enableDatabricksSqlWrite: boolean
   ) => {
     try {
       setCreateSessionError(null);
@@ -148,7 +148,7 @@ export function MainArea({
             : [],
           outcomes: outcomes,
           disallowed_tools: [
-            ...(enableDatabricksSql ? [] : ['mcp__sql__execute_sql']),
+            ...(enableDatabricksSqlWrite ? [] : ['mcp__sql__execute_sql']),
             ...(enableDatabricksApps ? [] : ['mcp__apps__*']),
           ],
         },
