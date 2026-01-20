@@ -177,7 +177,7 @@
     "subtitle": "AI Agent で Databricks での開発を加速しましょう。\n下のクイックスタートか、メッセージを入力から始めてください。",
     "comingSoon": "この機能は近日公開予定です",
     "databricksAppsToggle": "Databricks Apps への自動デプロイを有効化",
-    "databricksSqlToggle": "Databricks SQL の更新系クエリ実行を許可",
+    "databricksSqlWriteToggle": "Databricks SQL の書き込み操作（INSERT/UPDATE/DELETE）を許可",
     "quickstarts": {
       "lakeflow": {
         "title": "ジョブのエラー調査",

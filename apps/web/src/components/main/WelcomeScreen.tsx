@@ -284,7 +284,7 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{t('welcome.databricksSqlToggle')}</p>
+                    <p>{t('welcome.databricksSqlWriteToggle')}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

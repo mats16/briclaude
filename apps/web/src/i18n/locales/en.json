@@ -177,7 +177,7 @@
     "subtitle": "Accelerate your Databricks development with AI Agent.\nStart with a quickstart below or type a message.",
     "comingSoon": "This feature is coming soon",
     "databricksAppsToggle": "Enable automatic deployment to Databricks Apps",
-    "databricksSqlToggle": "Allow write SQL execution on Databricks SQL",
+    "databricksSqlWriteToggle": "Allow write operations (INSERT/UPDATE/DELETE) on Databricks SQL",
     "quickstarts": {
       "lakeflow": {
         "title": "Investigate Job Errors",
