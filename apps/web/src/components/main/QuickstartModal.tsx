@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { jobsService, reposService, workspaceService } from '@/services';
 import { useUser } from '@/hooks/useUser';
-import type { JobRun, WorkspaceSelection } from '@repo/types';
+import type { JobRun, WorkspaceSelection, WorkspaceGetStatusResponse } from '@repo/types';
 
 export type QuickstartType = 'lakeflow' | 'databricksApps' | 'tbd';
 
@@ -406,7 +406,7 @@ function DatabricksAppsContent({
       const templatePath = `${response.path}/${selectedTemplate.name}`;
 
       // Workspace API から object_id を取得
-      let statusResponse;
+      let statusResponse: WorkspaceGetStatusResponse;
       try {
         statusResponse = await workspaceService.getStatus(templatePath);
       } catch (statusErr) {

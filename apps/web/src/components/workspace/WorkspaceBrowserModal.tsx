@@ -289,8 +289,8 @@ export function WorkspaceBrowserModal({
           <Button
             onClick={() => {
               const pathToSelect = selectedItem?.path ?? currentPath;
-              const objectIdToSelect = selectedItem?.object_id ?? currentObjectId;
-              if (objectIdToSelect === undefined) return;
+              // selectedItem.object_id は必須、currentObjectId は disabled で保護
+              const objectIdToSelect = selectedItem?.object_id ?? currentObjectId!;
               onSelect({
                 path: pathToSelect,
                 name: extractNameFromPath(pathToSelect),
@@ -299,7 +299,7 @@ export function WorkspaceBrowserModal({
               });
               onOpenChange(false);
             }}
-            disabled={(selectedItem?.object_id ?? currentObjectId) === undefined}
+            disabled={!selectedItem && currentObjectId === undefined}
           >
             {t('workspace.selectCurrentFolder')}
           </Button>
