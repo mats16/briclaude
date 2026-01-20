@@ -22,9 +22,10 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { jobsService, reposService, workspaceService } from '@/services';
+import { jobsService, reposService } from '@/services';
 import { useUser } from '@/hooks/useUser';
-import type { JobRun, WorkspaceSelection, WorkspaceGetStatusResponse } from '@repo/types';
+import { extractNameFromPath } from '@/lib/workspace';
+import type { JobRun, WorkspaceSelection } from '@repo/types';
 
 export type QuickstartType = 'lakeflow' | 'databricksApps' | 'tbd';
 
@@ -402,29 +403,17 @@ function DatabricksAppsContent({
       });
 
       // Clone successful - fill prompt and workspace path
-      // sparse_checkout でテンプレートのみクローンしているので、実際のパスは <repo_path>/<template_name>
-      const templatePath = `${response.path}/${selectedTemplate.name}`;
-
-      // Workspace API から object_id を取得
-      let statusResponse: WorkspaceGetStatusResponse;
-      try {
-        statusResponse = await workspaceService.getStatus(templatePath);
-      } catch (statusErr) {
-        console.error('Failed to get workspace status:', statusErr);
-        setCloneError(t('quickstart.databricksApps.getStatusError'));
-        return;
-      }
-
+      // repos API レスポンスから直接 id を取得（追加の API 呼び出し不要）
       const prompt = t('quickstart.databricksApps.presetPrompt', {
         templateName: selectedTemplate.name,
-        path: templatePath,
+        path: response.path,
       });
 
       const workspaceSelection: WorkspaceSelection = {
-        path: templatePath,
-        name: selectedTemplate.name,
-        object_type: 'DIRECTORY',
-        object_id: statusResponse.object_id,
+        path: response.path,
+        name: extractNameFromPath(response.path),
+        object_type: 'REPO',
+        object_id: response.id,
       };
 
       onFillPrompt(prompt, workspaceSelection, true);
