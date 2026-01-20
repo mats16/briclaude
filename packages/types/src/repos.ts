@@ -30,4 +30,8 @@ export interface ReposCreateResponse {
   branch: string;
   /** HEAD commit ID */
   head_commit_id: string;
+  /** Sparse checkout configuration */
+  sparse_checkout?: {
+    patterns: string[];
+  };
 }
