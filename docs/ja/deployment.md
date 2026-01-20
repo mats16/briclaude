@@ -70,7 +70,11 @@ Databricks シークレットスコープを作成し、必要なシークレッ
 ### 2.1 シークレットスコープの作成
 
 ```bash
-databricks secrets create-scope briclaude-[dev|prod]
+# 開発環境
+databricks secrets create-scope briclaude-dev
+
+# 本番環境
+databricks secrets create-scope briclaude-prod
 ```
 
 ### 2.2 必要なシークレットの追加

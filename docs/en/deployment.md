@@ -70,7 +70,11 @@ Create a Databricks secret scope and add required secrets.
 ### 2.1 Create Secret Scope
 
 ```bash
-databricks secrets create-scope briclaude-[dev|prod]
+# Development
+databricks secrets create-scope briclaude-dev
+
+# Production
+databricks secrets create-scope briclaude-prod
 ```
 
 ### 2.2 Add Required Secrets
