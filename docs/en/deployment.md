@@ -55,12 +55,14 @@ GRANT USAGE, SELECT ON SEQUENCES TO briclaude_app;
 
 **Important:** The application uses Row-Level Security (RLS) with `current_setting('app.user_id', true)`. The application sets this session variable for each request to enforce user isolation. The `NOBYPASSRLS` option ensures the application user cannot bypass RLS policies, providing an additional layer of security.
 
-### 1.3 Run Database Migrations
+### 1.3 Database Migrations
 
-Set the `DATABASE_URL` environment variable and run migrations:
+Database migrations are automatically applied when the server starts. No manual migration steps are required for deployment.
+
+**For local development or manual migration:**
 
 ```bash
-# Set database URL (use admin user for migrations)
+# Set database URL
 export DATABASE_URL="postgresql://admin:password@host:5432/briclaude"
 
 # Navigate to api directory
@@ -69,9 +71,11 @@ cd apps/api
 # Generate migration files (if schema changed)
 npm run db:generate
 
-# Apply migrations
+# Manually apply migrations (optional)
 npm run db:migrate
 ```
+
+**Note:** Ensure the database user specified in `DATABASE_URL` has sufficient privileges to create tables and apply schema changes during the initial deployment.
 
 ## 2. Configure Secrets
 
