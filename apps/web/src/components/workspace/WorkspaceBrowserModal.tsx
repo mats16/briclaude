@@ -163,8 +163,7 @@ export function WorkspaceBrowserModal({
       }
 
       // 選択可能なタイプの場合は即座に選択して閉じる
-      // object_id が必要
-      if (selectableTypes.includes(item.object_type) && item.object_id !== undefined) {
+      if (selectableTypes.includes(item.object_type)) {
         onSelect({
           path: item.path,
           name: extractNameFromPath(item.path),

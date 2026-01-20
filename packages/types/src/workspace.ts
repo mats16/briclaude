@@ -17,7 +17,7 @@ export type WorkspaceObjectType =
 export interface WorkspaceObjectInfo {
   path: string;
   object_type: WorkspaceObjectType;
-  object_id?: number;
+  object_id: number;
   language?: 'SCALA' | 'PYTHON' | 'SQL' | 'R';
   created_at?: number;
   modified_at?: number;

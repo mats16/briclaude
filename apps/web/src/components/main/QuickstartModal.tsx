@@ -406,9 +406,13 @@ function DatabricksAppsContent({
       const templatePath = `${response.path}/${selectedTemplate.name}`;
 
       // Workspace API から object_id を取得
-      const statusResponse = await workspaceService.getStatus(templatePath);
-      if (statusResponse.object_id === undefined) {
-        throw new Error('Failed to get object_id for workspace');
+      let statusResponse;
+      try {
+        statusResponse = await workspaceService.getStatus(templatePath);
+      } catch (statusErr) {
+        console.error('Failed to get workspace status:', statusErr);
+        setCloneError(t('quickstart.databricksApps.getStatusError'));
+        return;
       }
 
       const prompt = t('quickstart.databricksApps.presetPrompt', {

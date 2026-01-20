@@ -209,6 +209,7 @@
       "templatesCount": "{{count}} template(s)",
       "selectTemplate": "Select {{name}} template",
       "cloneError": "Failed to clone template",
+      "getStatusError": "Failed to get workspace information after cloning",
       "cloneInfo": "Select a template and click Clone.",
       "viewOnGithub": "View on GitHub",
       "clone": "Clone",
