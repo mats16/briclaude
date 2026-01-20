@@ -30,8 +30,8 @@ Ensure the database is accessible from Databricks Apps via network configuration
 Create a dedicated database user for the application with appropriate permissions.
 
 ```sql
--- Create application user
-CREATE USER briclaude_app WITH PASSWORD 'your-secure-password';
+-- Create application user with RLS bypass explicitly disabled
+CREATE USER briclaude_app WITH PASSWORD 'your-secure-password' NOBYPASSRLS;
 
 -- Grant connect permission
 GRANT CONNECT ON DATABASE briclaude TO briclaude_app;
@@ -53,7 +53,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 GRANT USAGE, SELECT ON SEQUENCES TO briclaude_app;
 ```
 
-**Important:** The application uses Row-Level Security (RLS) with `current_setting('app.user_id', true)`. The application sets this session variable for each request to enforce user isolation.
+**Important:** The application uses Row-Level Security (RLS) with `current_setting('app.user_id', true)`. The application sets this session variable for each request to enforce user isolation. The `NOBYPASSRLS` option ensures the application user cannot bypass RLS policies, providing an additional layer of security.
 
 ### 1.3 Run Database Migrations
 

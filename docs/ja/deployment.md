@@ -30,8 +30,8 @@ CREATE DATABASE briclaude;
 適切な権限を持つ、アプリケーション専用のデータベースユーザーを作成します。
 
 ```sql
--- アプリケーションユーザーを作成
-CREATE USER briclaude_app WITH PASSWORD 'your-secure-password';
+-- アプリケーションユーザーを作成（RLS バイパスを明示的に無効化）
+CREATE USER briclaude_app WITH PASSWORD 'your-secure-password' NOBYPASSRLS;
 
 -- 接続権限を付与
 GRANT CONNECT ON DATABASE briclaude TO briclaude_app;
@@ -53,7 +53,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 GRANT USAGE, SELECT ON SEQUENCES TO briclaude_app;
 ```
 
-**重要:** このアプリケーションは Row-Level Security (RLS) を使用し、`current_setting('app.user_id', true)` でユーザーを識別します。アプリケーションは各リクエストでこのセッション変数を設定し、ユーザー分離を強制します。
+**重要:** このアプリケーションは Row-Level Security (RLS) を使用し、`current_setting('app.user_id', true)` でユーザーを識別します。アプリケーションは各リクエストでこのセッション変数を設定し、ユーザー分離を強制します。`NOBYPASSRLS` オプションにより、アプリケーションユーザーが RLS ポリシーをバイパスできないことが保証され、追加のセキュリティレイヤーが提供されます。
 
 ### 1.3 データベースマイグレーションの実行
 
