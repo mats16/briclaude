@@ -66,11 +66,7 @@ Create a Databricks secret scope and add required secrets.
 ### 2.1 Create Secret Scope
 
 ```bash
-# For development environment
-databricks secrets create-scope briclaude-dev
-
-# For production environment
-databricks secrets create-scope briclaude-prod
+databricks secrets create-scope briclaude-[dev|prod]
 ```
 
 ### 2.2 Add Required Secrets
@@ -78,11 +74,7 @@ databricks secrets create-scope briclaude-prod
 **Database URL:**
 
 ```bash
-# Development
-databricks secrets put-secret briclaude-dev database-url --string-value "postgresql://briclaude_user:password@host:5432/briclaude"
-
-# Production
-databricks secrets put-secret briclaude-prod database-url --string-value "postgresql://briclaude_user:password@host:5432/briclaude"
+databricks secrets put-secret briclaude-[dev|prod] database-url --string-value "postgresql://briclaude_user:password@host:5432/briclaude"
 ```
 
 **Encryption Key:**
@@ -90,14 +82,8 @@ databricks secrets put-secret briclaude-prod database-url --string-value "postgr
 Generate a secure encryption key for encrypting sensitive data (OAuth tokens, etc.). A 32-byte key (64 hexadecimal characters) is required.
 
 ```bash
-# Generate encryption key
 ENCRYPTION_KEY=$(openssl rand -hex 32)
-
-# Development
-databricks secrets put-secret briclaude-dev encryption-key --string-value "$ENCRYPTION_KEY"
-
-# Production
-databricks secrets put-secret briclaude-prod encryption-key --string-value "$ENCRYPTION_KEY"
+databricks secrets put-secret briclaude-[dev|prod] encryption-key --string-value "$ENCRYPTION_KEY"
 ```
 
 ## 3. Deploy with Asset Bundles

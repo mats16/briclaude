@@ -66,11 +66,7 @@ Databricks シークレットスコープを作成し、必要なシークレッ
 ### 2.1 シークレットスコープの作成
 
 ```bash
-# 開発環境用
-databricks secrets create-scope briclaude-dev
-
-# 本番環境用
-databricks secrets create-scope briclaude-prod
+databricks secrets create-scope briclaude-[dev|prod]
 ```
 
 ### 2.2 必要なシークレットの追加
@@ -78,11 +74,7 @@ databricks secrets create-scope briclaude-prod
 **データベース URL:**
 
 ```bash
-# 開発環境
-databricks secrets put-secret briclaude-dev database-url --string-value "postgresql://briclaude_user:password@host:5432/briclaude"
-
-# 本番環境
-databricks secrets put-secret briclaude-prod database-url --string-value "postgresql://briclaude_user:password@host:5432/briclaude"
+databricks secrets put-secret briclaude-[dev|prod] database-url --string-value "postgresql://briclaude_user:password@host:5432/briclaude"
 ```
 
 **暗号化キー:**
@@ -90,14 +82,8 @@ databricks secrets put-secret briclaude-prod database-url --string-value "postgr
 機密データ（OAuth トークンなど）を暗号化するための安全な暗号化キーを生成します。32 バイト（64 文字の 16 進数）のランダムキーが必要です。
 
 ```bash
-# 暗号化キーを生成
 ENCRYPTION_KEY=$(openssl rand -hex 32)
-
-# 開発環境
-databricks secrets put-secret briclaude-dev encryption-key --string-value "$ENCRYPTION_KEY"
-
-# 本番環境
-databricks secrets put-secret briclaude-prod encryption-key --string-value "$ENCRYPTION_KEY"
+databricks secrets put-secret briclaude-[dev|prod] encryption-key --string-value "$ENCRYPTION_KEY"
 ```
 
 ## 3. Asset Bundles によるデプロイ
