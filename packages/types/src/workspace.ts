@@ -59,7 +59,7 @@ export interface RecentWorkspace {
   path: string;
   name: string;
   last_used_at: number;
-  object_type?: WorkspaceObjectType;
+  object_type: WorkspaceObjectType;
   object_id: number;
 }
 
