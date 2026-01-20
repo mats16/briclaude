@@ -27,30 +27,14 @@ Ensure the database is accessible from Databricks Apps via network configuration
 
 ### 1.2 Create Application User
 
-Create a dedicated database user for the application with appropriate permissions.
+Create a dedicated database user for the application and grant database owner privileges.
 
 ```sql
 -- Create application user with RLS bypass explicitly disabled
 CREATE USER briclaude_app WITH PASSWORD 'your-secure-password' NOBYPASSRLS;
 
--- Grant connect permission
-GRANT CONNECT ON DATABASE briclaude TO briclaude_app;
-
--- Grant schema permissions
-GRANT USAGE ON SCHEMA public TO briclaude_app;
-
--- Grant table permissions (after migration)
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO briclaude_app;
-
--- Grant sequence permissions
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO briclaude_app;
-
--- Set default privileges for future tables
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO briclaude_app;
-
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-GRANT USAGE, SELECT ON SEQUENCES TO briclaude_app;
+-- Grant database owner privileges
+ALTER DATABASE briclaude OWNER TO briclaude_app;
 ```
 
 **Important:** The application uses Row-Level Security (RLS) with `current_setting('app.user_id', true)`. The application sets this session variable for each request to enforce user isolation. The `NOBYPASSRLS` option ensures the application user cannot bypass RLS policies, providing an additional layer of security.
@@ -74,8 +58,6 @@ npm run db:generate
 # Manually apply migrations (optional)
 npm run db:migrate
 ```
-
-**Note:** Ensure the database user specified in `DATABASE_URL` has sufficient privileges to create tables and apply schema changes during the initial deployment.
 
 ## 2. Configure Secrets
 

@@ -27,30 +27,14 @@ CREATE DATABASE briclaude;
 
 ### 1.2 アプリケーション用ユーザーの作成
 
-適切な権限を持つ、アプリケーション専用のデータベースユーザーを作成します。
+アプリケーション専用のデータベースユーザーを作成し、データベースの owner 権限を付与します。
 
 ```sql
 -- アプリケーションユーザーを作成（RLS バイパスを明示的に無効化）
 CREATE USER briclaude_app WITH PASSWORD 'your-secure-password' NOBYPASSRLS;
 
--- 接続権限を付与
-GRANT CONNECT ON DATABASE briclaude TO briclaude_app;
-
--- スキーマ権限を付与
-GRANT USAGE ON SCHEMA public TO briclaude_app;
-
--- テーブル権限を付与（マイグレーション実行後）
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO briclaude_app;
-
--- シーケンス権限を付与
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO briclaude_app;
-
--- 今後作成されるテーブルへのデフォルト権限を設定
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO briclaude_app;
-
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-GRANT USAGE, SELECT ON SEQUENCES TO briclaude_app;
+-- データベースの owner 権限を付与
+ALTER DATABASE briclaude OWNER TO briclaude_app;
 ```
 
 **重要:** このアプリケーションは Row-Level Security (RLS) を使用し、`current_setting('app.user_id', true)` でユーザーを識別します。アプリケーションは各リクエストでこのセッション変数を設定し、ユーザー分離を強制します。`NOBYPASSRLS` オプションにより、アプリケーションユーザーが RLS ポリシーをバイパスできないことが保証され、追加のセキュリティレイヤーが提供されます。
@@ -74,8 +58,6 @@ npm run db:generate
 # 手動でマイグレーションを適用（オプション）
 npm run db:migrate
 ```
-
-**注意:** 初回デプロイ時にテーブル作成やスキーマ変更を適用するため、`DATABASE_URL` に指定するデータベースユーザーには十分な権限が必要です。
 
 ## 2. シークレットの設定
 
