@@ -120,30 +120,6 @@ databricks apps list
 databricks apps get briclaude-dev-<user-id>
 ```
 
-## 4. Post-Deployment Verification
-
-### 4.1 Check Application Health
-
-Access the health endpoint to verify the application is running:
-
-```bash
-curl https://<workspace-url>/apps/<app-name>/api/health
-```
-
-Expected response:
-
-```json
-{
-  "status": "ok",
-  "timestamp": "2026-01-20T00:00:00.000Z",
-  "service": "briclaude-api"
-}
-```
-
-### 4.2 Check Database Connection
-
-The health endpoint also verifies database connectivity. If there are database issues, the status will indicate an error.
-
 ## Troubleshooting
 
 ### Database Connection Issues

@@ -120,30 +120,6 @@ databricks apps list
 databricks apps get briclaude-dev-<user-id>
 ```
 
-## 4. デプロイ後の検証
-
-### 4.1 アプリケーションのヘルスチェック
-
-ヘルスエンドポイントにアクセスして、アプリケーションが実行されていることを確認します。
-
-```bash
-curl https://<workspace-url>/apps/<app-name>/api/health
-```
-
-期待されるレスポンス:
-
-```json
-{
-  "status": "ok",
-  "timestamp": "2026-01-20T00:00:00.000Z",
-  "service": "briclaude-api"
-}
-```
-
-### 4.2 データベース接続の確認
-
-ヘルスエンドポイントはデータベース接続も検証します。データベースに問題がある場合、ステータスにエラーが表示されます。
-
 ## トラブルシューティング
 
 ### データベース接続の問題
