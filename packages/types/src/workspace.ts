@@ -60,6 +60,7 @@ export interface RecentWorkspace {
   name: string;
   last_used_at: number;
   object_type?: WorkspaceObjectType;
+  object_id?: number;
 }
 
 /** Workspace選択時の結果 */
@@ -67,4 +68,5 @@ export interface WorkspaceSelection {
   path: string;
   name: string;
   object_type: WorkspaceObjectType;
+  object_id?: number;
 }

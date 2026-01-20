@@ -4,13 +4,14 @@ import { Rocket, FolderCode, Settings, Logs } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { APP_STATUS_POLLING_INTERVAL_MS } from '@/constants';
+import { useUser } from '@/hooks/useUser';
 import type { DatabricksApp } from '@repo/types';
 
 interface FloatingButtonsProps {
   sessionId: string;
   showAppButton: boolean;
   showWorkspaceButton: boolean;
-  workspacePath?: string;
+  workspaceObjectId?: number;
 }
 
 type AppStateType = 'RUNNING' | 'DEPLOYING' | 'CRASHED' | 'UNAVAILABLE' | 'UNKNOWN' | string;
@@ -19,9 +20,10 @@ export function FloatingButtons({
   sessionId,
   showAppButton,
   showWorkspaceButton,
-  workspacePath,
+  workspaceObjectId,
 }: FloatingButtonsProps) {
   const { t } = useTranslation();
+  const { databricksHost } = useUser();
   const [appInfo, setAppInfo] = useState<DatabricksApp | null>(null);
   // fetchAppInfo の最新版を保持する ref（interval 内で常に最新を参照するため）
   const fetchAppInfoRef = useRef<() => Promise<void>>(undefined);
@@ -116,17 +118,16 @@ export function FloatingButtons({
   };
 
   const handleOpenConsole = () => {
-    if (appInfo?.name) {
-      const databricksHost = import.meta.env.DATABRICKS_HOST;
+    if (appInfo?.name && databricksHost) {
       const consoleUrl = `https://${databricksHost}/apps/${appInfo.name}`;
       window.open(consoleUrl, '_blank');
     }
   };
 
   const handleOpenWorkspace = () => {
-    if (!workspacePath) return;
-    const databricksHost = import.meta.env.DATABRICKS_HOST;
-    const workspaceUrl = `https://${databricksHost}/#workspace${workspacePath}`;
+    if (!workspaceObjectId || !databricksHost) return;
+    // object_id を使用して正しい URL 形式で開く
+    const workspaceUrl = `https://${databricksHost}/browse/folders/${workspaceObjectId}`;
     window.open(workspaceUrl, '_blank');
   };
 
@@ -178,7 +179,7 @@ export function FloatingButtons({
 
         {/* 右側: Workspace ボタン */}
         <div>
-          {showWorkspaceButton && workspacePath && (
+          {showWorkspaceButton && workspaceObjectId && (
             <div className="flex items-center h-8 px-3 rounded-lg shadow-lg bg-background border">
               <button
                 className="flex items-center gap-1 hover:opacity-70"

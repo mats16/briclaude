@@ -18,8 +18,8 @@ import { useUser } from '@/hooks/useUser';
 import { WorkspaceBrowserModal } from './WorkspaceBrowserModal';
 
 interface WorkspaceSelectorProps {
-  value: string | null;
-  onChange: (path: string | null) => void;
+  value: WorkspaceSelection | null;
+  onChange: (selection: WorkspaceSelection | null) => void;
   disabled?: boolean;
 }
 
@@ -43,16 +43,16 @@ export function WorkspaceSelector({ value, onChange, disabled = false }: Workspa
   const userHomePath = user?.name ? `/Workspace/Users/${user.name}` : '/Workspace';
 
   const handleSelect = useCallback(
-    (path: string, objectType?: WorkspaceSelection['object_type']) => {
-      onChange(path);
-      addRecentWorkspace(path, objectType);
+    (selection: WorkspaceSelection) => {
+      onChange(selection);
+      addRecentWorkspace(selection.path, selection.object_type, selection.object_id);
     },
     [onChange, addRecentWorkspace]
   );
 
   const handleModalSelect = useCallback(
     (selection: WorkspaceSelection) => {
-      handleSelect(selection.path, selection.object_type);
+      handleSelect(selection);
     },
     [handleSelect]
   );
@@ -65,10 +65,8 @@ export function WorkspaceSelector({ value, onChange, disabled = false }: Workspa
     [onChange]
   );
 
-  const displayName = value ? extractNameFromPath(value) : t('workspace.select');
-  // 現在選択中のワークスペースのobject_typeを取得
-  const currentWorkspace = value ? recentWorkspaces.find(w => w.path === value) : null;
-  const Icon = getIcon(currentWorkspace?.object_type);
+  const displayName = value ? extractNameFromPath(value.path) : t('workspace.select');
+  const Icon = getIcon(value?.object_type);
 
   return (
     <>
@@ -117,12 +115,19 @@ export function WorkspaceSelector({ value, onChange, disabled = false }: Workspa
               </DropdownMenuLabel>
               {recentWorkspaces.map(workspace => {
                 const ItemIcon = getIcon(workspace.object_type);
-                const isSelected = value === workspace.path;
+                const isSelected = value?.path === workspace.path;
 
                 return (
                   <DropdownMenuItem
                     key={workspace.path}
-                    onClick={() => handleSelect(workspace.path, workspace.object_type)}
+                    onClick={() =>
+                      handleSelect({
+                        path: workspace.path,
+                        name: workspace.name,
+                        object_type: workspace.object_type ?? 'DIRECTORY',
+                        object_id: workspace.object_id,
+                      })
+                    }
                     className="flex items-start gap-3 py-2"
                   >
                     <ItemIcon className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />

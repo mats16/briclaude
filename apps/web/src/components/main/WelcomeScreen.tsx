@@ -22,14 +22,15 @@ import { useDragDrop } from '@/hooks/useDragDrop';
 import { useRecentWorkspaces } from '@/hooks/useRecentWorkspaces';
 import { useUser } from '@/hooks/useUser';
 import { buildMessageContent } from '@/lib/content-builder';
+import { extractNameFromPath } from '@/lib/workspace';
 import { SESSION_MODELS, DEFAULT_SESSION_MODEL, TEXTAREA_MAX_HEIGHT_MAIN } from '@/constants';
-import type { UserMessageContentBlock } from '@repo/types';
+import type { UserMessageContentBlock, WorkspaceSelection } from '@repo/types';
 
 interface WelcomeScreenProps {
   onNewSession?: (
     content: UserMessageContentBlock[],
     modelId: string,
-    workspacePath: string | null,
+    workspaceSelection: WorkspaceSelection | null,
     enableDatabricksApps: boolean
   ) => Promise<void> | void;
   sessionError?: string | null;
@@ -43,7 +44,7 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
     defaultValue: '',
   });
   const [selectedModel, setSelectedModel] = useState(DEFAULT_SESSION_MODEL);
-  const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(null);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<WorkspaceSelection | null>(null);
   const [enableDatabricksApps, setEnableDatabricksApps] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -82,7 +83,11 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
       const messageContent = buildMessageContent(content.trim(), images);
       // Workspace選択があれば履歴に追加
       if (selectedWorkspace) {
-        addRecentWorkspace(selectedWorkspace);
+        addRecentWorkspace(
+          selectedWorkspace.path,
+          selectedWorkspace.object_type,
+          selectedWorkspace.object_id
+        );
       }
       await onNewSession?.(
         messageContent,
@@ -337,8 +342,15 @@ export function WelcomeScreen({ onNewSession, sessionError }: WelcomeScreenProps
         onFillPrompt={(prompt, workspacePath, enableApps) => {
           setContent(prompt);
           if (workspacePath) {
-            setSelectedWorkspace(workspacePath);
-            addRecentWorkspace(workspacePath);
+            // QuickstartModal からは path のみ渡されるため、WorkspaceSelection を構築
+            const selection: WorkspaceSelection = {
+              path: workspacePath,
+              name: extractNameFromPath(workspacePath),
+              object_type: 'DIRECTORY',
+              // object_id は不明なので省略
+            };
+            setSelectedWorkspace(selection);
+            addRecentWorkspace(workspacePath, 'DIRECTORY');
           }
           if (enableApps) {
             setEnableDatabricksApps(true);
