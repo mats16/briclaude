@@ -82,6 +82,7 @@ export function WorkspaceBrowserModal({
   const [isLoading, setIsLoading] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectError, setSelectError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<WorkspaceObjectInfo | null>(null);
 
   // モーダルが開いた時にパスをリセット
@@ -92,6 +93,7 @@ export function WorkspaceBrowserModal({
       setCurrentObjectId(undefined);
       setSelectedItem(null);
       setError(null);
+      setSelectError(null);
     }
   }, [open, initialPath]);
 
@@ -271,10 +273,16 @@ export function WorkspaceBrowserModal({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            {t('workspace.cancel')}
-          </Button>
+        <DialogFooter className="flex-col gap-2 sm:flex-row sm:gap-0">
+          {selectError && (
+            <p className="text-sm text-destructive w-full sm:w-auto sm:flex-1 sm:mr-2">
+              {selectError}
+            </p>
+          )}
+          <div className="flex gap-2 sm:gap-0">
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              {t('workspace.cancel')}
+            </Button>
           <Button
             onClick={async () => {
               // リストから選択されたアイテムがある場合はそのまま使用
@@ -304,6 +312,7 @@ export function WorkspaceBrowserModal({
 
               // 初期パスで object_id がない場合は getStatus で取得
               setIsSelecting(true);
+              setSelectError(null); // エラーをクリアして再試行可能に
               try {
                 const statusResponse = await workspaceService.getStatus(currentPath);
                 setCurrentObjectId(statusResponse.object_id);
@@ -317,9 +326,9 @@ export function WorkspaceBrowserModal({
                 onOpenChange(false);
               } catch (err) {
                 if (err instanceof ApiClientError) {
-                  setError(err.message);
+                  setSelectError(err.message);
                 } else {
-                  setError(t('workspace.error'));
+                  setSelectError(t('workspace.error'));
                 }
               } finally {
                 setIsSelecting(false);
@@ -336,6 +345,7 @@ export function WorkspaceBrowserModal({
               t('workspace.selectCurrentFolder')
             )}
           </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
