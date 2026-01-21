@@ -1,10 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import type { Job } from 'pg-boss';
-import {
-  SESSION_EVENTS_QUEUE,
-  type SessionEventJobPayload,
-} from '../types/event-queue.types.js';
+import { SESSION_EVENTS_QUEUE, type SessionEventJobPayload } from '../types/event-queue.types.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 
 /**

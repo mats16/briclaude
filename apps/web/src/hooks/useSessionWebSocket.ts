@@ -9,7 +9,7 @@ import type {
   UserMessageContentBlock,
 } from '@repo/types';
 import {
-  WEBSOCKET_PING_INTERVAL_MS,
+  WEBSOCKET_KEEP_ALIVE_INTERVAL_MS,
   WEBSOCKET_RECONNECT_BASE_DELAY_MS,
   WEBSOCKET_RECONNECT_MAX_DELAY_MS,
 } from '@/constants';
@@ -120,8 +120,6 @@ export function useSessionWebSocket({
           const errorMessage = (message as { message: string }).message;
           setError(new Error(errorMessage));
           onErrorRef.current?.(new Error(errorMessage));
-        } else if (message.type === 'pong') {
-          // Pong message - ignore
         } else if (message.type === 'control_response') {
           // WsControlResponse - pending リクエストを解決
           const response = message as WsControlResponse;
@@ -190,17 +188,17 @@ export function useSessionWebSocket({
     };
   }, [connect, autoConnect]);
 
-  // Ping/Pong によるキープアライブ
+  // keep_alive によるキープアライブ
   useEffect(() => {
     if (!isConnected) return;
 
-    const pingInterval = setInterval(() => {
+    const keepAliveInterval = setInterval(() => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: 'ping' }));
+        wsRef.current.send(JSON.stringify({ type: 'keep_alive' }));
       }
-    }, WEBSOCKET_PING_INTERVAL_MS);
+    }, WEBSOCKET_KEEP_ALIVE_INTERVAL_MS);
 
-    return () => clearInterval(pingInterval);
+    return () => clearInterval(keepAliveInterval);
   }, [isConnected]);
 
   // メッセージ送信関数（未接続の場合は透過的に接続）

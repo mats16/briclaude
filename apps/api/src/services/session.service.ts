@@ -151,10 +151,7 @@ async function processAllEvents(
       }
     }
   } catch (error) {
-    fastify.log.error(
-      { sessionId: sessionId.toString(), error },
-      'Error processing events'
-    );
+    fastify.log.error({ sessionId: sessionId.toString(), error }, 'Error processing events');
 
     // セッション状態を error に更新
     try {
@@ -409,7 +406,7 @@ export async function createSession(
   // 9. 即座にレスポンス返却（TypeID 形式）
   return {
     id: sessionId.toString(),
-    session_status: 'init',
+    session_status: 'running',
     title: title ?? null,
     created_at: now.toISOString(),
     updated_at: now.toISOString(),
