@@ -14,7 +14,7 @@
 
 1. `mcp__apps__get` で状態確認
 2. `mcp__apps__logs` でログ確認
-3. CLI: `databricks apps list-deployments $SESSION_APP_NAME -o json` でデプロイ履歴
+3. `mcp__apps__list_-_deployments` でデプロイ履歴
 
 ## Deployment Issues
 

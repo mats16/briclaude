@@ -92,9 +92,9 @@ Permissions: `CAN_VIEW`, `CAN_MANAGE_RUN`, `CAN_MANAGE`
 ### App Management
 
 ```bash
-databricks apps get APP_NAME -o json
-databricks apps list -o json
-databricks apps update APP_NAME --json '{...}'
+databricks apps get APP_NAME
+databricks apps list
+databricks apps update APP_NAME '{...}'
 databricks apps start APP_NAME
 databricks apps stop APP_NAME --no-wait
 ```
@@ -103,8 +103,8 @@ databricks apps stop APP_NAME --no-wait
 
 ```bash
 databricks apps deploy APP_NAME --source-code-path /Workspace/path
-databricks apps list-deployments APP_NAME -o json
-databricks apps get-deployment APP_NAME DEPLOYMENT_ID -o json
+databricks apps list-deployments APP_NAME
+databricks apps get-deployment APP_NAME DEPLOYMENT_ID
 ```
 
 ### Logs
@@ -117,7 +117,7 @@ databricks apps logs APP_NAME --deployment-id DEPLOYMENT_ID
 ### Permissions
 
 ```bash
-databricks apps get-permissions APP_NAME -o json
+databricks apps get-permissions APP_NAME
 databricks apps set-permissions APP_NAME --json '{
   "access_control_list": [
     { "service_principal_name": "SP_NAME", "permission_level": "CAN_MANAGE" }
@@ -142,7 +142,7 @@ databricks apps update $SESSION_APP_NAME --json '{
 ### 2. Service Principal Name を取得
 
 ```bash
-databricks apps get $SESSION_APP_NAME -o json | jq -r '.service_principal_name'
+databricks apps get $SESSION_APP_NAME | jq -r '.service_principal_name'
 ```
 
 ### 3. 権限を付与
