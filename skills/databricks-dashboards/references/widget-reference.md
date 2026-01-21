@@ -165,16 +165,16 @@ Complete specifications for each widget type.
 
 ## Counter
 
-Single value display:
+Single value display. **Note: Counter uses spec.version 2.**
 
 ```json
 {
   "widget": {
-    "name": "counter_1",
+    "name": "c1d2e3f4",
     "queries": [{
-      "name": "main",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ab72463012345678901234567890_total_counter",
       "query": {
-        "datasetName": "summary_data",
+        "datasetName": "01f0ab72",
         "fields": [
           {"name": "total", "expression": "SUM(`amount`)"}
         ],
@@ -182,7 +182,7 @@ Single value display:
       }
     }],
     "spec": {
-      "version": 3,
+      "version": 2,
       "widgetType": "counter",
       "encodings": {
         "value": {"fieldName": "total", "displayName": "Total Amount"}
@@ -207,14 +207,16 @@ Single value display:
 
 ## Table
 
+**Note: Table uses spec.version 1.**
+
 ```json
 {
   "widget": {
-    "name": "table_1",
+    "name": "a1b2c3d4",
     "queries": [{
-      "name": "main",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ab72463012345678901234567891_detail_table",
       "query": {
-        "datasetName": "detail_data",
+        "datasetName": "01f0ab72",
         "fields": [
           {"name": "id", "expression": "`id`"},
           {"name": "name", "expression": "`name`"},
@@ -225,7 +227,7 @@ Single value display:
       }
     }],
     "spec": {
-      "version": 3,
+      "version": 1,
       "widgetType": "table",
       "encodings": {
         "columns": [
@@ -249,7 +251,7 @@ Single value display:
 
 ```json
 "spec": {
-  "version": 3,
+  "version": 1,
   "widgetType": "table",
   "encodings": {
     "columns": [
