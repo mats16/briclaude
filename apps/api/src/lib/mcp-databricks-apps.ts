@@ -20,6 +20,8 @@ import type { AuthProvider } from './databricks-auth.js';
  * | `mcp__dbapps__show_app` | アプリ情報を取得 |
  * | `mcp__dbapps__list_deployments` | アプリのデプロイ履歴を取得 |
  * | `mcp__dbapps__list_logs` | アプリのランタイムログを取得 |
+ * | `mcp__dbapps__start_app` | アプリを開始 |
+ * | `mcp__dbapps__stop_app` | アプリを停止 |
  *
  * ## アプリ名
  *
@@ -46,6 +48,8 @@ import type { AuthProvider } from './databricks-auth.js';
  *       'mcp__dbapps__show_app',
  *       'mcp__dbapps__list_deployments',
  *       'mcp__dbapps__list_logs',
+ *       'mcp__dbapps__start_app',
+ *       'mcp__dbapps__stop_app',
  *     ],
  *   },
  * });
@@ -179,9 +183,43 @@ Returns stdout/stderr logs from the running app. Note: Logs are not persisted wh
     }
   );
 
+  const startApp = tool(
+    'start_app',
+    `Start the Databricks App.
+
+The app name is: **${appName}**
+
+Starts the app compute. The app must already exist and have been deployed at least once.`,
+    {},
+    async () => {
+      const app = await client.start(appName);
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify(app) }],
+        structuredContent: app,
+      };
+    }
+  );
+
+  const stopApp = tool(
+    'stop_app',
+    `Stop the Databricks App.
+
+The app name is: **${appName}**
+
+Stops the app compute. The app can be restarted later using the start_app tool.`,
+    {},
+    async () => {
+      const app = await client.stop(appName);
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify(app) }],
+        structuredContent: app,
+      };
+    }
+  );
+
   return createSdkMcpServer({
     name: 'apps',
     version: '1.0.0',
-    tools: [createApp, deployApp, showApp, listDeployments, listLogs],
+    tools: [createApp, deployApp, showApp, listDeployments, listLogs, startApp, stopApp],
   });
 }

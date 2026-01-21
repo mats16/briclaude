@@ -201,6 +201,26 @@ export class DatabricksAppsClient {
   }
 
   /**
+   * Databricks App を開始
+   *
+   * @param appName - アプリ名
+   * @returns アプリ情報
+   */
+  async start(appName: string): Promise<DatabricksApp> {
+    return this.callApi<DatabricksApp>('POST', `/api/2.0/apps/${appName}/start`);
+  }
+
+  /**
+   * Databricks App を停止
+   *
+   * @param appName - アプリ名
+   * @returns アプリ情報
+   */
+  async stop(appName: string): Promise<DatabricksApp> {
+    return this.callApi<DatabricksApp>('POST', `/api/2.0/apps/${appName}/stop`);
+  }
+
+  /**
    * Databricks App の権限を更新（既存の権限に追加/更新）
    *
    * @param appName - アプリ名
