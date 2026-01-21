@@ -107,7 +107,7 @@ async function saveAndBroadcastEvent(
 
 /**
  * すべてのイベントをバックグラウンドで処理する
- * - init イベント: sdkSessionId を設定、初回 user message を broadcast
+ * - init イベント: status='running' に更新、sdkSessionId を設定、初回 user message を broadcast
  * - result イベント: sessions.status を 'idle' に更新
  * - すべてのイベント: WebSocket 送信 & pg-boss 経由で DB 保存
  *
@@ -129,15 +129,18 @@ async function processAllEvents(
       // WebSocket 送信 & pg-boss 経由で DB 保存
       await saveAndBroadcastEvent(fastify, userId, sessionId, message);
 
-      // init イベント時に sdkSessionId を設定 & 初回 user message を broadcast
+      // init イベント時に status='running' に更新、sdkSessionId を設定、初回 user message を broadcast
       if (message.type === 'system' && message.subtype === 'init') {
         const initMessage = message as SDKSystemMessage;
 
-        // sdkSessionId を設定
+        // status='running' に更新 & sdkSessionId を設定
         await fastify.withUserContext(userId, async tx => {
           await tx
             .update(sessions)
-            .set({ sdkSessionId: initMessage.session_id || null })
+            .set({
+              status: 'running',
+              sdkSessionId: initMessage.session_id || null,
+            })
             .where(eq(sessions.id, sessionId.toUUID()));
         });
 
@@ -198,10 +201,10 @@ async function processAllEvents(
  *
  * 処理フロー:
  * 1. TypeID で session_id 生成
- * 2. sessions INSERT (status='running')
+ * 2. sessions INSERT (status='init')
  * 3. claude-agent-sdk で query() 実行
  * 4. 即座にレスポンスを返し、すべてのイベントはバックグラウンドで処理
- *    - init イベント時に sessions.sdkSessionId を設定 & 初回 user message を broadcast
+ *    - init イベント時に status='running' に更新、sdkSessionId を設定、初回 user message を broadcast
  *    - result イベント時に sessions.status を 'idle' に更新
  * 5. query() 失敗時は sessions.status を 'error' に更新
  *
@@ -274,14 +277,14 @@ export async function createSession(
   // 5. タイムスタンプを設定（レスポンス用）
   const now = new Date();
 
-  // 6. sessions を INSERT (status='running')
-  // user message は SDK から isReplay: true で返却されるため、saveAndBroadcastEvent で処理
+  // 6. sessions を INSERT (status='init')
+  // user message は init イベント受信時に saveAndBroadcastEvent で処理
   await fastify.withUserContext(userId, async tx => {
     await tx.insert(sessions).values({
       id: sessionId.toUUID(),
       userId,
       title: title ?? null,
-      status: 'running',
+      status: 'init',
       sdkSessionId: null,
       context: sessionContext,
     });
@@ -417,7 +420,7 @@ export async function createSession(
   // 9. 即座にレスポンス返却（TypeID 形式）
   return {
     id: sessionId.toString(),
-    session_status: 'running',
+    session_status: 'init',
     title: title ?? null,
     created_at: now.toISOString(),
     updated_at: now.toISOString(),
