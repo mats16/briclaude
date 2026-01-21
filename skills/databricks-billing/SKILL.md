@@ -179,6 +179,32 @@ HAVING SUM(u.usage_quantity) != 0
 ORDER BY total_cost DESC
 ```
 
+## Query Optimization Tips
+
+System tables can contain large volumes of data. Follow these practices to minimize query cost and improve performance:
+
+- **Always filter by date range**: Use `WHERE usage_date >= CURRENT_DATE - INTERVAL N DAYS` to limit scans
+- **Use BROADCAST hint**: The `list_prices` table is small; use `/*+ BROADCAST(p) */` for efficient joins
+- **Avoid SELECT ***: Only select columns you need from `usage_metadata` struct
+- **Use LIMIT for exploration**: Add `LIMIT` when exploring data patterns before running full aggregations
+
+**For recurring reports**, consider:
+
+```sql
+-- Create a Materialized View for frequently accessed cost summaries
+CREATE MATERIALIZED VIEW billing.daily_costs AS
+SELECT
+  usage_date,
+  sku_name,
+  SUM(usage_quantity) AS total_dbu
+FROM system.billing.usage
+WHERE usage_date >= CURRENT_DATE - INTERVAL 90 DAYS
+GROUP BY usage_date, sku_name;
+
+-- Refresh periodically
+REFRESH MATERIALIZED VIEW billing.daily_costs;
+```
+
 ## Notes & Limitations
 
 1. **Data Latency**: Billing data is not real-time; updated throughout the day
