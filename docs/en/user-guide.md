@@ -6,11 +6,10 @@ This guide explains the user-facing features and how Briclaude works.
 
 1. [Overview](#overview)
 2. [File System and User Environment](#file-system-and-user-environment)
-3. [Authentication and Tokens](#authentication-and-tokens)
-4. [Permissions and Operations](#permissions-and-operations)
-5. [Skills System](#skills-system)
-6. [Sessions and Workspace Integration](#sessions-and-workspace-integration)
-7. [Security](#security)
+3. [Authentication and Permissions](#authentication-and-permissions)
+4. [Skills System](#skills-system)
+5. [Sessions and Workspace Integration](#sessions-and-workspace-integration)
+6. [Security](#security)
 
 ## Overview
 
@@ -68,94 +67,58 @@ Skills are stored on the file system, which provides the following characteristi
 - **User-specific**: Each user has their own set of skills
 - **Portability**: Skills can be imported from Git repositories
 
-## Authentication and Tokens
+## Authentication and Permissions
 
-### Authentication Flow
+Briclaude uses different authentication methods depending on the type of operation.
 
-In Databricks Apps, the authentication proxy handles user authentication and forwards the following headers to the application:
+### Authentication by Operation Type
 
-| Header | Description |
-|--------|-------------|
-| `x-forwarded-user` | User ID (from IdP) |
-| `x-forwarded-preferred-username` | Display name |
-| `x-forwarded-email` | Email address |
-| `x-forwarded-access-token` | OBO (On-Behalf-Of) token |
+| Category | Token Used | PAT Registration | Description |
+|----------|------------|------------------|-------------|
+| **Databricks SQL (MCP)** | OBO | Not required | Execute SQL with user permissions |
+| **Databricks Apps Operations (MCP)** | PAT → SP | Recommended | Create/deploy apps, get logs |
+| **Databricks CLI (Claude execution)** | PAT → SP | Recommended | CLI commands like `databricks sync` |
+| **CLI in Hooks** | PAT → SP | Recommended | `workspace export-dir` in SessionStart hooks |
 
-### Token Types and Usage
+※ "PAT → SP" means PAT is used if registered, otherwise falls back to Service Principal
 
-Briclaude uses multiple token types:
+### Authentication Method Details
 
-#### 1. OBO (On-Behalf-Of) Token
+#### OBO (On-Behalf-Of) Token
 
-- **How to obtain**: Automatically provided by Databricks Apps authentication proxy
-- **Use case**: Call Databricks API on behalf of the user
-- **Validity**: Short-lived token provided per request
-- **Limitation**: Only available when accessing through Databricks Apps
+A token automatically provided by the Databricks Apps authentication proxy. **No user action required** - it's available just by accessing the app.
 
-#### 2. PAT (Personal Access Token)
+- **Use case**: Databricks SQL execution via MCP
+- **Permissions**: User's own Databricks permissions
 
-- **How to obtain**: User generates in Databricks UI and registers in the app
-- **Use case**: Claude executes Databricks CLI commands on behalf of the user
-- **Validity**: User configurable (recommended: within 90 days)
-- **Storage**: Encrypted with AES-256-GCM and stored in database
+#### PAT (Personal Access Token)
 
-#### 3. Service Principal Token
+A token that users generate in Databricks and register with the app.
 
-- **How to obtain**: Application obtains via OAuth Client Credentials
-- **Use case**: Fallback when PAT is not registered
-- **Limitation**: Operations limited to Service Principal's permission scope
-
-### Why PAT is Required
-
-When Claude Code executes the `databricks` CLI within a session, PAT is required for the following reasons:
-
-1. **CLI Authentication**: The `databricks` CLI uses credentials from the file system
-2. **User Permission Execution**: OBO tokens are only available via HTTP headers and cannot be used with CLI
-3. **Workspace Operations**: File upload/download requires user permissions
-
-```
-┌────────────────────────────────────────────────────────────────┐
-│  Authentication within Claude Code Session                     │
-│                                                                │
-│  ┌─────────────┐    ┌─────────────────┐    ┌──────────────┐  │
-│  │ Claude Code │───▶│ databricks CLI  │───▶│ Databricks   │  │
-│  │             │    │ (using PAT)     │    │ Workspace    │  │
-│  └─────────────┘    └─────────────────┘    └──────────────┘  │
-└────────────────────────────────────────────────────────────────┘
-```
-
-### How to Register PAT
-
-1. Generate PAT from Databricks UI: Settings > Developer > Access tokens
-2. Register the token in Briclaude's settings screen
-3. The token is encrypted and stored securely
+- **Use case**: CLI commands executed by Claude, Apps operations
+- **Permissions**: User's own Databricks permissions
+- **How to register**:
+  1. Generate in Databricks UI → Settings → Developer → Access tokens
+  2. Register the token in Briclaude's settings screen
 
 **Note**: PAT must start with `dapi`.
 
-## Permissions and Operations
+#### Service Principal (SP)
 
-Each operation uses the following permissions/tokens:
+A service account token configured in the application. Automatically used when PAT is not registered.
 
-| Operation | Token Used | Description |
-|-----------|------------|-------------|
-| **App Access** | OBO Token | Handled by Databricks Apps auth proxy |
-| **Session Creation** | App Auth | Internal app processing, only user auth required |
-| **Skill List/Create/Delete** | App Auth | File system operations, only user auth |
-| **Skill Git Import** | App Auth | Clone public repositories |
-| **Claude Chat** | App Auth + Anthropic API | Claude API calls |
-| **Workspace File Fetch** | PAT or OBO | `databricks workspace export-dir` command |
-| **Workspace File Sync** | PAT | `databricks sync` command (executed by Claude) |
-| **SQL Warehouse Query** | PAT or SP | Databricks SQL execution |
+- **Use case**: Fallback for PAT
+- **Permissions**: Limited to permissions granted to the SP
 
-### Authentication Priority
+### Why PAT Registration is Recommended
 
-When calling Databricks API, authentication methods are selected in the following order:
+Registering a PAT provides the following benefits:
 
-```
-1. User-registered PAT (if available)
-   ↓ (if not available)
-2. Service Principal Token (OAuth M2M)
-```
+1. **User permission execution**: Claude can operate all resources you have access to
+2. **Audit logging**: Operations are recorded under your user name
+3. **Bypass SP limitations**: Use permissions not granted to the SP
+
+Without a PAT registered, operations are limited to the SP's permission scope.
 
 ## Skills System
 
