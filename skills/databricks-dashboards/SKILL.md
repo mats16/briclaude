@@ -272,6 +272,33 @@ resources:
       warehouse_id: ${var.warehouse_id}
 ```
 
+## Validation
+
+Validate dashboard JSON before importing to catch errors early:
+
+```bash
+# Syntax check
+jq empty dashboard.lvdash.json
+
+# Verify required structure
+jq '{
+  datasets: (.datasets | length),
+  pages: [.pages[] | {name, displayName, widgets: (.layout | length)}]
+}' dashboard.lvdash.json
+
+# List all dataset names (for debugging references)
+jq -r '.datasets[].name' dashboard.lvdash.json
+
+# Check widget-dataset references
+jq -r '.pages[].layout[].widget.queries[]?.query.datasetName // empty' dashboard.lvdash.json | sort -u
+```
+
+**Common validation issues:**
+- Missing `datasets` array
+- Widget referencing non-existent dataset name
+- Invalid page/widget name format (should be 8-char hex)
+- Missing required encoding fields for widget type
+
 ## Best Practices
 
 1. **Use meaningful dataset names** - Referenced in widgets
