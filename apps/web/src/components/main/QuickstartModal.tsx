@@ -390,7 +390,11 @@ function DatabricksAppsContent({
     try {
       // Construct workspace path: /Workspace/Users/<email>/databricks_apps/<template>-<timestamp>
       const timestamp = Date.now();
-      const workspacePath = `/Workspace/Users/${user.email}/databricks_apps/${selectedTemplate.name}-${timestamp}`;
+      const databricksAppsDir = `/Workspace/Users/${user.email}/databricks_apps`;
+      const workspacePath = `${databricksAppsDir}/${selectedTemplate.name}-${timestamp}`;
+
+      // Ensure the databricks_apps directory exists before cloning
+      await workspaceService.mkdirs(databricksAppsDir);
 
       const response = await reposService.createRepo({
         url: GITHUB_APP_TEMPLATES_REPO_URL,
