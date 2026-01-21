@@ -443,6 +443,8 @@ Bar and line on the same chart:
 
 ## Filters
 
+**Note: All filter widgets use spec.version 2.**
+
 ### Date Range Picker
 
 ```json
@@ -458,7 +460,7 @@ Bar and line on the same chart:
       }
     }],
     "spec": {
-      "version": 3,
+      "version": 2,
       "widgetType": "filter-date-range-picker",
       "encodings": {
         "fields": {"fieldName": "date", "displayName": "Date Range"}
@@ -484,7 +486,7 @@ Bar and line on the same chart:
       }
     }],
     "spec": {
-      "version": 3,
+      "version": 2,
       "widgetType": "filter-multi-select",
       "encodings": {
         "fields": {"fieldName": "category", "displayName": "Category"}
@@ -497,9 +499,73 @@ Bar and line on the same chart:
 
 ### Single-Select Filter
 
+Single-select filters allow selecting one value to filter other widgets. They can have multiple queries: one for the options list and parameter queries to apply the filter to other datasets.
+
 ```json
-"widgetType": "filter-single-select"
+{
+  "widget": {
+    "name": "81999930",
+    "queries": [
+      {
+        "name": "dashboards/{dashboard_id}/datasets/{dataset_id}_time_key",
+        "query": {
+          "datasetName": "select_time_key_overview",
+          "fields": [
+            {"name": "time_key", "expression": "`time_key`"},
+            {"name": "time_key_associativity", "expression": "COUNT_IF(`associative_filter_predicate_group`)"}
+          ],
+          "disaggregated": false
+        }
+      },
+      {
+        "name": "parameter_dashboards/{dashboard_id}/datasets/{dataset_id}_param_time_key",
+        "query": {
+          "datasetName": "dd0ba138",
+          "parameters": [
+            {"name": "param_time_key", "keyword": "param_time_key"}
+          ],
+          "disaggregated": false
+        }
+      }
+    ],
+    "spec": {
+      "version": 2,
+      "widgetType": "filter-single-select",
+      "encodings": {
+        "fields": [
+          {
+            "fieldName": "time_key",
+            "queryName": "dashboards/{dashboard_id}/datasets/{dataset_id}_time_key"
+          },
+          {
+            "parameterName": "param_time_key",
+            "queryName": "parameter_dashboards/{dashboard_id}/datasets/{dataset_id}_param_time_key"
+          }
+        ]
+      },
+      "frame": {
+        "showTitle": true,
+        "title": "View date by"
+      },
+      "selection": {
+        "defaultSelection": {
+          "values": {
+            "dataType": "STRING",
+            "values": [{"value": "Week"}]
+          }
+        }
+      }
+    }
+  },
+  "position": {"x": 0, "y": 3, "width": 3, "height": 1}
+}
 ```
+
+**Key points:**
+- First query: provides the options list (with optional associativity count)
+- Parameter queries: apply the selected value to other datasets via `parameters`
+- `encodings.fields`: link field/parameter names to their query names
+- `selection.defaultSelection`: sets the initial selected value
 
 ---
 

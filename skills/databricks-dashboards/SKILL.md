@@ -170,11 +170,11 @@ Grid-based layout (12 columns total):
 | Histogram | `histogram` | x | 3 |
 | Combo | `combo` | x, y, y2 | 3 |
 | Pivot | `pivot` | rows, columns, values | 3 |
-| Filter | `filter-*` | (varies) | 3 |
+| Filter | `filter-*` | (varies) | **2** |
 | Counter | `counter` | value | **2** |
 | Table | `table` | columns | **1** |
 
-**Important:** Most widgets use spec.version 3. Counter and Table are exceptions - they require older versions (2 and 1 respectively) and will not work with version 3.
+**Important:** Most chart widgets use spec.version 3. Filter and Counter require version 2, Table requires version 1. Using the wrong version will cause errors.
 
 For detailed widget specifications: See [Widget Reference](references/widget-reference.md)
 
@@ -207,7 +207,7 @@ For detailed widget specifications: See [Widget Reference](references/widget-ref
 }
 ```
 
-### Date Range Filter
+### Date Range Filter (spec.version: 2)
 
 ```json
 {
@@ -222,7 +222,7 @@ For detailed widget specifications: See [Widget Reference](references/widget-ref
       }
     }],
     "spec": {
-      "version": 3,
+      "version": 2,
       "widgetType": "filter-date-range-picker",
       "encodings": {
         "fields": {"fieldName": "date", "displayName": "Date Range"}
@@ -321,7 +321,7 @@ jq -r '.pages[].layout[].widget.queries[]?.query.datasetName // empty' dashboard
 1. **8-char hex IDs** - Required for page name, widget name, and dataset name/datasetName
 2. **Query name format** - Must follow `dashboards/{dashboard_id}/datasets/{dataset_id}_{description}` pattern
 3. **Parameter prefix** - Filter widget queries must use `parameter_` prefix
-4. **spec.version** - Counter requires version 2, Table requires version 1, all others use version 3
+4. **spec.version** - Filter and Counter require version 2, Table requires version 1, all other chart widgets use version 3
 5. **Frame with title** - Always set `spec.frame` with `showTitle: true` and `title`. Widgets without titles severely degrade dashboard readability
 6. **uiSettings required** - Every dashboard must include the `uiSettings` block with `theme`, `genieSpace`, and `applyModeEnabled` fields
 
