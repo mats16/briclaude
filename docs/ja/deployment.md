@@ -17,6 +17,8 @@ Databricks Lakebase または外部の PostgreSQL インスタンスを用意し
 - **Databricks Lakebase（推奨）:** Databricks コンソールから Lakebase インスタンスを作成
 - **外部の PostgreSQL:** ネットワーク設定により、Databricks Apps からアクセス可能であることを確認
 
+> **注:** このアプリケーションは外部 PostgreSQL プロバイダーとして [Neon](https://neon.tech/) での動作確認を行っています。
+
 ### 1.2 アプリケーション用ユーザーの作成
 
 アプリケーション専用のデータベースユーザーを作成します。
@@ -96,7 +98,7 @@ databricks secrets put-secret briclaude-[dev|prod] encryption-key --string-value
 
 ## 3. Asset Bundles によるデプロイ
 
-> **注意:** Databricks Asset Bundles を使用したこのデプロイ方法は、Lakebase サポートがバンドル設定で利用可能になるまでの暫定的な対応です。Lakebase 統合がサポートされると、データベースとユーザーの作成手順はバンドルリソースを通じて自動化される可能性があります。
+> **注意:** Databricks Asset Bundles を使用したこのデプロイ方法は、Lakebase サポートがバンドル設定で利用可能になるまでの暫定的な対応です。Lakebase 統合がサポートされると、データベースとユーザーの作成手順はバンドルリソースを通じて自動化され、データベースを含めた完全な Infrastructure as Code でのデプロイが可能になることを想定しています。
 
 > **デフォルトターゲット:** `databricks.yaml` ではデフォルトで `dev` ターゲットが使用されるように設定されています。開発環境へのデプロイでは `--target` を省略できます。
 
