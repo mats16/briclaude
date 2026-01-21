@@ -17,6 +17,8 @@ Prepare a Databricks Lakebase or external PostgreSQL instance.
 - **Databricks Lakebase (recommended):** Create a Lakebase instance from the Databricks console
 - **External PostgreSQL:** Ensure it is accessible from Databricks Apps via network configuration
 
+> **Note:** This application has been tested with [Neon](https://neon.tech/) as an external PostgreSQL provider.
+
 ### 1.2 Create Application User
 
 Create a dedicated database user for the application.
@@ -96,24 +98,26 @@ databricks secrets put-secret briclaude-[dev|prod] encryption-key --string-value
 
 ## 3. Deploy with Asset Bundles
 
-> **Note:** This deployment method using Databricks Asset Bundles is a temporary solution until Lakebase support is available in the bundle configuration. Once Lakebase integration is supported, the database and user creation steps may be automated through bundle resources.
+> **Note:** This deployment method using Databricks Asset Bundles is a temporary solution until Lakebase support is available in the bundle configuration. Once Lakebase integration is supported, the database and user creation steps may be automated through bundle resources, enabling full infrastructure-as-code deployment including the database.
+
+> **Default Target:** The `databricks.yaml` is configured to use `dev` as the default target. You can omit `--target` for development deployments.
 
 ### 3.1 Validate Bundle Configuration
 
 ```bash
-databricks bundle validate --target [dev|prod]
+databricks bundle validate [--target prod]
 ```
 
 ### 3.2 Deploy to Databricks
 
 ```bash
-databricks bundle deploy --target [dev|prod]
+databricks bundle deploy [--target prod]
 ```
 
 ### 3.3 Start Application
 
 ```bash
-databricks bundle run briclaude_app --target [dev|prod]
+databricks bundle run briclaude_app [--target prod]
 ```
 
 ### 3.4 Verify Deployment
