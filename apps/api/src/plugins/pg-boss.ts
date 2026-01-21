@@ -4,8 +4,6 @@ import { PgBoss } from 'pg-boss';
 declare module 'fastify' {
   interface FastifyInstance {
     boss: PgBoss;
-    /** pg-boss がシャットダウン中かどうか */
-    isBossShuttingDown: boolean;
   }
 }
 
@@ -37,13 +35,11 @@ export default fp(
 
       // Fastify インスタンスにデコレート
       fastify.decorate('boss', boss);
-      fastify.decorate('isBossShuttingDown', false);
 
       // Graceful shutdown
+      // work() メソッドで登録されたワーカーは boss.stop() で自動停止される
       fastify.addHook('onClose', async () => {
         fastify.log.info('Stopping pg-boss...');
-        // シャットダウンフラグを設定（ポーリングループを停止）
-        fastify.isBossShuttingDown = true;
         await boss.stop({ graceful: true, timeout: 30000 });
         fastify.log.info('pg-boss stopped');
       });

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import { enqueueSessionEvent, registerEventWorker } from './event-queue.service.js';
@@ -10,9 +10,7 @@ describe('event-queue.service', () => {
     const mockBoss = {
       send: vi.fn().mockResolvedValue('job-id-123'),
       createQueue: vi.fn().mockResolvedValue(undefined),
-      fetch: vi.fn().mockResolvedValue([]),
-      complete: vi.fn().mockResolvedValue(undefined),
-      fail: vi.fn().mockResolvedValue(undefined),
+      work: vi.fn().mockResolvedValue('worker-id-123'),
     };
 
     const mockWithUserContext = vi.fn().mockImplementation(async (_userId, callback) => {
@@ -23,7 +21,6 @@ describe('event-queue.service', () => {
     return {
       boss: mockBoss,
       withUserContext: mockWithUserContext,
-      isBossShuttingDown: false,
       log: {
         info: vi.fn(),
         error: vi.fn(),
@@ -165,11 +162,6 @@ describe('event-queue.service', () => {
       fastify = createMockFastify();
     });
 
-    afterEach(() => {
-      // ポーリングループを停止
-      fastify.isBossShuttingDown = true;
-    });
-
     it('should create queue with config settings', async () => {
       await registerEventWorker(fastify as unknown as FastifyInstance);
 
@@ -196,7 +188,6 @@ describe('event-queue.service', () => {
       };
 
       await registerEventWorker(customFastify as unknown as FastifyInstance);
-      customFastify.isBossShuttingDown = true;
 
       expect(customFastify.boss.createQueue).toHaveBeenCalledWith(SESSION_EVENTS_QUEUE, {
         retryLimit: 5,
@@ -216,22 +207,51 @@ describe('event-queue.service', () => {
       );
     });
 
-    it('should log worker registration', async () => {
+    it('should register worker using work() method', async () => {
       await registerEventWorker(fastify as unknown as FastifyInstance);
 
-      expect(fastify.log.info).toHaveBeenCalledWith('Event queue worker registered');
+      expect(fastify.boss.work).toHaveBeenCalledWith(
+        SESSION_EVENTS_QUEUE,
+        {
+          batchSize: 10,
+          pollingIntervalSeconds: 2,
+        },
+        expect.any(Function)
+      );
     });
 
-    it('should start polling loop that fetches jobs', async () => {
+    it('should use custom batchSize and pollingIntervalSeconds from config', async () => {
+      const customFastify = {
+        ...createMockFastify(),
+        config: {
+          PGBOSS_RETRY_LIMIT: 3,
+          PGBOSS_RETRY_DELAY: 5,
+          PGBOSS_EXPIRE_IN_SECONDS: 1800,
+          PGBOSS_RETENTION_SECONDS: 604800,
+          PGBOSS_BATCH_SIZE: 25,
+          PGBOSS_POLLING_INTERVAL_SECONDS: 10,
+        },
+      };
+
+      await registerEventWorker(customFastify as unknown as FastifyInstance);
+
+      expect(customFastify.boss.work).toHaveBeenCalledWith(
+        SESSION_EVENTS_QUEUE,
+        {
+          batchSize: 25,
+          pollingIntervalSeconds: 10,
+        },
+        expect.any(Function)
+      );
+    });
+
+    it('should log worker registration with workerId', async () => {
       await registerEventWorker(fastify as unknown as FastifyInstance);
 
-      // ポーリングループが開始されるまで少し待つ
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      // fetch が呼び出されていることを確認
-      expect(fastify.boss.fetch).toHaveBeenCalledWith(SESSION_EVENTS_QUEUE, {
-        batchSize: 10,
-      });
+      expect(fastify.log.info).toHaveBeenCalledWith(
+        { workerId: 'worker-id-123' },
+        'Event queue worker registered'
+      );
     });
   });
 });

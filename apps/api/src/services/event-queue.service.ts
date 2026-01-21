@@ -54,9 +54,8 @@ export async function enqueueSessionEvent(
 /**
  * イベントワーカーを登録する
  *
- * fetch() + complete()/fail() パターンを使用し、
- * 異なるセッションのジョブを並列処理しながら、
- * 個別ジョブの成功/失敗を制御する。
+ * pg-boss の work() メソッドを使用してワーカーを登録。
+ * pg-boss がポーリング管理、完了/失敗処理、シャットダウンを自動で管理する。
  *
  * ワーカー設定:
  * - バッチサイズ: 設定値（デフォルト: 10）
@@ -86,72 +85,43 @@ export async function registerEventWorker(fastify: FastifyInstance): Promise<voi
   });
   fastify.log.info({ queue: SESSION_EVENTS_QUEUE }, 'Event queue created');
 
-  const intervalMs = PGBOSS_POLLING_INTERVAL_SECONDS * 1000;
-
-  /**
-   * ジョブをフェッチして並列処理する
-   */
-  const poll = async () => {
-    const jobs = await fastify.boss.fetch<SessionEventJobPayload>(SESSION_EVENTS_QUEUE, {
+  // work() でワーカーを登録
+  // pg-boss がポーリング、完了/失敗処理、シャットダウン時の停止を自動管理
+  const workerId = await fastify.boss.work<SessionEventJobPayload>(
+    SESSION_EVENTS_QUEUE,
+    {
       batchSize: PGBOSS_BATCH_SIZE,
-    });
-
-    if (!jobs || jobs.length === 0) return;
-
-    // 並列処理
-    const results = await Promise.allSettled(
-      jobs.map(async job => {
-        const { userId, sessionId, eventUuid, type, subtype, message } = job.data;
-        await fastify.withUserContext(userId, async tx => {
-          await insertSessionEventInTx(tx, {
-            uuid: eventUuid,
-            sessionId,
-            type,
-            subtype,
-            message,
+      pollingIntervalSeconds: PGBOSS_POLLING_INTERVAL_SECONDS,
+    },
+    async jobs => {
+      // 並列処理（異なるセッションのジョブ）
+      const results = await Promise.allSettled(
+        jobs.map(async job => {
+          const { userId, sessionId, eventUuid, type, subtype, message } = job.data;
+          await fastify.withUserContext(userId, async tx => {
+            await insertSessionEventInTx(tx, {
+              uuid: eventUuid,
+              sessionId,
+              type,
+              subtype,
+              message,
+            });
           });
-        });
-        return job.id;
-      })
-    );
+        })
+      );
 
-    // 個別に complete/fail
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
-      const job = jobs[i];
-
-      if (result.status === 'fulfilled') {
-        await fastify.boss.complete(SESSION_EVENTS_QUEUE, job.id);
-      } else {
+      // 失敗があれば例外をスローしてリトライ
+      const failures = results.filter(r => r.status === 'rejected');
+      if (failures.length > 0) {
+        const errors = failures.map(f => (f as PromiseRejectedResult).reason);
         fastify.log.error(
-          { sessionId: job.data.sessionId, eventUuid: job.data.eventUuid, error: result.reason },
-          'Failed to insert session event from queue'
+          { errors, jobCount: jobs.length, failureCount: failures.length },
+          'Some jobs failed in batch'
         );
-        await fastify.boss.fail(SESSION_EVENTS_QUEUE, job.id, result.reason);
+        throw new Error(`${failures.length}/${jobs.length} jobs failed`);
       }
     }
-  };
+  );
 
-  /**
-   * ポーリングループ
-   * シャットダウンフラグが立つまで継続
-   */
-  const pollLoop = async () => {
-    while (!fastify.isBossShuttingDown) {
-      try {
-        await poll();
-      } catch (error) {
-        fastify.log.error({ error }, 'Event queue polling error');
-      }
-      await new Promise(resolve => setTimeout(resolve, intervalMs));
-    }
-    fastify.log.info('Event queue poll loop stopped');
-  };
-
-  // バックグラウンドで開始（await しない）
-  pollLoop().catch(error => {
-    fastify.log.error({ error }, 'Event queue poll loop crashed');
-  });
-
-  fastify.log.info('Event queue worker registered');
+  fastify.log.info({ workerId }, 'Event queue worker registered');
 }
