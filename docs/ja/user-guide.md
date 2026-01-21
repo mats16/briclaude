@@ -75,7 +75,7 @@ Briclaude では、操作の種類によって異なる認証方式を使用し�
 
 | カテゴリ | 使用トークン | PAT 登録 | 説明 |
 |---------|-------------|----------|------|
-| **Claude Code 基盤モデル** | Anthropic API Key | 不要 | サーバー側で管理 |
+| **Claude Code 基盤モデル** | PAT → SP | 推奨 | Databricks がホストする Foundation Model API |
 | **Hooks 内の CLI** | PAT → SP | 推奨 | SessionStart フックでの `workspace export-dir` など |
 | **Databricks CLI (Claude 実行)** | PAT → SP | 推奨 | `databricks sync` などの CLI コマンド |
 | **Databricks SQL (MCP)** | OBO | 不要 | ユーザー権限で SQL を実行 |
