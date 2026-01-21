@@ -189,7 +189,12 @@ Returns stdout/stderr logs from the running app. Note: Logs are not persisted wh
 
 The app name is: **${appName}**
 
-Starts the app compute. The app must already exist and have been deployed at least once.`,
+Starts the app compute. The app must already exist and have been deployed at least once.
+
+**Behavior:**
+- Starting an already running app is safe (idempotent operation)
+- The app state will transition to STARTING, then RUNNING
+- This operation may take a few minutes to complete`,
     {},
     async () => {
       const app = await client.start(appName);
@@ -206,7 +211,12 @@ Starts the app compute. The app must already exist and have been deployed at lea
 
 The app name is: **${appName}**
 
-Stops the app compute. The app can be restarted later using the start_app tool.`,
+Stops the app compute. The app can be restarted later using the start_app tool.
+
+**Behavior:**
+- Stopping an already stopped app is safe (idempotent operation)
+- The app state will transition to STOPPING, then STOPPED
+- This operation may take a few minutes to complete`,
     {},
     async () => {
       const app = await client.stop(appName);

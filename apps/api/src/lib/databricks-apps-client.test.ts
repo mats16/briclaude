@@ -180,6 +180,88 @@ describe('DatabricksAppsClient', () => {
     });
   });
 
+  describe('start', () => {
+    it('should start an app successfully', async () => {
+      const mockApp = {
+        name: 'test-app',
+        url: 'https://test-app.example.com',
+        status: 'STARTING',
+      };
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockApp),
+      });
+
+      const app = await client.start('test-app');
+
+      expect(app).toEqual(mockApp);
+      expect(mockAuthProvider.getToken).toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://example.databricks.com/api/2.0/apps/test-app/start',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            authorization: 'Bearer test-token',
+          }),
+        })
+      );
+    });
+
+    it('should throw error when starting non-existent app', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        text: () => Promise.resolve('App not found'),
+      });
+
+      await expect(client.start('non-existent-app')).rejects.toThrow(
+        'Databricks API error (404): App not found'
+      );
+    });
+  });
+
+  describe('stop', () => {
+    it('should stop an app successfully', async () => {
+      const mockApp = {
+        name: 'test-app',
+        url: 'https://test-app.example.com',
+        status: 'STOPPING',
+      };
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockApp),
+      });
+
+      const app = await client.stop('test-app');
+
+      expect(app).toEqual(mockApp);
+      expect(mockAuthProvider.getToken).toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://example.databricks.com/api/2.0/apps/test-app/stop',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            authorization: 'Bearer test-token',
+          }),
+        })
+      );
+    });
+
+    it('should throw error when stopping non-existent app', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        text: () => Promise.resolve('App not found'),
+      });
+
+      await expect(client.stop('non-existent-app')).rejects.toThrow(
+        'Databricks API error (404): App not found'
+      );
+    });
+  });
+
   describe('error handling', () => {
     it('should throw error when API returns error', async () => {
       global.fetch = vi.fn().mockResolvedValue({
