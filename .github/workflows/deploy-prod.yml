@@ -24,13 +24,13 @@ jobs:
         uses: databricks/setup-cli@main
 
       - name: Deploy bundle
-        run: databricks bundle deploy --auto-approve --target prod --var="app_name=claude-code-app-prod"
+        run: databricks bundle deploy --auto-approve --target prod
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
 
       - name: Run app
-        run: databricks bundle run claude_app --target prod --var="app_name=claude-code-app-prod"
+        run: databricks bundle run briclaude_app --target prod
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
