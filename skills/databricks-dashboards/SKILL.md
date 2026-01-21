@@ -24,9 +24,21 @@ Dashboard files use `.lvdash.json` extension. The structure:
       "displayName": "Page Title",
       "layout": [...]
     }
-  ]
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "genieSpace": {
+      "isEnabled": true,
+      "enablementMode": "ENABLED"
+    },
+    "applyModeEnabled": false
+  }
 }
 ```
+
+**Note:** The `uiSettings` block is required. Always include it in dashboard files.
 
 ## Naming Conventions
 
@@ -90,7 +102,17 @@ Generate hex IDs: `crypto.randomBytes(4).toString('hex')` or `openssl rand -hex 
         }
       ]
     }
-  ]
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "genieSpace": {
+      "isEnabled": true,
+      "enablementMode": "ENABLED"
+    },
+    "applyModeEnabled": false
+  }
 }
 ```
 
@@ -269,10 +291,14 @@ Validate dashboard JSON to catch errors early:
 # Syntax check
 jq empty dashboard.lvdash.json
 
+# Verify only allowed top-level keys exist (datasets, pages, uiSettings)
+jq -e 'keys - ["datasets", "pages", "uiSettings"] | length == 0' dashboard.lvdash.json
+
 # Verify required structure
 jq '{
   datasets: (.datasets | length),
-  pages: [.pages[] | {name, displayName, widgets: (.layout | length)}]
+  pages: [.pages[] | {name, displayName, widgets: (.layout | length)}],
+  hasUiSettings: (.uiSettings != null)
 }' dashboard.lvdash.json
 
 # List all dataset names (for debugging references)
@@ -283,7 +309,9 @@ jq -r '.pages[].layout[].widget.queries[]?.query.datasetName // empty' dashboard
 ```
 
 **Common errors:**
+- Unexpected top-level keys (only `datasets`, `pages`, `uiSettings` are allowed)
 - Missing `datasets` array
+- Missing `uiSettings` block
 - Widget referencing non-existent dataset name (must match 8-char hex ID in datasets)
 - Invalid page/widget/dataset name format (must be 8-char hex, e.g., `a1b2c3d4`)
 - Missing required encoding fields for widget type
@@ -295,6 +323,7 @@ jq -r '.pages[].layout[].widget.queries[]?.query.datasetName // empty' dashboard
 3. **Parameter prefix** - Filter widget queries must use `parameter_` prefix
 4. **spec.version** - Counter requires version 2, Table requires version 1, all others use version 3
 5. **Frame with title** - Always set `spec.frame` with `showTitle: true` and `title`. Widgets without titles severely degrade dashboard readability
+6. **uiSettings required** - Every dashboard must include the `uiSettings` block with `theme`, `genieSpace`, and `applyModeEnabled` fields
 
 ## Tips
 
