@@ -149,10 +149,10 @@ Grid-based layout (12 columns total):
 | Combo | `combo` | x, y, y2 | 3 |
 | Pivot | `pivot` | rows, columns, values | 3 |
 | Filter | `filter-*` | (varies) | 3 |
-| Counter | `counter` | value | 2 |
-| Table | `table` | columns | 1 |
+| Counter | `counter` | value | **2** |
+| Table | `table` | columns | **1** |
 
-**Note:** Counter and Table require older spec versions (2 and 1 respectively).
+**Important:** Most widgets use spec.version 3. Counter and Table are exceptions - they require older versions (2 and 1 respectively) and will not work with version 3.
 
 For detailed widget specifications: See [Widget Reference](references/widget-reference.md)
 

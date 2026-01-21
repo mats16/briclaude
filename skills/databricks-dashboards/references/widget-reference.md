@@ -29,9 +29,9 @@ Complete specifications for each widget type.
   "widget": {
     "name": "b1a2c3d4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac3f065f117db5bbc92371902e11_bar_chart",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac01065f117db5bbc92371902e11_bar_chart",
       "query": {
-        "datasetName": "01f0ac3f",
+        "datasetName": "01f0ac01",
         "fields": [
           {"name": "category", "expression": "`category_column`"},
           {"name": "value", "expression": "SUM(`value_column`)"}
@@ -75,9 +75,9 @@ Complete specifications for each widget type.
   "widget": {
     "name": "l1e2n3e4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac3f065f117db5bbc92371902e12_line_chart",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac02065f117db5bbc92371902e12_line_chart",
       "query": {
-        "datasetName": "01f0ac3f",
+        "datasetName": "01f0ac02",
         "fields": [
           {"name": "date", "expression": "DATE_TRUNC('DAY', `timestamp`)"},
           {"name": "metric", "expression": "AVG(`metric_column`)"}
@@ -111,9 +111,9 @@ Complete specifications for each widget type.
   "widget": {
     "name": "a1r2e3a4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac3f065f117db5bbc92371902e13_area_chart",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac03065f117db5bbc92371902e13_area_chart",
       "query": {
-        "datasetName": "01f0ac3f",
+        "datasetName": "01f0ac03",
         "fields": [
           {"name": "date", "expression": "`date`"},
           {"name": "value", "expression": "SUM(`value`)"},
@@ -149,9 +149,9 @@ Complete specifications for each widget type.
   "widget": {
     "name": "p1i2e3c4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac3f065f117db5bbc92371902e14_pie_chart",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac04065f117db5bbc92371902e14_pie_chart",
       "query": {
-        "datasetName": "01f0ac3f",
+        "datasetName": "01f0ac04",
         "fields": [
           {"name": "category", "expression": "`category`"},
           {"name": "value", "expression": "SUM(`amount`)"}
@@ -294,9 +294,9 @@ Single value display. **Note: Counter uses spec.version 2.**
   "widget": {
     "name": "s1c2a3t4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac3f065f117db5bbc92371902e15_scatter_plot",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac05065f117db5bbc92371902e15_scatter_plot",
       "query": {
-        "datasetName": "01f0ac3f",
+        "datasetName": "01f0ac05",
         "fields": [
           {"name": "x_val", "expression": "`metric_x`"},
           {"name": "y_val", "expression": "`metric_y`"},
@@ -332,9 +332,9 @@ Single value display. **Note: Counter uses spec.version 2.**
   "widget": {
     "name": "h1e2a3t4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac3f065f117db5bbc92371902e16_heatmap",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac06065f117db5bbc92371902e16_heatmap",
       "query": {
-        "datasetName": "01f0ac3f",
+        "datasetName": "01f0ac06",
         "fields": [
           {"name": "x_dim", "expression": "`dimension_x`"},
           {"name": "y_dim", "expression": "`dimension_y`"},
@@ -372,9 +372,9 @@ Bar and line on the same chart:
   "widget": {
     "name": "c1o2m3b4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac3f065f117db5bbc92371902e17_combo_chart",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac07065f117db5bbc92371902e17_combo_chart",
       "query": {
-        "datasetName": "01f0ac3f",
+        "datasetName": "01f0ac07",
         "fields": [
           {"name": "month", "expression": "`month`"},
           {"name": "revenue", "expression": "SUM(`revenue`)"},
@@ -410,9 +410,9 @@ Bar and line on the same chart:
   "widget": {
     "name": "p1v2o3t4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac3f065f117db5bbc92371902e18_pivot_table",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac08065f117db5bbc92371902e18_pivot_table",
       "query": {
-        "datasetName": "01f0ac3f",
+        "datasetName": "01f0ac08",
         "fields": [
           {"name": "row_dim", "expression": "`category`"},
           {"name": "col_dim", "expression": "`region`"},
@@ -450,9 +450,9 @@ Bar and line on the same chart:
   "widget": {
     "name": "f1d2r3p4",
     "queries": [{
-      "name": "parameter_dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac3f065f117db5bbc92371902e19_param_date",
+      "name": "parameter_dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac09065f117db5bbc92371902e19_param_date",
       "query": {
-        "datasetName": "01f0ac3f",
+        "datasetName": "01f0ac09",
         "fields": [{"name": "date", "expression": "`date_column`"}],
         "disaggregated": true
       }
@@ -476,9 +476,9 @@ Bar and line on the same chart:
   "widget": {
     "name": "f1m2s3f4",
     "queries": [{
-      "name": "parameter_dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac3f065f117db5bbc92371902e20_param_category",
+      "name": "parameter_dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac0a065f117db5bbc92371902e20_param_category",
       "query": {
-        "datasetName": "01f0ac3f",
+        "datasetName": "01f0ac0a",
         "fields": [{"name": "category", "expression": "`category`"}],
         "disaggregated": true
       }
