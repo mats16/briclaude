@@ -1,18 +1,15 @@
 ---
 name: databricks-dashboards
 description: |
-  Create and manage Databricks AI/BI dashboards using lvdash.json format.
+  Create Databricks AI/BI dashboard JSON files in lvdash.json format.
   Triggers: create dashboard, dashboard JSON, lvdash.json, visualization dashboard, BI dashboard, build dashboard, dashboard definition, widget layout.
-  Outputs dashboard definition files that can be imported via Databricks CLI or API.
-metadata:
-  version: 1.0.0
 ---
 
 # Databricks Dashboards
 
 ## Overview
 
-AI/BI dashboards (formerly Lakeview dashboards) are defined in `.lvdash.json` files. Export and import via CLI or API.
+AI/BI dashboards (formerly Lakeview dashboards) are defined in `.lvdash.json` files.
 
 ## File Format
 
@@ -85,7 +82,8 @@ Generate hex IDs: `crypto.randomBytes(4).toString('hex')` or `openssl rand -hex 
               "encodings": {
                 "x": {"fieldName": "date", "scale": {"type": "categorical"}, "displayName": "Date"},
                 "y": {"fieldName": "revenue", "scale": {"type": "quantitative"}, "displayName": "Revenue"}
-              }
+              },
+              "frame": {"showTitle": true, "title": "Daily Revenue"}
             }
           },
           "position": {"x": 0, "y": 0, "width": 6, "height": 4}
@@ -154,7 +152,7 @@ Grid-based layout (12 columns total):
 | Counter | `counter` | value | 2 |
 | Table | `table` | columns | 1 |
 
-**Note:** Counter と Table は古い spec version を使用する必要があります。
+**Note:** Counter and Table require older spec versions (2 and 1 respectively).
 
 For detailed widget specifications: See [Widget Reference](references/widget-reference.md)
 
@@ -179,7 +177,8 @@ For detailed widget specifications: See [Widget Reference](references/widget-ref
       "widgetType": "counter",
       "encodings": {
         "value": {"fieldName": "total", "displayName": "Total Amount"}
-      }
+      },
+      "frame": {"showTitle": true, "title": "Total Amount"}
     }
   },
   "position": {"x": 0, "y": 0, "width": 3, "height": 2}
@@ -262,34 +261,9 @@ For detailed widget specifications: See [Widget Reference](references/widget-ref
 }
 ```
 
-## Import/Export
-
-### Export via CLI
-
-```bash
-databricks workspace export /Workspace/path/to/dashboard.lvdash.json ./local.lvdash.json
-```
-
-### Import via CLI
-
-```bash
-databricks workspace import ./dashboard.lvdash.json /Workspace/Users/user@example.com/dashboards/my_dashboard.lvdash.json --format AUTO
-```
-
-### Bundle Configuration
-
-```yaml
-resources:
-  dashboards:
-    my_dashboard:
-      display_name: "My Dashboard"
-      file_path: ./src/my_dashboard.lvdash.json
-      warehouse_id: ${var.warehouse_id}
-```
-
 ## Validation
 
-Validate dashboard JSON before importing to catch errors early:
+Validate dashboard JSON to catch errors early:
 
 ```bash
 # Syntax check
@@ -308,20 +282,25 @@ jq -r '.datasets[].name' dashboard.lvdash.json
 jq -r '.pages[].layout[].widget.queries[]?.query.datasetName // empty' dashboard.lvdash.json | sort -u
 ```
 
-**Common validation issues:**
+**Common errors:**
 - Missing `datasets` array
 - Widget referencing non-existent dataset name (must match 8-char hex ID in datasets)
 - Invalid page/widget/dataset name format (must be 8-char hex, e.g., `a1b2c3d4`)
 - Missing required encoding fields for widget type
 
-## Best Practices
+## Required Rules
 
-1. **8-char hex IDs** - Use for page name, widget name, and dataset name/datasetName
-2. **Descriptive query names** - Follow `dashboards/{dashboard_id}/datasets/{dataset_id}_{description}` pattern
-3. **Parameter prefix** - Use `parameter_` prefix for filter widget queries
-4. **Grid layout** - 12 columns, plan widget positions carefully
-5. **Test incrementally** - Import after adding each component
-6. **Use `disaggregated: false`** for aggregations, `true` for raw field access
+1. **8-char hex IDs** - Required for page name, widget name, and dataset name/datasetName
+2. **Query name format** - Must follow `dashboards/{dashboard_id}/datasets/{dataset_id}_{description}` pattern
+3. **Parameter prefix** - Filter widget queries must use `parameter_` prefix
+4. **spec.version** - Counter requires version 2, Table requires version 1, all others use version 3
+5. **Frame with title** - Always set `spec.frame` with `showTitle: true` and `title`. Widgets without titles severely degrade dashboard readability
+
+## Tips
+
+- **Grid layout** - 12 columns total, plan widget positions carefully
+- **Test incrementally** - Import after adding each component to catch errors early
+- **Use `disaggregated: false`** for aggregations, `true` for raw field access
 
 ## References
 

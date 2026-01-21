@@ -16,6 +16,9 @@ Complete specifications for each widget type.
 10. [Pivot Table](#pivot-table)
 11. [Filters](#filters)
 12. [Text Widget](#text-widget)
+13. [Frame Structure](#frame-structure)
+14. [Scale Types](#scale-types)
+15. [Expression Functions](#expression-functions)
 
 ---
 
@@ -485,6 +488,30 @@ Markdown-enabled text display:
   "position": {"x": 0, "y": 0, "width": 12, "height": 2}
 }
 ```
+
+---
+
+## Frame Structure
+
+Widget title and description configuration.
+
+**Important:** `title` and `showTitle: true` are practically required. Widgets without titles make it difficult to understand their content and severely degrade dashboard readability.
+
+```json
+"frame": {
+  "showTitle": true,
+  "title": "Widget Title",
+  "showDescription": true,
+  "description": "Optional description text displayed below the title."
+}
+```
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `showTitle` | boolean | **Yes** | Always set to `true` |
+| `title` | string | **Yes** | Title describing widget content |
+| `showDescription` | boolean | No | Show/hide the description |
+| `description` | string | No | Description text (displayed below title) |
 
 ---
 
