@@ -1,6 +1,5 @@
 import type { FastifyInstance } from 'fastify';
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
-import type { Job } from 'pg-boss';
 import { SESSION_EVENTS_QUEUE, type SessionEventJobPayload } from '../types/event-queue.types.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 
@@ -55,6 +54,10 @@ export async function enqueueSessionEvent(
 /**
  * イベントワーカーを登録する
  *
+ * fetch() + complete()/fail() パターンを使用し、
+ * 異なるセッションのジョブを並列処理しながら、
+ * 個別ジョブの成功/失敗を制御する。
+ *
  * ワーカー設定:
  * - バッチサイズ: 設定値（デフォルト: 10）
  *   singletonKey でセッション単位の順序は保証されるため、
@@ -83,38 +86,72 @@ export async function registerEventWorker(fastify: FastifyInstance): Promise<voi
   });
   fastify.log.info({ queue: SESSION_EVENTS_QUEUE }, 'Event queue created');
 
-  await fastify.boss.work<SessionEventJobPayload>(
-    SESSION_EVENTS_QUEUE,
-    {
-      batchSize: PGBOSS_BATCH_SIZE,
-      pollingIntervalSeconds: PGBOSS_POLLING_INTERVAL_SECONDS,
-    },
-    async (jobs: Job<SessionEventJobPayload>[]) => {
-      // バッチ処理: 異なるセッションのイベントは並列処理可能
-      // singletonKey によりセッション内の順序は保証される
-      for (const job of jobs) {
-        const { userId, sessionId, eventUuid, type, subtype, message } = job.data;
+  const intervalMs = PGBOSS_POLLING_INTERVAL_SECONDS * 1000;
 
-        try {
-          await fastify.withUserContext(userId, async tx => {
-            await insertSessionEventInTx(tx, {
-              uuid: eventUuid,
-              sessionId,
-              type,
-              subtype,
-              message,
-            });
+  /**
+   * ジョブをフェッチして並列処理する
+   */
+  const poll = async () => {
+    const jobs = await fastify.boss.fetch<SessionEventJobPayload>(SESSION_EVENTS_QUEUE, {
+      batchSize: PGBOSS_BATCH_SIZE,
+    });
+
+    if (!jobs || jobs.length === 0) return;
+
+    // 並列処理
+    const results = await Promise.allSettled(
+      jobs.map(async job => {
+        const { userId, sessionId, eventUuid, type, subtype, message } = job.data;
+        await fastify.withUserContext(userId, async tx => {
+          await insertSessionEventInTx(tx, {
+            uuid: eventUuid,
+            sessionId,
+            type,
+            subtype,
+            message,
           });
-        } catch (error) {
-          fastify.log.error(
-            { sessionId, eventUuid, error },
-            'Failed to insert session event from queue'
-          );
-          throw error; // pg-boss にリトライさせる
-        }
+        });
+        return job.id;
+      })
+    );
+
+    // 個別に complete/fail
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      const job = jobs[i];
+
+      if (result.status === 'fulfilled') {
+        await fastify.boss.complete(SESSION_EVENTS_QUEUE, job.id);
+      } else {
+        fastify.log.error(
+          { sessionId: job.data.sessionId, eventUuid: job.data.eventUuid, error: result.reason },
+          'Failed to insert session event from queue'
+        );
+        await fastify.boss.fail(SESSION_EVENTS_QUEUE, job.id, result.reason);
       }
     }
-  );
+  };
+
+  /**
+   * ポーリングループ
+   * シャットダウンフラグが立つまで継続
+   */
+  const pollLoop = async () => {
+    while (!fastify.isBossShuttingDown) {
+      try {
+        await poll();
+      } catch (error) {
+        fastify.log.error({ error }, 'Event queue polling error');
+      }
+      await new Promise(resolve => setTimeout(resolve, intervalMs));
+    }
+    fastify.log.info('Event queue poll loop stopped');
+  };
+
+  // バックグラウンドで開始（await しない）
+  pollLoop().catch(error => {
+    fastify.log.error({ error }, 'Event queue poll loop crashed');
+  });
 
   fastify.log.info('Event queue worker registered');
 }

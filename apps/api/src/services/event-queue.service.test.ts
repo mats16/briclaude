@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import { enqueueSessionEvent, registerEventWorker } from './event-queue.service.js';
@@ -10,7 +10,9 @@ describe('event-queue.service', () => {
     const mockBoss = {
       send: vi.fn().mockResolvedValue('job-id-123'),
       createQueue: vi.fn().mockResolvedValue(undefined),
-      work: vi.fn().mockResolvedValue('worker-id-123'),
+      fetch: vi.fn().mockResolvedValue([]),
+      complete: vi.fn().mockResolvedValue(undefined),
+      fail: vi.fn().mockResolvedValue(undefined),
     };
 
     const mockWithUserContext = vi.fn().mockImplementation(async (_userId, callback) => {
@@ -21,6 +23,7 @@ describe('event-queue.service', () => {
     return {
       boss: mockBoss,
       withUserContext: mockWithUserContext,
+      isBossShuttingDown: false,
       log: {
         info: vi.fn(),
         error: vi.fn(),
@@ -156,14 +159,19 @@ describe('event-queue.service', () => {
   });
 
   describe('registerEventWorker', () => {
-    let fastify: FastifyInstance;
+    let fastify: ReturnType<typeof createMockFastify>;
 
     beforeEach(() => {
       fastify = createMockFastify();
     });
 
+    afterEach(() => {
+      // ポーリングループを停止
+      fastify.isBossShuttingDown = true;
+    });
+
     it('should create queue with config settings', async () => {
-      await registerEventWorker(fastify);
+      await registerEventWorker(fastify as unknown as FastifyInstance);
 
       expect(fastify.boss.createQueue).toHaveBeenCalledWith(SESSION_EVENTS_QUEUE, {
         retryLimit: 3,
@@ -172,19 +180,6 @@ describe('event-queue.service', () => {
         expireInSeconds: 1800,
         retentionSeconds: 604800,
       });
-    });
-
-    it('should register worker with config options', async () => {
-      await registerEventWorker(fastify);
-
-      expect(fastify.boss.work).toHaveBeenCalledWith(
-        SESSION_EVENTS_QUEUE,
-        {
-          batchSize: 10,
-          pollingIntervalSeconds: 2,
-        },
-        expect.any(Function)
-      );
     });
 
     it('should use custom config values when provided', async () => {
@@ -198,9 +193,10 @@ describe('event-queue.service', () => {
           PGBOSS_BATCH_SIZE: 20,
           PGBOSS_POLLING_INTERVAL_SECONDS: 5,
         },
-      } as unknown as FastifyInstance;
+      };
 
-      await registerEventWorker(customFastify);
+      await registerEventWorker(customFastify as unknown as FastifyInstance);
+      customFastify.isBossShuttingDown = true;
 
       expect(customFastify.boss.createQueue).toHaveBeenCalledWith(SESSION_EVENTS_QUEUE, {
         retryLimit: 5,
@@ -209,19 +205,10 @@ describe('event-queue.service', () => {
         expireInSeconds: 3600,
         retentionSeconds: 86400,
       });
-
-      expect(customFastify.boss.work).toHaveBeenCalledWith(
-        SESSION_EVENTS_QUEUE,
-        {
-          batchSize: 20,
-          pollingIntervalSeconds: 5,
-        },
-        expect.any(Function)
-      );
     });
 
     it('should log queue creation', async () => {
-      await registerEventWorker(fastify);
+      await registerEventWorker(fastify as unknown as FastifyInstance);
 
       expect(fastify.log.info).toHaveBeenCalledWith(
         { queue: SESSION_EVENTS_QUEUE },
@@ -230,9 +217,21 @@ describe('event-queue.service', () => {
     });
 
     it('should log worker registration', async () => {
-      await registerEventWorker(fastify);
+      await registerEventWorker(fastify as unknown as FastifyInstance);
 
       expect(fastify.log.info).toHaveBeenCalledWith('Event queue worker registered');
+    });
+
+    it('should start polling loop that fetches jobs', async () => {
+      await registerEventWorker(fastify as unknown as FastifyInstance);
+
+      // ポーリングループが開始されるまで少し待つ
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // fetch が呼び出されていることを確認
+      expect(fastify.boss.fetch).toHaveBeenCalledWith(SESSION_EVENTS_QUEUE, {
+        batchSize: 10,
+      });
     });
   });
 });
