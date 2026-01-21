@@ -111,7 +111,9 @@ A service account token configured in the application. Automatically used when P
 - **Use case**: Fallback for PAT
 - **Permissions**: Limited to permissions granted to the SP
 
-### Why PAT Registration is Recommended
+### Why PAT Registration is Required
+
+Ideally, all operations would use OBO tokens, but the current OBO token lacks sufficient authorization scopes, requiring PAT for most operations.
 
 Registering a PAT provides the following benefits:
 
