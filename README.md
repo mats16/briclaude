@@ -188,4 +188,4 @@ For detailed development guidelines, see:
 
 ## License
 
-MIT
+Apache-2.0
