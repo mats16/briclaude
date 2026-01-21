@@ -98,22 +98,24 @@ databricks secrets put-secret briclaude-[dev|prod] encryption-key --string-value
 
 > **Note:** This deployment method using Databricks Asset Bundles is a temporary solution until Lakebase support is available in the bundle configuration. Once Lakebase integration is supported, the database and user creation steps may be automated through bundle resources.
 
+> **Default Target:** The `databricks.yaml` is configured to use `dev` as the default target. You can omit `--target` for development deployments.
+
 ### 3.1 Validate Bundle Configuration
 
 ```bash
-databricks bundle validate --target [dev|prod]
+databricks bundle validate [--target prod]
 ```
 
 ### 3.2 Deploy to Databricks
 
 ```bash
-databricks bundle deploy --target [dev|prod]
+databricks bundle deploy [--target prod]
 ```
 
 ### 3.3 Start Application
 
 ```bash
-databricks bundle run briclaude_app --target [dev|prod]
+databricks bundle run briclaude_app [--target prod]
 ```
 
 ### 3.4 Verify Deployment

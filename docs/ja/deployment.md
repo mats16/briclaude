@@ -98,22 +98,24 @@ databricks secrets put-secret briclaude-[dev|prod] encryption-key --string-value
 
 > **注意:** Databricks Asset Bundles を使用したこのデプロイ方法は、Lakebase サポートがバンドル設定で利用可能になるまでの暫定的な対応です。Lakebase 統合がサポートされると、データベースとユーザーの作成手順はバンドルリソースを通じて自動化される可能性があります。
 
+> **デフォルトターゲット:** `databricks.yaml` ではデフォルトで `dev` ターゲットが使用されるように設定されています。開発環境へのデプロイでは `--target` を省略できます。
+
 ### 3.1 バンドル設定の検証
 
 ```bash
-databricks bundle validate --target [dev|prod]
+databricks bundle validate [--target prod]
 ```
 
 ### 3.2 Databricks へのデプロイ
 
 ```bash
-databricks bundle deploy --target [dev|prod]
+databricks bundle deploy [--target prod]
 ```
 
 ### 3.3 アプリケーションの起動
 
 ```bash
-databricks bundle run briclaude_app --target [dev|prod]
+databricks bundle run briclaude_app [--target prod]
 ```
 
 ### 3.4 デプロイの確認
