@@ -235,6 +235,10 @@ Single value display. **Note: Counter uses spec.version 2.**
 
 **Note: Table uses spec.version 1.**
 
+**Important:** Table widgets require complete column definitions with all required properties. Simplified column definitions will fail.
+
+### Complete Example
+
 ```json
 {
   "widget": {
@@ -246,8 +250,8 @@ Single value display. **Note: Counter uses spec.version 2.**
         "fields": [
           {"name": "id", "expression": "`id`"},
           {"name": "name", "expression": "`name`"},
-          {"name": "value", "expression": "`value`"},
-          {"name": "date", "expression": "`created_at`"}
+          {"name": "amount", "expression": "`amount`"},
+          {"name": "created_at", "expression": "`created_at`"}
         ],
         "disaggregated": true
       }
@@ -257,12 +261,108 @@ Single value display. **Note: Counter uses spec.version 2.**
       "widgetType": "table",
       "encodings": {
         "columns": [
-          {"fieldName": "id", "displayName": "ID"},
-          {"fieldName": "name", "displayName": "Name"},
-          {"fieldName": "value", "displayName": "Value"},
-          {"fieldName": "date", "displayName": "Date"}
+          {
+            "fieldName": "id",
+            "type": "integer",
+            "displayAs": "number",
+            "title": "ID",
+            "visible": true,
+            "order": 100000,
+            "alignContent": "right",
+            "booleanValues": ["false", "true"],
+            "allowSearch": true,
+            "allowHTML": false,
+            "highlightLinks": true,
+            "useMonospaceFont": false,
+            "preserveWhitespace": false,
+            "linkOpenInNewTab": true,
+            "imageUrlTemplate": "{{ @ }}",
+            "imageTitleTemplate": "{{ @ }}",
+            "imageWidth": "",
+            "imageHeight": "",
+            "linkUrlTemplate": "{{ @ }}",
+            "linkTextTemplate": "{{ @ }}",
+            "linkTitleTemplate": "{{ @ }}",
+            "numberFormat": "0"
+          },
+          {
+            "fieldName": "name",
+            "type": "string",
+            "displayAs": "string",
+            "title": "Name",
+            "visible": true,
+            "order": 100001,
+            "alignContent": "left",
+            "booleanValues": ["false", "true"],
+            "allowSearch": true,
+            "allowHTML": false,
+            "highlightLinks": true,
+            "useMonospaceFont": false,
+            "preserveWhitespace": false,
+            "linkOpenInNewTab": true,
+            "imageUrlTemplate": "{{ @ }}",
+            "imageTitleTemplate": "{{ @ }}",
+            "imageWidth": "",
+            "imageHeight": "",
+            "linkUrlTemplate": "{{ @ }}",
+            "linkTextTemplate": "{{ @ }}",
+            "linkTitleTemplate": "{{ @ }}"
+          },
+          {
+            "fieldName": "amount",
+            "type": "float",
+            "displayAs": "number",
+            "title": "Amount",
+            "visible": true,
+            "order": 100002,
+            "alignContent": "right",
+            "booleanValues": ["false", "true"],
+            "allowSearch": true,
+            "allowHTML": false,
+            "highlightLinks": true,
+            "useMonospaceFont": false,
+            "preserveWhitespace": false,
+            "linkOpenInNewTab": true,
+            "imageUrlTemplate": "{{ @ }}",
+            "imageTitleTemplate": "{{ @ }}",
+            "imageWidth": "",
+            "imageHeight": "",
+            "linkUrlTemplate": "{{ @ }}",
+            "linkTextTemplate": "{{ @ }}",
+            "linkTitleTemplate": "{{ @ }}",
+            "numberFormat": "0.00"
+          },
+          {
+            "fieldName": "created_at",
+            "type": "datetime",
+            "displayAs": "datetime",
+            "title": "Created At",
+            "visible": true,
+            "order": 100003,
+            "alignContent": "left",
+            "booleanValues": ["false", "true"],
+            "allowSearch": true,
+            "allowHTML": false,
+            "highlightLinks": true,
+            "useMonospaceFont": false,
+            "preserveWhitespace": false,
+            "linkOpenInNewTab": true,
+            "imageUrlTemplate": "{{ @ }}",
+            "imageTitleTemplate": "{{ @ }}",
+            "imageWidth": "",
+            "imageHeight": "",
+            "linkUrlTemplate": "{{ @ }}",
+            "linkTextTemplate": "{{ @ }}",
+            "linkTitleTemplate": "{{ @ }}"
+          }
         ]
       },
+      "invisibleColumns": [],
+      "allowHTMLByDefault": false,
+      "itemsPerPage": 25,
+      "paginationSize": "default",
+      "condensed": true,
+      "withRowNumber": false,
       "frame": {
         "title": "Data Table",
         "showTitle": true
@@ -273,26 +373,201 @@ Single value display. **Note: Counter uses spec.version 2.**
 }
 ```
 
+### Required Column Properties
+
+Every column definition must include all of these properties:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `fieldName` | string | Field name matching query field |
+| `type` | string | Data type: `string`, `integer`, `float`, `datetime` |
+| `displayAs` | string | Display format: `string`, `number`, `datetime` |
+| `title` | string | Column header title |
+| `visible` | boolean | Show/hide column |
+| `order` | number | Column order (start from 100000, increment by 1) |
+| `alignContent` | string | Alignment: `left`, `right`, `center` |
+| `booleanValues` | array | Always `["false", "true"]` |
+| `allowSearch` | boolean | Enable search (typically `true`) |
+| `allowHTML` | boolean | Allow HTML rendering |
+| `highlightLinks` | boolean | Highlight links (typically `true`) |
+| `useMonospaceFont` | boolean | Use monospace font |
+| `preserveWhitespace` | boolean | Preserve whitespace |
+| `linkOpenInNewTab` | boolean | Open links in new tab (typically `true`) |
+| `imageUrlTemplate` | string | Always `"{{ @ }}"` |
+| `imageTitleTemplate` | string | Always `"{{ @ }}"` |
+| `imageWidth` | string | Always `""` |
+| `imageHeight` | string | Always `""` |
+| `linkUrlTemplate` | string | Always `"{{ @ }}"` |
+| `linkTextTemplate` | string | Always `"{{ @ }}"` |
+| `linkTitleTemplate` | string | Always `"{{ @ }}"` |
+
+### Numeric Type Additional Property
+
+For `integer` and `float` types, add:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `numberFormat` | string | Format: `"0"` (integer), `"0.00"` (2 decimals), `"$0.00"` (currency) |
+
+### Required Spec-Level Properties
+
+These properties must be included at the spec level:
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `invisibleColumns` | array | `[]` | List of hidden column field names |
+| `allowHTMLByDefault` | boolean | `false` | Default HTML rendering setting |
+| `itemsPerPage` | number | `25` | Rows per page |
+| `paginationSize` | string | `"default"` | Pagination size |
+| `condensed` | boolean | `true` | Use condensed row height |
+| `withRowNumber` | boolean | `false` | Show row numbers |
+
+### Column Templates by Type
+
+#### String Column
+
+```json
+{
+  "fieldName": "name",
+  "type": "string",
+  "displayAs": "string",
+  "title": "Name",
+  "visible": true,
+  "order": 100000,
+  "alignContent": "left",
+  "booleanValues": ["false", "true"],
+  "allowSearch": true,
+  "allowHTML": false,
+  "highlightLinks": true,
+  "useMonospaceFont": false,
+  "preserveWhitespace": false,
+  "linkOpenInNewTab": true,
+  "imageUrlTemplate": "{{ @ }}",
+  "imageTitleTemplate": "{{ @ }}",
+  "imageWidth": "",
+  "imageHeight": "",
+  "linkUrlTemplate": "{{ @ }}",
+  "linkTextTemplate": "{{ @ }}",
+  "linkTitleTemplate": "{{ @ }}"
+}
+```
+
+#### Integer Column
+
+```json
+{
+  "fieldName": "count",
+  "type": "integer",
+  "displayAs": "number",
+  "title": "Count",
+  "visible": true,
+  "order": 100001,
+  "alignContent": "right",
+  "booleanValues": ["false", "true"],
+  "allowSearch": true,
+  "allowHTML": false,
+  "highlightLinks": true,
+  "useMonospaceFont": false,
+  "preserveWhitespace": false,
+  "linkOpenInNewTab": true,
+  "imageUrlTemplate": "{{ @ }}",
+  "imageTitleTemplate": "{{ @ }}",
+  "imageWidth": "",
+  "imageHeight": "",
+  "linkUrlTemplate": "{{ @ }}",
+  "linkTextTemplate": "{{ @ }}",
+  "linkTitleTemplate": "{{ @ }}",
+  "numberFormat": "0"
+}
+```
+
+#### Float Column
+
+```json
+{
+  "fieldName": "amount",
+  "type": "float",
+  "displayAs": "number",
+  "title": "Amount",
+  "visible": true,
+  "order": 100002,
+  "alignContent": "right",
+  "booleanValues": ["false", "true"],
+  "allowSearch": true,
+  "allowHTML": false,
+  "highlightLinks": true,
+  "useMonospaceFont": false,
+  "preserveWhitespace": false,
+  "linkOpenInNewTab": true,
+  "imageUrlTemplate": "{{ @ }}",
+  "imageTitleTemplate": "{{ @ }}",
+  "imageWidth": "",
+  "imageHeight": "",
+  "linkUrlTemplate": "{{ @ }}",
+  "linkTextTemplate": "{{ @ }}",
+  "linkTitleTemplate": "{{ @ }}",
+  "numberFormat": "0.00"
+}
+```
+
+#### Datetime Column
+
+```json
+{
+  "fieldName": "created_at",
+  "type": "datetime",
+  "displayAs": "datetime",
+  "title": "Created At",
+  "visible": true,
+  "order": 100003,
+  "alignContent": "left",
+  "booleanValues": ["false", "true"],
+  "allowSearch": true,
+  "allowHTML": false,
+  "highlightLinks": true,
+  "useMonospaceFont": false,
+  "preserveWhitespace": false,
+  "linkOpenInNewTab": true,
+  "imageUrlTemplate": "{{ @ }}",
+  "imageTitleTemplate": "{{ @ }}",
+  "imageWidth": "",
+  "imageHeight": "",
+  "linkUrlTemplate": "{{ @ }}",
+  "linkTextTemplate": "{{ @ }}",
+  "linkTitleTemplate": "{{ @ }}"
+}
+```
+
 ### Table with Conditional Formatting
 
 ```json
-"spec": {
-  "version": 1,
-  "widgetType": "table",
-  "encodings": {
-    "columns": [
-      {"fieldName": "name", "displayName": "Name"},
-      {
-        "fieldName": "status",
-        "displayName": "Status",
-        "colorMode": "text",
-        "conditions": [
-          {"condition": {"operator": "=", "value": "SUCCESS"}, "color": "#00A972"},
-          {"condition": {"operator": "=", "value": "FAILED"}, "color": "#FF3621"}
-        ]
-      }
-    ]
-  }
+{
+  "fieldName": "status",
+  "type": "string",
+  "displayAs": "string",
+  "title": "Status",
+  "visible": true,
+  "order": 100004,
+  "alignContent": "left",
+  "booleanValues": ["false", "true"],
+  "allowSearch": true,
+  "allowHTML": false,
+  "highlightLinks": true,
+  "useMonospaceFont": false,
+  "preserveWhitespace": false,
+  "linkOpenInNewTab": true,
+  "imageUrlTemplate": "{{ @ }}",
+  "imageTitleTemplate": "{{ @ }}",
+  "imageWidth": "",
+  "imageHeight": "",
+  "linkUrlTemplate": "{{ @ }}",
+  "linkTextTemplate": "{{ @ }}",
+  "linkTitleTemplate": "{{ @ }}",
+  "colorMode": "text",
+  "conditions": [
+    {"condition": {"operator": "=", "value": "SUCCESS"}, "color": "#00A972"},
+    {"condition": {"operator": "=", "value": "FAILED"}, "color": "#FF3621"}
+  ]
 }
 ```
 
