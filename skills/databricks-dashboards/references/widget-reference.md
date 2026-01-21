@@ -16,6 +16,9 @@ Complete specifications for each widget type.
 10. [Pivot Table](#pivot-table)
 11. [Filters](#filters)
 12. [Text Widget](#text-widget)
+13. [Frame Structure](#frame-structure)
+14. [Scale Types](#scale-types)
+15. [Expression Functions](#expression-functions)
 
 ---
 
@@ -24,11 +27,11 @@ Complete specifications for each widget type.
 ```json
 {
   "widget": {
-    "name": "bar_chart_1",
+    "name": "b1a2c3d4",
     "queries": [{
-      "name": "main",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac01065f117db5bbc92371902e11_bar_chart",
       "query": {
-        "datasetName": "dataset_name",
+        "datasetName": "01f0ac01",
         "fields": [
           {"name": "category", "expression": "`category_column`"},
           {"name": "value", "expression": "SUM(`value_column`)"}
@@ -44,8 +47,8 @@ Complete specifications for each widget type.
         "y": {"fieldName": "value", "scale": {"type": "quantitative"}, "displayName": "Value"}
       },
       "frame": {
-        "title": "Chart Title",
-        "showTitle": true
+        "showTitle": true,
+        "title": "Bar Chart Title"
       }
     }
   },
@@ -70,11 +73,11 @@ Complete specifications for each widget type.
 ```json
 {
   "widget": {
-    "name": "line_chart_1",
+    "name": "l1e2n3e4",
     "queries": [{
-      "name": "main",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac02065f117db5bbc92371902e12_line_chart",
       "query": {
-        "datasetName": "time_series_data",
+        "datasetName": "01f0ac02",
         "fields": [
           {"name": "date", "expression": "DATE_TRUNC('DAY', `timestamp`)"},
           {"name": "metric", "expression": "AVG(`metric_column`)"}
@@ -88,6 +91,10 @@ Complete specifications for each widget type.
       "encodings": {
         "x": {"fieldName": "date", "scale": {"type": "temporal"}, "displayName": "Date"},
         "y": {"fieldName": "metric", "scale": {"type": "quantitative"}, "displayName": "Metric"}
+      },
+      "frame": {
+        "showTitle": true,
+        "title": "Line Chart Title"
       }
     }
   },
@@ -102,11 +109,11 @@ Complete specifications for each widget type.
 ```json
 {
   "widget": {
-    "name": "area_chart_1",
+    "name": "a1r2e3a4",
     "queries": [{
-      "name": "main",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac03065f117db5bbc92371902e13_area_chart",
       "query": {
-        "datasetName": "trend_data",
+        "datasetName": "01f0ac03",
         "fields": [
           {"name": "date", "expression": "`date`"},
           {"name": "value", "expression": "SUM(`value`)"},
@@ -122,6 +129,10 @@ Complete specifications for each widget type.
         "x": {"fieldName": "date", "scale": {"type": "temporal"}, "displayName": "Date"},
         "y": {"fieldName": "value", "scale": {"type": "quantitative"}, "displayName": "Value"},
         "color": {"fieldName": "category", "scale": {"type": "categorical"}, "displayName": "Category"}
+      },
+      "frame": {
+        "showTitle": true,
+        "title": "Area Chart Title"
       }
     }
   },
@@ -136,11 +147,11 @@ Complete specifications for each widget type.
 ```json
 {
   "widget": {
-    "name": "pie_chart_1",
+    "name": "p1i2e3c4",
     "queries": [{
-      "name": "main",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac04065f117db5bbc92371902e14_pie_chart",
       "query": {
-        "datasetName": "distribution_data",
+        "datasetName": "01f0ac04",
         "fields": [
           {"name": "category", "expression": "`category`"},
           {"name": "value", "expression": "SUM(`amount`)"}
@@ -154,6 +165,10 @@ Complete specifications for each widget type.
       "encodings": {
         "label": {"fieldName": "category", "displayName": "Category"},
         "value": {"fieldName": "value", "displayName": "Amount"}
+      },
+      "frame": {
+        "showTitle": true,
+        "title": "Pie Chart Title"
       }
     }
   },
@@ -165,16 +180,16 @@ Complete specifications for each widget type.
 
 ## Counter
 
-Single value display:
+Single value display. **Note: Counter uses spec.version 2.**
 
 ```json
 {
   "widget": {
-    "name": "counter_1",
+    "name": "c1d2e3f4",
     "queries": [{
-      "name": "main",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ab72463012345678901234567890_total_counter",
       "query": {
-        "datasetName": "summary_data",
+        "datasetName": "01f0ab72",
         "fields": [
           {"name": "total", "expression": "SUM(`amount`)"}
         ],
@@ -182,7 +197,7 @@ Single value display:
       }
     }],
     "spec": {
-      "version": 3,
+      "version": 2,
       "widgetType": "counter",
       "encodings": {
         "value": {"fieldName": "total", "displayName": "Total Amount"}
@@ -207,14 +222,16 @@ Single value display:
 
 ## Table
 
+**Note: Table uses spec.version 1.**
+
 ```json
 {
   "widget": {
-    "name": "table_1",
+    "name": "a1b2c3d4",
     "queries": [{
-      "name": "main",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ab72463012345678901234567891_detail_table",
       "query": {
-        "datasetName": "detail_data",
+        "datasetName": "01f0ab72",
         "fields": [
           {"name": "id", "expression": "`id`"},
           {"name": "name", "expression": "`name`"},
@@ -225,7 +242,7 @@ Single value display:
       }
     }],
     "spec": {
-      "version": 3,
+      "version": 1,
       "widgetType": "table",
       "encodings": {
         "columns": [
@@ -249,7 +266,7 @@ Single value display:
 
 ```json
 "spec": {
-  "version": 3,
+  "version": 1,
   "widgetType": "table",
   "encodings": {
     "columns": [
@@ -275,11 +292,11 @@ Single value display:
 ```json
 {
   "widget": {
-    "name": "scatter_1",
+    "name": "s1c2a3t4",
     "queries": [{
-      "name": "main",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac05065f117db5bbc92371902e15_scatter_plot",
       "query": {
-        "datasetName": "correlation_data",
+        "datasetName": "01f0ac05",
         "fields": [
           {"name": "x_val", "expression": "`metric_x`"},
           {"name": "y_val", "expression": "`metric_y`"},
@@ -295,6 +312,10 @@ Single value display:
         "x": {"fieldName": "x_val", "scale": {"type": "quantitative"}, "displayName": "Metric X"},
         "y": {"fieldName": "y_val", "scale": {"type": "quantitative"}, "displayName": "Metric Y"},
         "color": {"fieldName": "category", "scale": {"type": "categorical"}, "displayName": "Category"}
+      },
+      "frame": {
+        "showTitle": true,
+        "title": "Scatter Plot Title"
       }
     }
   },
@@ -309,11 +330,11 @@ Single value display:
 ```json
 {
   "widget": {
-    "name": "heatmap_1",
+    "name": "h1e2a3t4",
     "queries": [{
-      "name": "main",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac06065f117db5bbc92371902e16_heatmap",
       "query": {
-        "datasetName": "matrix_data",
+        "datasetName": "01f0ac06",
         "fields": [
           {"name": "x_dim", "expression": "`dimension_x`"},
           {"name": "y_dim", "expression": "`dimension_y`"},
@@ -329,6 +350,10 @@ Single value display:
         "x": {"fieldName": "x_dim", "scale": {"type": "categorical"}, "displayName": "X Dimension"},
         "y": {"fieldName": "y_dim", "scale": {"type": "categorical"}, "displayName": "Y Dimension"},
         "color": {"fieldName": "intensity", "scale": {"type": "quantitative"}, "displayName": "Intensity"}
+      },
+      "frame": {
+        "showTitle": true,
+        "title": "Heatmap Title"
       }
     }
   },
@@ -345,11 +370,11 @@ Bar and line on the same chart:
 ```json
 {
   "widget": {
-    "name": "combo_1",
+    "name": "c1o2m3b4",
     "queries": [{
-      "name": "main",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac07065f117db5bbc92371902e17_combo_chart",
       "query": {
-        "datasetName": "combo_data",
+        "datasetName": "01f0ac07",
         "fields": [
           {"name": "month", "expression": "`month`"},
           {"name": "revenue", "expression": "SUM(`revenue`)"},
@@ -365,6 +390,10 @@ Bar and line on the same chart:
         "x": {"fieldName": "month", "scale": {"type": "categorical"}, "displayName": "Month"},
         "y": {"fieldName": "revenue", "scale": {"type": "quantitative"}, "displayName": "Revenue", "seriesType": "bar"},
         "y2": {"fieldName": "growth_rate", "scale": {"type": "quantitative"}, "displayName": "Growth Rate", "seriesType": "line"}
+      },
+      "frame": {
+        "showTitle": true,
+        "title": "Combo Chart Title"
       }
     }
   },
@@ -379,11 +408,11 @@ Bar and line on the same chart:
 ```json
 {
   "widget": {
-    "name": "pivot_1",
+    "name": "p1v2o3t4",
     "queries": [{
-      "name": "main",
+      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac08065f117db5bbc92371902e18_pivot_table",
       "query": {
-        "datasetName": "pivot_data",
+        "datasetName": "01f0ac08",
         "fields": [
           {"name": "row_dim", "expression": "`category`"},
           {"name": "col_dim", "expression": "`region`"},
@@ -399,6 +428,10 @@ Bar and line on the same chart:
         "rows": [{"fieldName": "row_dim", "displayName": "Category"}],
         "columns": [{"fieldName": "col_dim", "displayName": "Region"}],
         "values": [{"fieldName": "measure", "displayName": "Sales"}]
+      },
+      "frame": {
+        "showTitle": true,
+        "title": "Pivot Table Title"
       }
     }
   },
@@ -415,11 +448,11 @@ Bar and line on the same chart:
 ```json
 {
   "widget": {
-    "name": "date_filter",
+    "name": "f1d2r3p4",
     "queries": [{
-      "name": "main",
+      "name": "parameter_dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac09065f117db5bbc92371902e19_param_date",
       "query": {
-        "datasetName": "main_data",
+        "datasetName": "01f0ac09",
         "fields": [{"name": "date", "expression": "`date_column`"}],
         "disaggregated": true
       }
@@ -441,11 +474,11 @@ Bar and line on the same chart:
 ```json
 {
   "widget": {
-    "name": "category_filter",
+    "name": "f1m2s3f4",
     "queries": [{
-      "name": "main",
+      "name": "parameter_dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac0a065f117db5bbc92371902e20_param_category",
       "query": {
-        "datasetName": "filter_options",
+        "datasetName": "01f0ac0a",
         "fields": [{"name": "category", "expression": "`category`"}],
         "disaggregated": true
       }
@@ -477,12 +510,36 @@ Markdown-enabled text display:
 ```json
 {
   "widget": {
-    "name": "text_header",
+    "name": "t1e2x3t4",
     "textbox_spec": "# Dashboard Title\n\n**Description:** This dashboard shows key metrics.\n\n- Item 1\n- Item 2"
   },
   "position": {"x": 0, "y": 0, "width": 12, "height": 2}
 }
 ```
+
+---
+
+## Frame Structure
+
+Widget title and description configuration.
+
+**Important:** `title` and `showTitle: true` are practically required. Widgets without titles make it difficult to understand their content and severely degrade dashboard readability.
+
+```json
+"frame": {
+  "showTitle": true,
+  "title": "Widget Title",
+  "showDescription": true,
+  "description": "Optional description text displayed below the title."
+}
+```
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `showTitle` | boolean | **Yes** | Always set to `true` |
+| `title` | string | **Yes** | Title describing widget content |
+| `showDescription` | boolean | No | Show/hide the description |
+| `description` | string | No | Description text (displayed below title) |
 
 ---
 
