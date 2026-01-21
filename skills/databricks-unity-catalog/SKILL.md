@@ -289,6 +289,28 @@ databricks api get /api/2.1/unity-catalog/lineage/column-lineage \
 
 For detailed lineage analysis: See [Lineage Reference](references/lineage.md)
 
+## Security Best Practices
+
+**Principle of Least Privilege**: Grant only the minimum permissions required.
+
+- **Avoid `ALL PRIVILEGES`** in production - use specific permissions (`SELECT`, `MODIFY`) instead
+- **Prefer group-based access** over direct user grants for easier management and auditing
+- **Use `SHOW GRANTS` regularly** to audit permissions on sensitive objects
+
+```sql
+-- Instead of ALL PRIVILEGES, grant specific permissions
+GRANT SELECT ON TABLE <catalog>.<schema>.<table> TO `analytics_readers`;
+GRANT SELECT, MODIFY ON TABLE <catalog>.<schema>.<table> TO `data_engineers`;
+
+-- Audit permissions on a table
+SHOW GRANTS ON TABLE <catalog>.<schema>.<table>;
+
+-- Audit what a specific principal can access
+SHOW GRANTS TO `user@example.com`;
+```
+
+**When to use `ALL PRIVILEGES`**: Only for object owners or administrators in development environments.
+
 ## Tips
 
 - Always use fully qualified names: `<catalog>.<schema>.<table>`

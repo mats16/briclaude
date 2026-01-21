@@ -41,6 +41,16 @@ metadata:
 
 `sql`, `catalog.schemas:read`, `catalog.tables:read`, `unity-catalog`, `serving`, `vector-search`, `genie`, `jobs`, `secrets`
 
+### Security Best Practices
+
+**Principle of Least Privilege**: Only grant scopes that the app actually needs.
+
+- For read-only table access: `sql`, `catalog.schemas:read`, `catalog.tables:read`, `unity-catalog`
+- For Model Serving only: `serving`
+- For Vector Search only: `vector-search`
+
+**Avoid granting all scopes at once.** Start with minimal scopes and add more only when errors indicate they are needed.
+
 ### Resource 環境変数
 
 `DATABRICKS_RESOURCE_SQL_WAREHOUSE_ID` などが必要な場合、`resources` も設定:
