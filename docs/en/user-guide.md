@@ -75,10 +75,11 @@ Briclaude uses different authentication methods depending on the type of operati
 
 | Category | Token Used | PAT Registration | Description |
 |----------|------------|------------------|-------------|
+| **Claude Code Model** | Anthropic API Key | Not required | Managed server-side |
+| **CLI in Hooks** | PAT → SP | Recommended | `workspace export-dir` in SessionStart hooks |
+| **Databricks CLI (Claude execution)** | PAT → SP | Recommended | CLI commands like `databricks sync` |
 | **Databricks SQL (MCP)** | OBO | Not required | Execute SQL with user permissions |
 | **Databricks Apps Operations (MCP)** | PAT → SP | Recommended | Create/deploy apps, get logs |
-| **Databricks CLI (Claude execution)** | PAT → SP | Recommended | CLI commands like `databricks sync` |
-| **CLI in Hooks** | PAT → SP | Recommended | `workspace export-dir` in SessionStart hooks |
 
 ※ "PAT → SP" means PAT is used if registered, otherwise falls back to Service Principal
 
