@@ -214,14 +214,16 @@ fastify.boss.send('queue-name', payload, options);
 
 ### Configuration
 
-| Setting | Value | Description |
-|---------|-------|-------------|
-| Retry Limit | 3 | Max retry attempts |
-| Retry Delay | 5s | Initial delay (exponential backoff) |
-| Expire In | 30 min | Job timeout |
-| Retention | 7 days | Completed job retention |
-| Batch Size | 1 | Jobs per worker cycle |
-| Polling Interval | 2s | Worker polling frequency |
+Settings are configurable via environment variables:
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `PGBOSS_RETRY_LIMIT` | 3 | Max retry attempts |
+| `PGBOSS_RETRY_DELAY` | 5 | Initial delay in seconds (exponential backoff) |
+| `PGBOSS_EXPIRE_IN_SECONDS` | 1800 | Job timeout (30 min) |
+| `PGBOSS_RETENTION_SECONDS` | 604800 | Completed job retention (7 days) |
+| `PGBOSS_BATCH_SIZE` | 10 | Jobs per worker cycle |
+| `PGBOSS_POLLING_INTERVAL_SECONDS` | 2 | Worker polling frequency |
 
 ### Session Ordering
 

@@ -25,6 +25,14 @@ describe('event-queue.service', () => {
         info: vi.fn(),
         error: vi.fn(),
       },
+      config: {
+        PGBOSS_RETRY_LIMIT: 3,
+        PGBOSS_RETRY_DELAY: 5,
+        PGBOSS_EXPIRE_IN_SECONDS: 1800,
+        PGBOSS_RETENTION_SECONDS: 604800,
+        PGBOSS_BATCH_SIZE: 10,
+        PGBOSS_POLLING_INTERVAL_SECONDS: 2,
+      },
     } as unknown as FastifyInstance;
   };
 
@@ -35,7 +43,7 @@ describe('event-queue.service', () => {
       fastify = createMockFastify();
     });
 
-    it('should enqueue event to pg-boss with correct payload', () => {
+    it('should enqueue event to pg-boss with correct payload', async () => {
       const message = {
         type: 'system',
         subtype: 'init',
@@ -43,7 +51,7 @@ describe('event-queue.service', () => {
         session_id: 'sdk-session-123',
       } as unknown as SDKMessage;
 
-      enqueueSessionEvent(fastify, {
+      await enqueueSessionEvent(fastify, {
         userId: 'user-123',
         sessionId: 'session_01abc123',
         sessionUUID: '019bdf24-b923-7aaa-918c-8ce71422def0',
@@ -67,14 +75,14 @@ describe('event-queue.service', () => {
       );
     });
 
-    it('should use singletonKey for session ordering', () => {
+    it('should use singletonKey for session ordering', async () => {
       const message = {
         type: 'assistant',
         uuid: 'event-uuid-456',
         session_id: 'sdk-session-123',
       } as unknown as SDKMessage;
 
-      enqueueSessionEvent(fastify, {
+      await enqueueSessionEvent(fastify, {
         userId: 'user-123',
         sessionId: 'session_01xyz789',
         sessionUUID: '019bdf24-b923-7aaa-918c-8ce71422def0',
@@ -89,7 +97,7 @@ describe('event-queue.service', () => {
       });
     });
 
-    it('should log error when enqueue fails', async () => {
+    it('should throw error and log when enqueue fails', async () => {
       const error = new Error('Queue connection failed');
       (fastify.boss.send as ReturnType<typeof vi.fn>).mockRejectedValueOnce(error);
 
@@ -99,18 +107,17 @@ describe('event-queue.service', () => {
         session_id: 'sdk-session-123',
       } as unknown as SDKMessage;
 
-      enqueueSessionEvent(fastify, {
-        userId: 'user-123',
-        sessionId: 'session_01fail',
-        sessionUUID: '019bdf24-b923-7aaa-918c-8ce71422def0',
-        eventUuid: 'event-uuid-789',
-        type: 'system',
-        subtype: null,
-        message,
-      });
-
-      // Wait for the promise to reject
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await expect(
+        enqueueSessionEvent(fastify, {
+          userId: 'user-123',
+          sessionId: 'session_01fail',
+          sessionUUID: '019bdf24-b923-7aaa-918c-8ce71422def0',
+          eventUuid: 'event-uuid-789',
+          type: 'system',
+          subtype: null,
+          message,
+        })
+      ).rejects.toThrow('Queue connection failed');
 
       expect(fastify.log.error).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -121,14 +128,14 @@ describe('event-queue.service', () => {
       );
     });
 
-    it('should handle null subtype', () => {
+    it('should handle null subtype', async () => {
       const message = {
         type: 'user',
         uuid: 'event-uuid-null',
         session_id: 'sdk-session-123',
       } as unknown as SDKMessage;
 
-      enqueueSessionEvent(fastify, {
+      await enqueueSessionEvent(fastify, {
         userId: 'user-123',
         sessionId: 'session_01null',
         sessionUUID: '019bdf24-b923-7aaa-918c-8ce71422def0',
@@ -155,26 +162,59 @@ describe('event-queue.service', () => {
       fastify = createMockFastify();
     });
 
-    it('should create queue with correct settings', async () => {
+    it('should create queue with config settings', async () => {
       await registerEventWorker(fastify);
 
       expect(fastify.boss.createQueue).toHaveBeenCalledWith(SESSION_EVENTS_QUEUE, {
         retryLimit: 3,
         retryDelay: 5,
         retryBackoff: true,
-        expireInSeconds: 30 * 60,
-        retentionSeconds: 7 * 24 * 60 * 60,
+        expireInSeconds: 1800,
+        retentionSeconds: 604800,
       });
     });
 
-    it('should register worker with correct options', async () => {
+    it('should register worker with config options', async () => {
       await registerEventWorker(fastify);
 
       expect(fastify.boss.work).toHaveBeenCalledWith(
         SESSION_EVENTS_QUEUE,
         {
-          batchSize: 1,
+          batchSize: 10,
           pollingIntervalSeconds: 2,
+        },
+        expect.any(Function)
+      );
+    });
+
+    it('should use custom config values when provided', async () => {
+      const customFastify = {
+        ...createMockFastify(),
+        config: {
+          PGBOSS_RETRY_LIMIT: 5,
+          PGBOSS_RETRY_DELAY: 10,
+          PGBOSS_EXPIRE_IN_SECONDS: 3600,
+          PGBOSS_RETENTION_SECONDS: 86400,
+          PGBOSS_BATCH_SIZE: 20,
+          PGBOSS_POLLING_INTERVAL_SECONDS: 5,
+        },
+      } as unknown as FastifyInstance;
+
+      await registerEventWorker(customFastify);
+
+      expect(customFastify.boss.createQueue).toHaveBeenCalledWith(SESSION_EVENTS_QUEUE, {
+        retryLimit: 5,
+        retryDelay: 10,
+        retryBackoff: true,
+        expireInSeconds: 3600,
+        retentionSeconds: 86400,
+      });
+
+      expect(customFastify.boss.work).toHaveBeenCalledWith(
+        SESSION_EVENTS_QUEUE,
+        {
+          batchSize: 20,
+          pollingIntervalSeconds: 5,
         },
         expect.any(Function)
       );
