@@ -29,7 +29,7 @@ Complete specifications for each widget type.
   "widget": {
     "name": "b1a2c3d4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac01065f117db5bbc92371902e11_bar_chart",
+      "name": "main_query",
       "query": {
         "datasetName": "01f0ac01",
         "fields": [
@@ -75,7 +75,7 @@ Complete specifications for each widget type.
   "widget": {
     "name": "l1e2n3e4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac02065f117db5bbc92371902e12_line_chart",
+      "name": "main_query",
       "query": {
         "datasetName": "01f0ac02",
         "fields": [
@@ -111,7 +111,7 @@ Complete specifications for each widget type.
   "widget": {
     "name": "a1r2e3a4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac03065f117db5bbc92371902e13_area_chart",
+      "name": "main_query",
       "query": {
         "datasetName": "01f0ac03",
         "fields": [
@@ -149,7 +149,7 @@ Complete specifications for each widget type.
   "widget": {
     "name": "p1i2e3c4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac04065f117db5bbc92371902e14_pie_chart",
+      "name": "main_query",
       "query": {
         "datasetName": "01f0ac04",
         "fields": [
@@ -163,8 +163,17 @@ Complete specifications for each widget type.
       "version": 3,
       "widgetType": "pie",
       "encodings": {
-        "label": {"fieldName": "category", "displayName": "Category"},
-        "value": {"fieldName": "value", "displayName": "Amount"}
+        "angle": {
+          "fieldName": "value",
+          "displayName": "Amount",
+          "scale": {"type": "quantitative"}
+        },
+        "color": {
+          "fieldName": "category",
+          "displayName": "Category",
+          "scale": {"type": "categorical"}
+        },
+        "label": {"show": true}
       },
       "frame": {
         "showTitle": true,
@@ -175,6 +184,8 @@ Complete specifications for each widget type.
   "position": {"x": 0, "y": 0, "width": 4, "height": 4}
 }
 ```
+
+**Note:** Pie charts use `angle` (quantitative, the measure) and `color` (categorical, the dimension) encodings, not `label`/`value`.
 
 ---
 
@@ -187,7 +198,7 @@ Single value display. **Note: Counter uses spec.version 2.**
   "widget": {
     "name": "c1d2e3f4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ab72463012345678901234567890_total_counter",
+      "name": "main_query",
       "query": {
         "datasetName": "01f0ab72",
         "fields": [
@@ -229,7 +240,7 @@ Single value display. **Note: Counter uses spec.version 2.**
   "widget": {
     "name": "a1b2c3d4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ab72463012345678901234567891_detail_table",
+      "name": "main_query",
       "query": {
         "datasetName": "01f0ab72",
         "fields": [
@@ -294,7 +305,7 @@ Single value display. **Note: Counter uses spec.version 2.**
   "widget": {
     "name": "s1c2a3t4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac05065f117db5bbc92371902e15_scatter_plot",
+      "name": "main_query",
       "query": {
         "datasetName": "01f0ac05",
         "fields": [
@@ -332,7 +343,7 @@ Single value display. **Note: Counter uses spec.version 2.**
   "widget": {
     "name": "h1e2a3t4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac06065f117db5bbc92371902e16_heatmap",
+      "name": "main_query",
       "query": {
         "datasetName": "01f0ac06",
         "fields": [
@@ -372,7 +383,7 @@ Bar and line on the same chart:
   "widget": {
     "name": "c1o2m3b4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac07065f117db5bbc92371902e17_combo_chart",
+      "name": "main_query",
       "query": {
         "datasetName": "01f0ac07",
         "fields": [
@@ -410,7 +421,7 @@ Bar and line on the same chart:
   "widget": {
     "name": "p1v2o3t4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac08065f117db5bbc92371902e18_pivot_table",
+      "name": "main_query",
       "query": {
         "datasetName": "01f0ac08",
         "fields": [
@@ -577,11 +588,22 @@ Markdown-enabled text display:
 {
   "widget": {
     "name": "t1e2x3t4",
-    "textbox_spec": "# Dashboard Title\n\n**Description:** This dashboard shows key metrics.\n\n- Item 1\n- Item 2"
+    "multilineTextboxSpec": {
+      "lines": [
+        "# Dashboard Title",
+        "",
+        "**Description:** This dashboard shows key metrics.",
+        "",
+        "- Item 1",
+        "- Item 2"
+      ]
+    }
   },
   "position": {"x": 0, "y": 0, "width": 12, "height": 2}
 }
 ```
+
+**Note:** Use `multilineTextboxSpec` with `lines` array. Each element represents a line of markdown content.
 
 ---
 

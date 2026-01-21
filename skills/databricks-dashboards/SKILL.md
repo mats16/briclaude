@@ -22,23 +22,20 @@ Dashboard files use `.lvdash.json` extension. The structure:
     {
       "name": "<8-char-id>",
       "displayName": "Page Title",
-      "layout": [...]
+      "layout": [...],
+      "pageType": "PAGE_TYPE_CANVAS"
     }
   ],
   "uiSettings": {
-    "theme": {
-      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
-    },
     "genieSpace": {
       "isEnabled": true,
       "enablementMode": "ENABLED"
-    },
-    "applyModeEnabled": false
+    }
   }
 }
 ```
 
-**Note:** The `uiSettings` block is required. Always include it in dashboard files.
+**Note:** The `uiSettings` block with `genieSpace` is required. The `pageType: "PAGE_TYPE_CANVAS"` is required for each page.
 
 ## Naming Conventions
 
@@ -47,7 +44,11 @@ Dashboard files use `.lvdash.json` extension. The structure:
 | Page name | 8-char hex ID | `a1b2c3d4` |
 | Widget name | 8-char hex ID | `e5f6a7b8` |
 | Dataset name | 8-char hex ID | `01f0ac3f` |
-| Query name | `dashboards/{dashboard_id}/datasets/{dataset_id}_{description}` | `dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac3f065f117db5bbc92371902e11_group_key` |
+| Query name | `main_query` (simple) or `dashboards/{dashboard_id}/datasets/{dataset_id}_{description}` (full) | `main_query` |
+
+**Query name formats:**
+- **Simple (recommended):** `main_query` - use for most widget queries
+- **Full format:** `dashboards/{dashboard_id}/datasets/{dataset_id}_{description}` - use for filters with cross-dataset associations
 
 Parameter queries use `parameter_` prefix:
 - `parameter_dashboards/{dashboard_id}/datasets/{dataset_id}_{param_name}`
@@ -64,7 +65,13 @@ Generate hex IDs: `crypto.randomBytes(4).toString('hex')` or `openssl rand -hex 
     {
       "name": "01f0ac3f",
       "displayName": "Sales Data",
-      "query": "SELECT date, revenue FROM catalog.schema.sales"
+      "queryLines": [
+        "SELECT\n",
+        "  date,\n",
+        "  revenue\n",
+        "FROM\n",
+        "  catalog.schema.sales"
+      ]
     }
   ],
   "pages": [
@@ -77,7 +84,7 @@ Generate hex IDs: `crypto.randomBytes(4).toString('hex')` or `openssl rand -hex 
             "name": "e5f6a7b8",
             "queries": [
               {
-                "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ac3f065f117db5bbc92371902e11_sales_chart",
+                "name": "main_query",
                 "query": {
                   "datasetName": "01f0ac3f",
                   "fields": [
@@ -100,18 +107,15 @@ Generate hex IDs: `crypto.randomBytes(4).toString('hex')` or `openssl rand -hex 
           },
           "position": {"x": 0, "y": 0, "width": 6, "height": 4}
         }
-      ]
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
     }
   ],
   "uiSettings": {
-    "theme": {
-      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
-    },
     "genieSpace": {
       "isEnabled": true,
       "enablementMode": "ENABLED"
-    },
-    "applyModeEnabled": false
+    }
   }
 }
 ```
@@ -126,21 +130,34 @@ Define SQL queries that power visualizations. Use 8-character hex ID for `name`:
 {
   "name": "01f0ac3f",
   "displayName": "Human Readable Name",
-  "query": "SELECT col1, col2 FROM catalog.schema.table WHERE ..."
+  "queryLines": [
+    "SELECT\n",
+    "  col1,\n",
+    "  col2\n",
+    "FROM\n",
+    "  catalog.schema.table\n",
+    "WHERE\n",
+    "  condition = 'value'"
+  ]
 }
 ```
 
+**Note:** Use `queryLines` (array of strings) instead of `query` (single string). Each line should end with `\n` for proper formatting.
+
 ### Pages
 
-Pages contain layouts with widgets. Use 8-character hex IDs:
+Pages contain layouts with widgets. Use 8-character hex IDs and include `pageType`:
 
 ```json
 {
   "name": "a1b2c3d4",
   "displayName": "Dashboard Page Title",
-  "layout": [...]
+  "layout": [...],
+  "pageType": "PAGE_TYPE_CANVAS"
 }
 ```
+
+**Note:** `pageType: "PAGE_TYPE_CANVAS"` is required for each page.
 
 ### Widget Position
 
@@ -164,7 +181,7 @@ Grid-based layout (12 columns total):
 | Bar | `bar` | x, y, color | 3 |
 | Line | `line` | x, y, color | 3 |
 | Area | `area` | x, y, color | 3 |
-| Pie | `pie` | label, value | 3 |
+| Pie | `pie` | angle, color, label | 3 |
 | Scatter | `scatter` | x, y, color | 3 |
 | Heatmap | `heatmap` | x, y, color | 3 |
 | Histogram | `histogram` | x | 3 |
@@ -187,7 +204,7 @@ For detailed widget specifications: See [Widget Reference](references/widget-ref
   "widget": {
     "name": "c1d2e3f4",
     "queries": [{
-      "name": "dashboards/01f0a403a6891cc1b5cf06c4960354b8/datasets/01f0ab72463012345678901234567890_total_counter",
+      "name": "main_query",
       "query": {
         "datasetName": "01f0ab72",
         "fields": [{"name": "total", "expression": "SUM(`amount`)"}],
@@ -239,11 +256,19 @@ For detailed widget specifications: See [Widget Reference](references/widget-ref
 {
   "widget": {
     "name": "d4e5f6a7",
-    "textbox_spec": "# Dashboard Title\n\nDescription text here."
+    "multilineTextboxSpec": {
+      "lines": [
+        "# Dashboard Title",
+        "",
+        "Description text here."
+      ]
+    }
   },
   "position": {"x": 0, "y": 0, "width": 12, "height": 1}
 }
 ```
+
+**Note:** Use `multilineTextboxSpec` with `lines` array. Each element is a line of markdown.
 
 ## Encodings Structure
 
@@ -319,11 +344,14 @@ jq -r '.pages[].layout[].widget.queries[]?.query.datasetName // empty' dashboard
 ## Required Rules
 
 1. **8-char hex IDs** - Required for page name, widget name, and dataset name/datasetName
-2. **Query name format** - Must follow `dashboards/{dashboard_id}/datasets/{dataset_id}_{description}` pattern
-3. **Parameter prefix** - Filter widget queries must use `parameter_` prefix
-4. **spec.version** - Filter and Counter require version 2, Table requires version 1, all other chart widgets use version 3
-5. **Frame with title** - Always set `spec.frame` with `showTitle: true` and `title`. Widgets without titles severely degrade dashboard readability
-6. **uiSettings required** - Every dashboard must include the `uiSettings` block with `theme`, `genieSpace`, and `applyModeEnabled` fields
+2. **queryLines format** - Datasets must use `queryLines` (array of strings), not `query` (single string)
+3. **pageType required** - Each page must include `"pageType": "PAGE_TYPE_CANVAS"`
+4. **Query name format** - Use `main_query` for simple widget queries; use full format `dashboards/{dashboard_id}/datasets/{dataset_id}_{description}` only for filters with cross-dataset associations
+5. **Parameter prefix** - Filter widget queries must use `parameter_` prefix
+6. **spec.version** - Filter and Counter require version 2, Table requires version 1, all other chart widgets use version 3
+7. **Frame with title** - Always set `spec.frame` with `showTitle: true` and `title`. Widgets without titles severely degrade dashboard readability
+8. **uiSettings required** - Every dashboard must include the `uiSettings` block with `genieSpace` configuration
+9. **Text widgets** - Use `multilineTextboxSpec` with `lines` array, not `textbox_spec`
 
 ## Tips
 
