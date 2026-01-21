@@ -2,7 +2,7 @@
 name: databricks-dashboards
 description: |
   Create Databricks AI/BI dashboard JSON files in lvdash.json format.
-  Triggers: create dashboard, dashboard JSON, lvdash.json, visualization dashboard, BI dashboard, build dashboard, dashboard definition, widget layout.
+  Triggers: ダッシュボード, 可視化, visualize, create dashboard, build dashboard, dashboard JSON, lvdash.json, BI dashboard, visualization, chart, graph, データ可視化, テーブル可視化, analyze data, data analysis, sales dashboard, KPI dashboard, metrics dashboard, report dashboard.
 ---
 
 # Databricks Dashboards
