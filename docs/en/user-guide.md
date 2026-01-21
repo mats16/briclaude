@@ -113,7 +113,10 @@ A service account token configured in the application. Automatically used when P
 
 ### Why PAT Registration is Required
 
-Ideally, all operations would use OBO tokens, but the current OBO token lacks sufficient authorization scopes, requiring PAT for most operations.
+Ideally, all operations would use OBO tokens, but the current OBO token lacks the following authorization scopes, requiring PAT:
+
+- **Workspace operations**: File read/write and sync
+- **Model Serving Endpoint**: Claude Code's foundation model calls
 
 Registering a PAT provides the following benefits:
 
