@@ -208,3 +208,9 @@ See each app's CLAUDE.md for detailed guidelines:
   - Databricks Apps deployment
   - Secret configuration
   - Asset Bundles usage
+
+- **User Guide**: [docs/en/user-guide.md](./docs/en/user-guide.md) ([日本語](./docs/ja/user-guide.md))
+  - File system and user environment
+  - Authentication and token usage
+  - Skills system
+  - Workspace integration
