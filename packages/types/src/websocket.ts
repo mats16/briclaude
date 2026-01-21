@@ -26,13 +26,6 @@ export interface WsErrorMessage {
 }
 
 /**
- * WebSocket Pong メッセージ
- */
-export interface WsPongMessage {
-  type: 'pong';
-}
-
-/**
  * Abort リクエスト（クライアント -> サーバー）
  */
 export interface WsAbortRequest {
@@ -81,17 +74,16 @@ export type WsServerMessage =
   | SDKMessage
   | SDKAuthStatusMessage
   | WsErrorMessage
-  | WsPongMessage
   | WsControlResponse;
 
 /**
- * WebSocket Ping メッセージ（クライアント -> サーバー）
+ * WebSocket KeepAlive メッセージ（クライアント -> サーバー）
  */
-export interface WsPingMessage {
-  type: 'ping';
+export interface WsKeepAliveMessage {
+  type: 'keep_alive';
 }
 
 /**
  * WebSocket クライアント -> サーバーメッセージ
  */
-export type WsClientMessage = WsPingMessage | SDKUserMessage | WsControlRequest;
+export type WsClientMessage = WsKeepAliveMessage | SDKUserMessage | WsControlRequest;

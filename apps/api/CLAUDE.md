@@ -8,6 +8,7 @@ REST API server built with Fastify 5. Uses Drizzle ORM for database operations a
 |----------|------------|
 | Framework | Fastify 5.2.0 |
 | ORM | Drizzle ORM 1.0.0-beta |
+| Job Queue | pg-boss |
 | AI | Claude Agent SDK |
 | Database | PostgreSQL (postgres.js) |
 | Testing | Vitest |
@@ -21,6 +22,7 @@ src/
 ├── plugins/           # Fastify plugins
 │   ├── config.ts      # Environment variables (@fastify/env)
 │   ├── database.ts    # Database connection (Drizzle)
+│   ├── pg-boss.ts     # Job queue (pg-boss)
 │   ├── request-context.ts  # Request context
 │   ├── request-decorator.ts # Request decorator
 │   └── static.ts      # Static file serving
@@ -31,10 +33,13 @@ src/
 │   ├── user-tokens.ts # Token management
 │   └── title.ts       # Title generation
 ├── services/          # Business logic
+│   ├── event-queue.service.ts
 │   ├── session.service.ts
 │   ├── title.service.ts
 │   ├── token-resolver.service.ts
 │   └── user.service.ts
+├── types/             # Type definitions
+│   └── event-queue.types.ts
 ├── utils/             # Utilities (encryption)
 ├── app.ts             # Fastify app setup
 └── server.ts          # Server entry point
@@ -92,14 +97,18 @@ export async function build() {
   // 2. Database plugin
   await app.register(databasePlugin);
 
-  // 3. Request decorator
+  // 3. pg-boss plugin
+  await app.register(pgBossPlugin);
+  await registerEventWorker(app);
+
+  // 4. Request decorator
   await app.register(requestDecoratorPlugin);
 
-  // 4. API routes
+  // 5. API routes
   await app.register(healthRoute, { prefix: '/api' });
   await app.register(sessionRoute, { prefix: '/api' });
 
-  // 5. Static file serving (last)
+  // 6. Static file serving (last)
   await app.register(staticPlugin);
 
   return app;
@@ -168,6 +177,71 @@ npm run db:migrate    # Run migrations
 npm run db:push       # Push schema directly
 npm run db:studio     # Start Drizzle Studio
 ```
+
+## Job Queue (pg-boss)
+
+pg-boss is used for reliable event persistence with retry guarantees. Session events are queued and processed asynchronously.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  saveAndBroadcastEvent                                  │
+│  ├─ WebSocket broadcast (immediate)                    │
+│  └─ pg-boss queue (persistent, retry guaranteed)       │
+│           ↓                                             │
+│  Event Worker → DB INSERT (ordered by session)         │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Usage
+
+```typescript
+// Enqueue an event (fire-and-forget with persistence)
+enqueueSessionEvent(fastify, {
+  userId: 'user-123',
+  sessionId: 'session_xxx',
+  sessionUUID: 'uuid-xxx',
+  eventUuid: 'event-uuid',
+  type: 'assistant',
+  subtype: null,
+  message: sdkMessage,
+});
+
+// Access pg-boss instance
+fastify.boss.send('queue-name', payload, options);
+```
+
+### Configuration
+
+Settings are configurable via environment variables:
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `PGBOSS_RETRY_LIMIT` | 3 | Max retry attempts |
+| `PGBOSS_RETRY_DELAY` | 5 | Initial delay in seconds (exponential backoff) |
+| `PGBOSS_EXPIRE_IN_SECONDS` | 1800 | Job timeout (30 min) |
+| `PGBOSS_RETENTION_SECONDS` | 604800 | Completed job retention (7 days) |
+| `PGBOSS_BATCH_SIZE` | 10 | Jobs per worker cycle |
+| `PGBOSS_POLLING_INTERVAL_SECONDS` | 2 | Worker polling frequency |
+
+### Session Ordering
+
+Events are ordered per session using `singletonKey`:
+
+```typescript
+fastify.boss.send(QUEUE_NAME, payload, {
+  singletonKey: sessionId,  // Ensures FIFO per session
+});
+```
+
+### Related Files
+
+| File | Description |
+|------|-------------|
+| `src/plugins/pg-boss.ts` | Plugin initialization and graceful shutdown |
+| `src/services/event-queue.service.ts` | Queue operations and worker registration |
+| `src/types/event-queue.types.ts` | Type definitions |
 
 ## Environment Variables
 

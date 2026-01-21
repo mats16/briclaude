@@ -7,6 +7,7 @@ import {
   type SDKResultMessage,
   type SDKSystemMessage,
   type SDKUserMessage,
+  type SDKUserMessageReplay,
 } from '@anthropic-ai/claude-agent-sdk';
 import type { UUID } from 'crypto';
 import type {
@@ -32,6 +33,7 @@ import { ensureDirectory, removeDirectory } from '../utils/directory.js';
 import { DatabricksAppsClient } from '../lib/databricks-apps-client.js';
 import { getAuthProvider } from '../lib/databricks-auth.js';
 import { wsManager } from './websocket-manager.service.js';
+import { enqueueSessionEvent } from './event-queue.service.js';
 import { SessionId } from '../models/session.model.js';
 import type { UserContext } from '../lib/user-context.js';
 import path from 'node:path';
@@ -60,147 +62,106 @@ const SESSION_SELECT_COLUMNS = {
 } as const;
 
 /**
- * SessionCreateEventData を SDKUserMessage 形式に変換
- */
-function convertToSDKUserMessage(
-  eventData: SessionCreateEventData,
-  sessionId: SessionId
-): SDKUserMessage {
-  return {
-    type: 'user',
-    message: {
-      role: 'user',
-      content: eventData.message.content,
-    },
-    parent_tool_use_id: eventData.parent_tool_use_id,
-    uuid: eventData.uuid as UUID,
-    session_id: sessionId.toString(),
-  };
-}
-
-/**
- * イベントを WebSocket にブロードキャストし、DB に保存する（並列処理）
- * WebSocket 送信は即座に行い、DB 書き込みは待たない
+ * イベントを pg-boss キューに追加し、成功した場合のみ WebSocket にブロードキャストする
+ *
+ * データ整合性を保証するため、キュー追加を先に実行:
+ * 1. pg-boss キューに追加（永続化保証）
+ * 2. 成功した場合のみ WebSocket にブロードキャスト
+ * 3. 失敗した場合はエラーメッセージをブロードキャスト
  *
  * @param sessionId - SessionId オブジェクト
- * @param options.skipDbSave - true の場合、DB 保存をスキップ（init イベント前に使用）
  */
-function saveAndBroadcastEvent(
+async function saveAndBroadcastEvent(
   fastify: FastifyInstance,
   userId: string,
   sessionId: SessionId,
-  message: SDKMessage,
-  options: { skipDbSave?: boolean } = {}
+  message: SDKMessage
 ): Promise<void> {
   const eventUuid = 'uuid' in message ? (message.uuid as string) : crypto.randomUUID();
   const eventSubtype = 'subtype' in message ? (message.subtype as string | undefined) : undefined;
 
-  // WebSocket にブロードキャスト（TypeID 形式で送信）
-  wsManager.broadcast(sessionId.toString(), message);
+  try {
+    // 1. pg-boss キューに追加（永続化保証）
+    await enqueueSessionEvent(fastify, {
+      userId,
+      sessionId: sessionId.toString(),
+      sessionUUID: sessionId.toUUID(),
+      eventUuid,
+      type: message.type,
+      subtype: eventSubtype ?? null,
+      message,
+    });
 
-  // DB に保存（skipDbSave が false の場合のみ）
-  if (!options.skipDbSave) {
-    return fastify
-      .withUserContext(userId, async tx => {
-        await insertSessionEventInTx(tx, {
-          uuid: eventUuid,
-          sessionId: sessionId.toUUID(),
-          type: message.type,
-          subtype: eventSubtype ?? null,
-          message: message,
-        });
-      })
-      .catch(error => {
-        fastify.log.error(
-          { sessionId: sessionId.toString(), eventUuid, error },
-          'Failed to save event to DB'
-        );
-      });
+    // 2. 成功した場合のみ WebSocket にブロードキャスト
+    wsManager.broadcast(sessionId.toString(), message);
+  } catch {
+    // 3. 失敗した場合はエラーメッセージをブロードキャスト
+    // エラーログは enqueueSessionEvent 内で出力済み
+    wsManager.broadcast(sessionId.toString(), {
+      type: 'error',
+      code: 'EVENT_PERSIST_FAILED',
+      message: `Failed to persist event: ${message.type}`,
+    });
   }
-  return Promise.resolve();
 }
 
 /**
- * init イベントを待機する
- * セッションは既に作成済みなので、init 受信時に UPDATE + init イベント INSERT を行う
+ * すべてのイベントをバックグラウンドで処理する
+ * - init イベント: status='running' に更新、sdkSessionId を設定、初回 user message を broadcast
+ * - result イベント: sessions.status を 'idle' に更新
+ * - すべてのイベント: WebSocket 送信 & pg-boss 経由で DB 保存
+ *
+ * @param response - SDK からのイベントストリーム
+ * @param fastify - Fastify インスタンス
+ * @param userId - ユーザーID
+ * @param sessionId - セッションID
+ * @param initialUserEvent - 初回ユーザーイベント（createSession 時のみ）
  */
-interface WaitForInitResult {
-  sdkSessionId: string;
-  iterator: AsyncIterator<SDKMessage, void>;
-}
-
-async function waitForInit(
+async function processAllEvents(
   response: AsyncIterable<SDKMessage>,
   fastify: FastifyInstance,
   userId: string,
-  sessionId: SessionId
-): Promise<WaitForInitResult> {
-  const iterator = response[Symbol.asyncIterator]();
-
-  while (true) {
-    const { value: message, done } = await iterator.next();
-
-    if (done || !message) {
-      throw new Error('Stream ended before init event');
-    }
-
-    // init イベント前: WebSocket 送信のみ（DB 保存しない）
-    saveAndBroadcastEvent(fastify, userId, sessionId, message, { skipDbSave: true });
-
-    // init イベントを検出 (type: system, subtype: init)
-    if (message.type === 'system' && message.subtype === 'init') {
-      const initMessage = message as SDKSystemMessage;
-
-      // sessions テーブル UPDATE + init イベント INSERT を1トランザクションで実行
-      await fastify.withUserContext(userId, async tx => {
-        // sessions テーブルを UPDATE（status を running に、sdkSessionId を設定）
-        await tx
-          .update(sessions)
-          .set({
-            status: 'running',
-            sdkSessionId: initMessage.session_id || null,
-          })
-          .where(eq(sessions.id, sessionId.toUUID()));
-
-        // init イベントを session_events テーブルに INSERT
-        await insertSessionEventInTx(tx, {
-          uuid: initMessage.uuid,
-          sessionId: sessionId.toUUID(),
-          type: initMessage.type,
-          subtype: initMessage.subtype,
-          message: initMessage,
-        });
-      });
-
-      return {
-        sdkSessionId: initMessage.session_id,
-        iterator,
-      };
-    }
-  }
-}
-
-/**
- * init 以降のイベントをバックグラウンドで処理する
- */
-async function processRemainingEvents(
-  iterator: AsyncIterator<SDKMessage, void>,
-  fastify: FastifyInstance,
-  userId: string,
-  sessionId: SessionId
+  sessionId: SessionId,
+  initialUserEvent?: SessionCreateEventData
 ): Promise<void> {
   try {
-    while (true) {
-      const { value: message, done } = await iterator.next();
+    for await (const message of response) {
+      // WebSocket 送信 & pg-boss 経由で DB 保存
+      await saveAndBroadcastEvent(fastify, userId, sessionId, message);
 
-      if (done || !message) {
-        break;
+      // init イベント時に status='running' に更新、sdkSessionId を設定、初回 user message を broadcast
+      if (message.type === 'system' && message.subtype === 'init') {
+        const initMessage = message as SDKSystemMessage;
+
+        // status='running' に更新 & sdkSessionId を設定
+        await fastify.withUserContext(userId, async tx => {
+          await tx
+            .update(sessions)
+            .set({
+              status: 'running',
+              sdkSessionId: initMessage.session_id || null,
+            })
+            .where(eq(sessions.id, sessionId.toUUID()));
+        });
+
+        // 初回 user message を SDKUserMessageReplay として broadcast & DB 保存
+        if (initialUserEvent) {
+          const userMessageReplay: SDKUserMessageReplay = {
+            type: 'user',
+            message: {
+              role: 'user',
+              content: initialUserEvent.message.content,
+            },
+            parent_tool_use_id: initialUserEvent.parent_tool_use_id,
+            uuid: initialUserEvent.uuid as UUID,
+            session_id: sessionId.toString(),
+            isReplay: true,
+          };
+          await saveAndBroadcastEvent(fastify, userId, sessionId, userMessageReplay);
+        }
       }
 
-      // WebSocket 送信 & DB 保存（並列）
-      saveAndBroadcastEvent(fastify, userId, sessionId, message);
-
-      // result イベント時にセッション状態を idle に更新
+      // result イベント時に sessions.status を 'idle' に更新
       if (message.type === 'result') {
         await fastify.withUserContext(userId, async tx => {
           await tx
@@ -211,10 +172,7 @@ async function processRemainingEvents(
       }
     }
   } catch (error) {
-    fastify.log.error(
-      { sessionId: sessionId.toString(), error },
-      'Error processing remaining events'
-    );
+    fastify.log.error({ sessionId: sessionId.toString(), error }, 'Error processing events');
 
     // セッション状態を error に更新
     try {
@@ -243,11 +201,12 @@ async function processRemainingEvents(
  *
  * 処理フロー:
  * 1. TypeID で session_id 生成
- * 2. sessions INSERT (status='init') + user message INSERT
+ * 2. sessions INSERT (status='init')
  * 3. claude-agent-sdk で query() 実行
- * 4. init イベント受信時に sessions UPDATE (status='running') + init イベント INSERT
- * 5. 即座にレスポンスを返し、残りのイベントはバックグラウンドで処理
- * 6. query() 失敗時は sessions status を 'error' に更新
+ * 4. 即座にレスポンスを返し、すべてのイベントはバックグラウンドで処理
+ *    - init イベント時に status='running' に更新、sdkSessionId を設定、初回 user message を broadcast
+ *    - result イベント時に sessions.status を 'idle' に更新
+ * 5. query() 失敗時は sessions.status を 'error' に更新
  *
  * @param fastify - Fastify インスタンス
  * @param userId - ユーザーID
@@ -318,8 +277,8 @@ export async function createSession(
   // 5. タイムスタンプを設定（レスポンス用）
   const now = new Date();
 
-  // 6. sessions と user message を先に INSERT (status='init')
-  const userMessage = convertToSDKUserMessage(userEvent.data, sessionId);
+  // 6. sessions を INSERT (status='init')
+  // user message は init イベント受信時に saveAndBroadcastEvent で処理
   await fastify.withUserContext(userId, async tx => {
     await tx.insert(sessions).values({
       id: sessionId.toUUID(),
@@ -328,14 +287,6 @@ export async function createSession(
       status: 'init',
       sdkSessionId: null,
       context: sessionContext,
-    });
-
-    await insertSessionEventInTx(tx, {
-      uuid: userEvent.data.uuid,
-      sessionId: sessionId.toUUID(),
-      type: 'user',
-      subtype: null,
-      message: userMessage,
     });
   });
 
@@ -449,11 +400,9 @@ export async function createSession(
     // AbortController を登録（abort 用）
     sessionAbortControllers.set(sessionId.toString(), abortController);
 
-    // 8. init イベントまで待機（status を 'running' に UPDATE）
-    const { iterator } = await waitForInit(response, fastify, userId, sessionId);
-
-    // 9. バックグラウンド処理開始（await しない）
-    processRemainingEvents(iterator, fastify, userId, sessionId).catch(error => {
+    // 8. バックグラウンド処理開始（await しない）
+    // 初回 user message は init イベント受信時に broadcast される
+    processAllEvents(response, fastify, userId, sessionId, userEvent?.data).catch(error => {
       fastify.log.error(
         { sessionId: sessionId.toString(), error },
         'Background event processing failed'
@@ -468,10 +417,10 @@ export async function createSession(
     throw error;
   }
 
-  // 10. 即座にレスポンス返却（TypeID 形式）
+  // 9. 即座にレスポンス返却（TypeID 形式）
   return {
     id: sessionId.toString(),
-    session_status: 'running',
+    session_status: 'init',
     title: title ?? null,
     created_at: now.toISOString(),
     updated_at: now.toISOString(),
@@ -800,9 +749,8 @@ export async function sendMessageToSession(
     // AbortController を登録（abort 用）
     sessionAbortControllers.set(sessionId.toString(), abortController);
 
-    // イベント処理（resume の場合は init イベントがないので直接処理）
-    const iterator = response[Symbol.asyncIterator]();
-    processRemainingEvents(iterator, fastify, userId, sessionId).catch(error => {
+    // イベント処理（resume の場合も init イベントがあるので同じ処理）
+    processAllEvents(response, fastify, userId, sessionId).catch(error => {
       fastify.log.error(
         { sessionId: sessionId.toString(), error },
         'Background event processing failed'
@@ -927,10 +875,11 @@ export async function executeAbort(
 
   if (!abortController) return;
 
-  // 1. abort を呼び出し（AbortController の削除は processRemainingEvents の finally で行う）
+  // 1. abort を呼び出し（AbortController の削除は processAllEvents の finally で行う）
   abortController.abort();
 
-  // 2. user メッセージを送信（画面表示用）- DB 保存完了を待機して順序を保証
+  // 2. user メッセージを送信（画面表示用）
+  // pg-boss の singletonKey でセッション単位の順序が保証される
   const userMessage = {
     type: 'user',
     uuid: crypto.randomUUID(),
@@ -943,7 +892,8 @@ export async function executeAbort(
   } as SDKUserMessage;
   await saveAndBroadcastEvent(fastify, userId, sessionId, userMessage);
 
-  // 3. result イベントを送信（user メッセージの後に送信されることが保証される）
+  // 3. result イベントを送信
+  // pg-boss の singletonKey でセッション単位の順序が保証される
   const resultMessage = {
     type: 'result',
     subtype: 'error_during_execution',

@@ -318,12 +318,12 @@ const sessionRoute: FastifyPluginAsync = async fastify => {
 
       request.log.info({ sessionId: session_id, userId: user.id }, 'WebSocket connected');
 
-      // クライアントからのメッセージ処理（ping/pong, user message, control_request）
+      // クライアントからのメッセージ処理（keep_alive, user message, control_request）
       socket.on('message', async (data: Buffer) => {
         try {
           const msg = JSON.parse(data.toString());
-          if (msg.type === 'ping') {
-            socket.send(JSON.stringify({ type: 'pong' }));
+          if (msg.type === 'keep_alive') {
+            // keep_alive メッセージは接続維持のため受信のみ（レスポンス不要）
           } else if (msg.type === 'user') {
             // SDKUserMessage を受信 → セッションにメッセージ送信
             try {
