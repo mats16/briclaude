@@ -12,15 +12,15 @@
 
 ## First Steps
 
-1. `mcp__apps__get` で状態確認
-2. `mcp__apps__logs` でログ確認
-3. `mcp__apps__list_-_deployments` でデプロイ履歴
+1. Check status with `mcp__apps__get`
+2. Check logs with `mcp__apps__logs`
+3. Check deployment history with `mcp__apps__list_-_deployments`
 
 ## Deployment Issues
 
 ### Deployment Failed
 
-`mcp__apps__logs` で `deployment_id` を指定してログ確認。
+Check logs with `mcp__apps__logs` specifying `deployment_id`.
 
 | Cause | Solution |
 |-------|----------|
@@ -33,17 +33,17 @@
 
 ### Permission Errors
 
-`mcp__apps__get` で `user_api_scopes` と `resources` を確認。
+Check `user_api_scopes` and `resources` with `mcp__apps__get`.
 
 ### Table Access Denied
 
-**4 scopes 全て必要:**
+**All 4 scopes are required:**
 - `sql`
 - `catalog.schemas:read`
 - `catalog.tables:read`
 - `unity-catalog`
 
-`mcp__apps__update` で設定後、`mcp__apps__stop` → `mcp__apps__start` で再起動。
+After configuring with `mcp__apps__update`, restart with `mcp__apps__stop` → `mcp__apps__start`.
 
 ### Other Access Denied
 
@@ -59,81 +59,81 @@
 
 | Problem | Solution |
 |---------|----------|
-| `user_api_scopes` 未設定 | `mcp__apps__update` で追加 |
-| catalog scopes 不足 | `catalog.schemas:read`, `catalog.tables:read` を追加 |
-| app.yaml に設定 | 非対応。`mcp__apps__update` を使用 |
-| User に権限なし | ユーザーに直接 GRANT |
-| 環境変数が取得できない | `resources` を設定 |
+| `user_api_scopes` not configured | Add with `mcp__apps__update` |
+| Missing catalog scopes | Add `catalog.schemas:read`, `catalog.tables:read` |
+| Configured in app.yaml | Not supported. Use `mcp__apps__update` |
+| User lacks permissions | GRANT directly to user |
+| Cannot get environment variables | Configure `resources` |
 
 ## OBO Token Issues
 
-### DATABRICKS_API_TOKEN が null
+### DATABRICKS_API_TOKEN is null
 
-**原因**: `user_api_scopes` が未設定
+**Cause**: `user_api_scopes` not configured
 
-**解決**: `mcp__apps__update` で scopes を設定し、再起動。
+**Solution**: Configure scopes with `mcp__apps__update` and restart.
 
-### Token 有効期限切れ
+### Token Expired
 
-- Apps runtime が自動更新する
-- コネクションを長時間保持しない
-- エラー時はリトライ実装
+- Apps runtime auto-refreshes tokens
+- Don't hold connections for long periods
+- Implement retry on errors
 
-### ユーザー未ログイン
+### User Not Logged In
 
-OBO はユーザーセッションが必要。ユーザーが Apps URL にアクセスしているか確認。
+OBO requires a user session. Verify user is accessing the Apps URL.
 
 ## SQL Execution Issues
 
-### mcp__databricks__run_sql でエラー
+### Error with mcp__databricks__run_sql
 
 | Error | Cause | Solution |
 |-------|-------|----------|
-| `PERMISSION_DENIED` | User にテーブル権限なし | User に直接 GRANT |
-| `TABLE_OR_VIEW_NOT_FOUND` | テーブル名誤り | 完全修飾名を使用 |
-| `RESOURCE_DOES_NOT_EXIST` | Warehouse なし | Warehouse ID 確認 |
-| `INVALID_SESSION` | Session 無効 | Apps 再起動 |
+| `PERMISSION_DENIED` | User lacks table permissions | GRANT directly to user |
+| `TABLE_OR_VIEW_NOT_FOUND` | Incorrect table name | Use fully qualified name |
+| `RESOURCE_DOES_NOT_EXIST` | Warehouse not found | Verify Warehouse ID |
+| `INVALID_SESSION` | Session invalid | Restart Apps |
 
-### 権限確認
+### Check Permissions
 
-`mcp__databricks__run_sql` で `SHOW GRANTS ON TABLE catalog.schema.table` を実行。
+Execute `SHOW GRANTS ON TABLE catalog.schema.table` with `mcp__databricks__run_sql`.
 
-### Warehouse 未起動
+### Warehouse Not Started
 
-クエリ実行時に自動起動されるが、初回は時間がかかる場合がある。
+Warehouse auto-starts on query execution, but first query may take time.
 
 ## Runtime Issues
 
 ### App Not Accessible
 
-`mcp__apps__get` で確認:
+Check with `mcp__apps__get`:
 - `compute_status.state` = `ACTIVE`
 - `active_deployment.status.state` = `SUCCEEDED`
 
-`ACTIVE` でなければ `mcp__apps__start`。
+If not `ACTIVE`, run `mcp__apps__start`.
 
 ### App Crashes
 
-`mcp__apps__logs` でログ確認。
+Check logs with `mcp__apps__logs`.
 
 **Common causes:**
-- `APP_PORT` 環境変数にバインドしていない
-- 環境変数不足
-- Import エラー
+- Not binding to `APP_PORT` environment variable
+- Missing environment variables
+- Import errors
 
-### 環境変数が取得できない
+### Cannot Get Environment Variables
 
-**Resource ID 系** (`DATABRICKS_RESOURCE_SQL_WAREHOUSE_ID` など):
-`mcp__apps__update` で `resources` を設定。
+**Resource ID variables** (`DATABRICKS_RESOURCE_SQL_WAREHOUSE_ID`, etc.):
+Configure `resources` with `mcp__apps__update`.
 
-**自動注入される変数**:
+**Auto-injected variables**:
 - `DATABRICKS_HOST`
-- `DATABRICKS_API_TOKEN` (OBO 有効時)
+- `DATABRICKS_API_TOKEN` (when OBO enabled)
 - `APP_PORT`
 
-### Secrets が取得できない
+### Cannot Get Secrets
 
-**app.yaml で設定:**
+**Configure in app.yaml:**
 ```yaml
 env:
   - name: API_KEY
@@ -143,8 +143,8 @@ env:
         scope: my-scope
 ```
 
-**または OBO で取得:**
-`user_api_scopes` に `secrets` を追加。
+**Or retrieve via OBO:**
+Add `secrets` to `user_api_scopes`.
 
 ## app.yaml Reference
 
