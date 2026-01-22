@@ -187,7 +187,7 @@ async function processAllEvents(
     sessionAbortControllers.delete(sessionId.toString());
 
     // エラーでない場合は status を idle に更新
-    // （正常終了 or result イベント受信で確実に idle にする）
+    // （result イベントの有無に関わらず、正常終了時に確実に idle にする）
     if (!hasError) {
       try {
         await fastify.withUserContext(userId, async tx => {
