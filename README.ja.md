@@ -188,4 +188,4 @@ npm run clean
 
 ## ライセンス
 
-MIT
+Apache-2.0
