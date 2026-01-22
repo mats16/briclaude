@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and, inArray } from 'drizzle-orm';
 import {
   query,
   type McpServerConfig,
@@ -123,6 +123,8 @@ async function processAllEvents(
   sessionId: SessionId,
   initialUserEvent?: SessionCreateEventData
 ): Promise<void> {
+  let hasError = false;
+
   try {
     for await (const message of response) {
       // WebSocket 送信 & pg-boss 経由で DB 保存
@@ -159,18 +161,9 @@ async function processAllEvents(
           await saveAndBroadcastEvent(fastify, userId, sessionId, userMessageReplay);
         }
       }
-
-      // result イベント時に sessions.status を 'idle' に更新
-      if (message.type === 'result') {
-        await fastify.withUserContext(userId, async tx => {
-          await tx
-            .update(sessions)
-            .set({ status: 'idle' })
-            .where(eq(sessions.id, sessionId.toUUID()));
-        });
-      }
     }
   } catch (error) {
+    hasError = true;
     fastify.log.error({ sessionId: sessionId.toString(), error }, 'Error processing events');
 
     // セッション状態を error に更新
@@ -190,8 +183,34 @@ async function processAllEvents(
 
     throw error;
   } finally {
-    // AbortController を削除（result イベント受信時 or エラー時）
+    // AbortController を削除
     sessionAbortControllers.delete(sessionId.toString());
+
+    // エラーでない場合は status を idle に更新
+    // （result イベントの有無に関わらず、正常終了時に確実に idle にする）
+    // 条件付き更新: status が init/running の場合のみ更新（競合状態を防ぐ）
+    // - 新しいリクエストで既に running になっている場合は上書きしない
+    // - error 状態は hasError フラグで保護済み
+    if (!hasError) {
+      try {
+        await fastify.withUserContext(userId, async tx => {
+          await tx
+            .update(sessions)
+            .set({ status: 'idle' })
+            .where(
+              and(
+                eq(sessions.id, sessionId.toUUID()),
+                inArray(sessions.status, ['init', 'running'])
+              )
+            );
+        });
+      } catch (updateError) {
+        fastify.log.error(
+          { sessionId: sessionId.toString(), updateError },
+          'Failed to update session status to idle in finally'
+        );
+      }
+    }
   }
 }
 

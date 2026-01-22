@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { SDKMessage, UserMessageContentBlock } from '@repo/types';
+import type { SDKMessage, UserMessageContentBlock, SessionStatus } from '@repo/types';
 import { sessionService } from '@/services/session.service';
 import { useSessionWebSocket } from './useSessionWebSocket';
 
 interface UseSessionEventsOptions {
   sessionId: string | null;
+  /** GET /api/sessions/:sessionId から取得した初期 sessionStatus */
+  initialSessionStatus?: SessionStatus | null;
 }
 
 interface UseSessionEventsReturn {
@@ -12,16 +14,29 @@ interface UseSessionEventsReturn {
   isLoading: boolean;
   isConnected: boolean;
   error: Error | null;
+  /** WebSocket からの result 受信で更新される session status */
+  sessionStatus: SessionStatus | null;
   sendMessage: (content: UserMessageContentBlock[]) => void;
   abort: () => Promise<boolean>;
 }
 
-export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSessionEventsReturn {
+export function useSessionEvents({
+  sessionId,
+  initialSessionStatus,
+}: UseSessionEventsOptions): UseSessionEventsReturn {
   const [events, setEvents] = useState<SDKMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [shouldAutoConnect, setShouldAutoConnect] = useState(false);
+  const [sessionStatus, setSessionStatus] = useState<SessionStatus | null>(null);
   const seenUuidsRef = useRef<Set<string>>(new Set());
+
+  // initialSessionStatus が変わったら sessionStatus を更新
+  useEffect(() => {
+    if (initialSessionStatus !== undefined) {
+      setSessionStatus(initialSessionStatus);
+    }
+  }, [initialSessionStatus]);
 
   // 過去イベントの取得
   const loadPastEvents = useCallback(async (targetSessionId: string) => {
@@ -39,17 +54,17 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
         response.data.filter(e => 'uuid' in e && e.uuid).map(e => e.uuid as string)
       );
 
-      // 最後のイベントが result でない場合のみ自動接続
-      const lastEvent = response.data[response.data.length - 1];
-      const isSessionComplete =
-        lastEvent && 'type' in lastEvent && (lastEvent as { type: string }).type === 'result';
-      setShouldAutoConnect(!isSessionComplete);
+      // session_status が init/running の場合のみ自動接続
+      // （initialSessionStatus を使って判定）
+      const needsWebSocket =
+        initialSessionStatus === 'init' || initialSessionStatus === 'running';
+      setShouldAutoConnect(needsWebSocket);
     } catch (e) {
       setError(e instanceof Error ? e : new Error('Failed to load events'));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [initialSessionStatus]);
 
   // WebSocket イベントハンドラ
   const handleEvent = useCallback((event: SDKMessage) => {
@@ -61,6 +76,15 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
     }
 
     setEvents(prev => [...prev, event]);
+
+    // result イベント受信時に sessionStatus を idle に更新
+    if (event.type === 'result') {
+      setSessionStatus('idle');
+    }
+    // init イベント受信時に sessionStatus を running に更新
+    if (event.type === 'system' && 'subtype' in event && event.subtype === 'init') {
+      setSessionStatus('running');
+    }
   }, []);
 
   // WebSocket 接続成功時のハンドラ
@@ -90,6 +114,7 @@ export function useSessionEvents({ sessionId }: UseSessionEventsOptions): UseSes
     isLoading,
     isConnected,
     error,
+    sessionStatus,
     sendMessage,
     abort,
   };
