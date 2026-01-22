@@ -1,6 +1,6 @@
 # Databricks Apps CLI Reference
 
-> **Note:** CLI は `mcp__apps__*` で対応できない場合のフォールバック。
+> **Note:** Use CLI as fallback only when `mcp__apps__*` tools cannot handle the operation.
 
 ## MCP vs CLI
 
@@ -127,9 +127,9 @@ databricks apps set-permissions APP_NAME --json '{
 
 ## Service Principal Resource Configuration
 
-User-on-behalf-of が使えない場合（バックグラウンドジョブなど）のみ使用。
+Use only when user-on-behalf-of is unavailable (e.g., background jobs).
 
-### 1. Resources をバインド
+### 1. Bind Resources
 
 ```bash
 databricks apps update $SESSION_APP_NAME --json '{
@@ -139,13 +139,13 @@ databricks apps update $SESSION_APP_NAME --json '{
 }'
 ```
 
-### 2. Service Principal Name を取得
+### 2. Get Service Principal Name
 
 ```bash
 databricks apps get $SESSION_APP_NAME | jq -r '.service_principal_name'
 ```
 
-### 3. 権限を付与
+### 3. Grant Permissions
 
 **SQL Warehouse:**
 ```bash

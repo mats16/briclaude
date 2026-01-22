@@ -9,26 +9,26 @@ metadata:
 
 ## Tools
 
-**Primary**: `mcp__apps__*` で操作（get, update, start, stop, logs, deploy, list）
-**SQL 実行**: `mcp__databricks__run_sql` でユーザー権限で SQL 実行
-**Fallback**: CLI (`databricks apps ...`) は MCP で対応できない場合のみ
+**Primary**: Use `mcp__apps__*` tools (get, update, start, stop, logs, deploy, list)
+**SQL Execution**: `mcp__databricks__run_sql` executes SQL with user permissions
+**Fallback**: CLI (`databricks apps ...`) only when MCP tools cannot handle the operation
 
 ## Environment
 
 - App name: `$SESSION_APP_NAME`
-- Auto deploy: `APP_AUTO_DEPLOY=true` でセッション終了時に自動デプロイ
+- Auto deploy: `APP_AUTO_DEPLOY=true` triggers automatic deployment on session end
 
 ## Core Workflow
 
-1. **状態確認**: `mcp__apps__get` → `compute_status.state`, `user_api_scopes`, `resources` を確認
-2. **ログ確認**: `mcp__apps__logs` → エラー時はまずログを確認
-3. **設定変更後**: `mcp__apps__stop` → `mcp__apps__start` で再起動
+1. **Check Status**: `mcp__apps__get` → Check `compute_status.state`, `user_api_scopes`, `resources`
+2. **Check Logs**: `mcp__apps__logs` → Always check logs first on errors
+3. **After Config Change**: `mcp__apps__stop` → `mcp__apps__start` to restart
 
 ## Authorization (OBO)
 
-**app.yaml では設定不可。** `mcp__apps__update` で `user_api_scopes` を設定。
+**Cannot be configured in app.yaml.** Use `mcp__apps__update` to set `user_api_scopes`.
 
-### Unity Catalog テーブルアクセスに必要な 4 scopes
+### 4 Scopes Required for Unity Catalog Table Access
 
 | scope | Purpose |
 |-------|---------|
@@ -51,9 +51,9 @@ metadata:
 
 **Avoid granting all scopes at once.** Start with minimal scopes and add more only when errors indicate they are needed.
 
-### Resource 環境変数
+### Resource Environment Variables
 
-`DATABRICKS_RESOURCE_SQL_WAREHOUSE_ID` などが必要な場合、`resources` も設定:
+When you need `DATABRICKS_RESOURCE_SQL_WAREHOUSE_ID` etc., also configure `resources`:
 
 ```json
 {
@@ -62,13 +62,13 @@ metadata:
 }
 ```
 
-## OBO Token による SQL 実行
+## SQL Execution with OBO Token
 
-### セッションからの SQL 実行
+### SQL Execution from Session
 
-`mcp__databricks__run_sql` を使用。ユーザーの OBO token で実行される。
+Use `mcp__databricks__run_sql`. Executed with user's OBO token.
 
-### Apps 内コードでの SQL 実行
+### SQL Execution in Apps Code
 
 ```python
 from databricks import sql
@@ -81,25 +81,25 @@ connection = sql.connect(
 )
 ```
 
-**自動注入される環境変数**:
+**Auto-injected Environment Variables**:
 - `DATABRICKS_HOST`: Workspace URL
-- `DATABRICKS_API_TOKEN`: OBO token（`user_api_scopes` 設定時のみ）
-- `APP_PORT`: アプリがバインドすべきポート
+- `DATABRICKS_API_TOKEN`: OBO token (only when `user_api_scopes` is configured)
+- `APP_PORT`: Port the app should bind to
 
 ## Troubleshooting Quick Reference
 
 | Issue | Action |
 |-------|--------|
-| Deployment failed | `mcp__apps__logs` で deployment_id 指定してログ確認 |
-| Permission error | `mcp__apps__get` で `user_api_scopes` 確認 |
-| Table access denied | 4 scopes 全て設定されているか確認 |
-| App not accessible | `compute_status.state` が ACTIVE か確認 |
-| OBO token が null | `user_api_scopes` が空でないか確認 |
-| SQL 権限エラー | ユーザー自身がテーブル権限を持っているか確認 |
+| Deployment failed | Check logs with `mcp__apps__logs` specifying deployment_id |
+| Permission error | Check `user_api_scopes` with `mcp__apps__get` |
+| Table access denied | Verify all 4 scopes are configured |
+| App not accessible | Check if `compute_status.state` is ACTIVE |
+| OBO token is null | Check if `user_api_scopes` is not empty |
+| SQL permission error | Verify user has table permissions |
 
-詳細: [troubleshooting.md](references/troubleshooting.md)
+Details: [troubleshooting.md](references/troubleshooting.md)
 
 ## Service Principal
 
-バックグラウンドジョブなど、ユーザーコンテキストがない場合のみ使用。
-詳細: [cli-reference.md](references/cli-reference.md#service-principal-resource-configuration)
+Use only when user context is unavailable (e.g., background jobs).
+Details: [cli-reference.md](references/cli-reference.md#service-principal-resource-configuration)
