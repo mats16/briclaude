@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and, inArray } from 'drizzle-orm';
 import {
   query,
   type McpServerConfig,
@@ -188,13 +188,21 @@ async function processAllEvents(
 
     // エラーでない場合は status を idle に更新
     // （result イベントの有無に関わらず、正常終了時に確実に idle にする）
+    // 条件付き更新: status が init/running の場合のみ更新（競合状態を防ぐ）
+    // - 新しいリクエストで既に running になっている場合は上書きしない
+    // - error 状態は hasError フラグで保護済み
     if (!hasError) {
       try {
         await fastify.withUserContext(userId, async tx => {
           await tx
             .update(sessions)
             .set({ status: 'idle' })
-            .where(eq(sessions.id, sessionId.toUUID()));
+            .where(
+              and(
+                eq(sessions.id, sessionId.toUUID()),
+                inArray(sessions.status, ['init', 'running'])
+              )
+            );
         });
       } catch (updateError) {
         fastify.log.error(
