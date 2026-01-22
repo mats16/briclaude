@@ -20,7 +20,6 @@ import type {
   SessionStatus,
   SessionCreateEventData,
   SessionUpdateRequest,
-  CodedError,
   DatabricksWorkspaceSource,
   DatabricksAppsOutcome,
 } from '@repo/types';
@@ -291,21 +290,7 @@ export async function createSession(
   });
 
   // 7. アクセストークンを取得（PAT → SP フォールバック）
-  let accessToken: string;
-  try {
-    const authProvider = await ctx.getAuthProvider();
-    accessToken = await authProvider.getToken();
-  } catch (tokenError) {
-    fastify.log.error(
-      { sessionId: sessionId.toString(), userId, error: tokenError },
-      'Failed to retrieve access token'
-    );
-    const error = new Error(
-      'アクセストークンの取得中にエラーが発生しました。しばらく待ってから再試行してください。'
-    ) as CodedError;
-    error.code = 'TOKEN_RETRIEVAL_ERROR';
-    throw error;
-  }
+  const authProvider = await getAuthProvider(fastify, ctx.userId, 'auto');
 
   // 8. claude-agent-sdk で query 実行
   try {
@@ -347,9 +332,11 @@ export async function createSession(
       };
     }
 
-    // apps: Databricks Apps MCP サーバーを追加（PAT → SP フォールバック）
-    const authProvider = await getAuthProvider(fastify, ctx.userId);
-    mcpServers.apps = createDbAppsMcpServer(authProvider, sessionId, ctx.userName);
+    // apps: Databricks Apps MCP サーバーを追加
+    mcpServers.apps = createDbAppsMcpServer({
+      authProvider,
+      sessionId,
+    });
 
     const response = query({
       prompt,
@@ -378,14 +365,13 @@ export async function createSession(
           DATABRICKS_WORKSPACE_PATH: workspaceSources[0]?.path,
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
-          ANTHROPIC_AUTH_TOKEN: accessToken,
+          ANTHROPIC_AUTH_TOKEN: await authProvider.getToken(),
           ANTHROPIC_CUSTOM_HEADERS: 'x-databricks-disable-beta-headers: true',
           ANTHROPIC_DEFAULT_OPUS_MODEL: fastify.config.ANTHROPIC_DEFAULT_OPUS_MODEL,
           ANTHROPIC_DEFAULT_SONNET_MODEL: fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL,
           ANTHROPIC_DEFAULT_HAIKU_MODEL: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
           // Databricks
-          DATABRICKS_HOST: `https://${fastify.config.DATABRICKS_HOST}`,
-          DATABRICKS_TOKEN: accessToken,
+          ...authProvider.getEnvVars(),
         },
         sandbox: {
           enabled: true,
@@ -641,21 +627,8 @@ export async function sendMessageToSession(
   wsManager.broadcast(sessionId.toString(), userMessage);
 
   // 5. アクセストークンを取得（PAT → SP フォールバック）
-  let accessToken: string;
-  try {
-    const authProvider = await ctx.getAuthProvider();
-    accessToken = await authProvider.getToken();
-  } catch (tokenError) {
-    fastify.log.error(
-      { sessionId: sessionId.toString(), userId, error: tokenError },
-      'Failed to retrieve access token'
-    );
-    const error = new Error(
-      'アクセストークンの取得中にエラーが発生しました。しばらく待ってから再試行してください。'
-    ) as CodedError;
-    error.code = 'TOKEN_RETRIEVAL_ERROR';
-    throw error;
-  }
+  const authProvider = await getAuthProvider(fastify, ctx.userId, 'auto');
+
   const { userHome } = ctx;
 
   // 6. claude-agent-sdk で query 実行（resume オプション使用）
@@ -694,9 +667,11 @@ export async function sendMessageToSession(
       };
     }
 
-    // apps: Databricks Apps MCP サーバーを追加（PAT → SP フォールバック）
-    const authProvider = await getAuthProvider(fastify, ctx.userId);
-    mcpServers.apps = createDbAppsMcpServer(authProvider, sessionId, ctx.userName);
+    // apps: Databricks Apps MCP サーバーを追加
+    mcpServers.apps = createDbAppsMcpServer({
+      authProvider,
+      sessionId,
+    });
 
     const response = query({
       prompt,
@@ -727,14 +702,13 @@ export async function sendMessageToSession(
           DATABRICKS_WORKSPACE_PATH: workspacePath,
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
-          ANTHROPIC_AUTH_TOKEN: accessToken,
+          ANTHROPIC_AUTH_TOKEN: await authProvider.getToken(),
           ANTHROPIC_CUSTOM_HEADERS: 'x-databricks-disable-beta-headers: true',
           ANTHROPIC_DEFAULT_OPUS_MODEL: fastify.config.ANTHROPIC_DEFAULT_OPUS_MODEL,
           ANTHROPIC_DEFAULT_SONNET_MODEL: fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL,
           ANTHROPIC_DEFAULT_HAIKU_MODEL: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
           // Databricks
-          DATABRICKS_HOST: `https://${fastify.config.DATABRICKS_HOST}`,
-          DATABRICKS_TOKEN: accessToken,
+          ...authProvider.getEnvVars(),
         },
         sandbox: {
           enabled: true,
@@ -785,7 +759,7 @@ export async function archiveSession(
   // user_home を取得（ベースディレクトリとして使用）
   const { userHome } = ctx;
 
-  // AuthProvider をトランザクション外で取得
+  // AuthProvider をトランザクション外で取得（PAT 優先）
   const authProvider = await getAuthProvider(fastify, ctx.userId);
 
   return fastify.withUserContext(userId, async tx => {

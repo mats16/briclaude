@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import path from 'node:path';
-import { getAuthProvider, type AuthProvider } from './databricks-auth.js';
+import { getAuthProvider, type AuthProvider, type PrincipalType } from './databricks-auth.js';
 
 /**
  * ユーザーコンテキスト
@@ -35,8 +35,18 @@ export class UserContext {
   /**
    * AuthProvider を取得（遅延評価、リクエストスコープでキャッシュ）
    * PAT が登録されていれば PAT、なければ SP を使用
+   *
+   * @param principalType - 使用するプリンシパルの種類（省略時は 'auto' でキャッシュを使用）
+   *   - 'auto': PAT があれば PAT、なければ SP（キャッシュを使用）
+   *   - 'pat': PAT のみ使用（キャッシュを使用しない）
+   *   - 'sp': Service Principal のみ使用（キャッシュを使用しない）
    */
-  async getAuthProvider(): Promise<AuthProvider> {
+  async getAuthProvider(principalType?: PrincipalType): Promise<AuthProvider> {
+    // principalType が指定された場合は都度取得（キャッシュを使わない）
+    if (principalType !== undefined) {
+      return getAuthProvider(this.fastify, this.userId, principalType);
+    }
+    // デフォルト（auto）の場合はキャッシュを使用
     if (this._authProvider === null) {
       this._authProvider = await getAuthProvider(this.fastify, this.userId);
     }

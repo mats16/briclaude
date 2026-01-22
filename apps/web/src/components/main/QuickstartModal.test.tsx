@@ -93,7 +93,12 @@ beforeEach(async () => {
     ok: true,
     json: () =>
       Promise.resolve([
-        { name: 'hello-world', path: 'hello-world', html_url: 'https://github.com/test', type: 'dir' },
+        {
+          name: 'hello-world',
+          path: 'hello-world',
+          html_url: 'https://github.com/test',
+          type: 'dir',
+        },
         {
           name: 'data-dashboard',
           path: 'data-dashboard',

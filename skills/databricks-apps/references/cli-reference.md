@@ -6,13 +6,17 @@
 
 | Operation | MCP (Primary) | CLI (Fallback) |
 |-----------|---------------|----------------|
-| Get app | `mcp__apps__get` | `databricks apps get` |
-| Update | `mcp__apps__update` | `databricks apps update` |
-| Start/Stop | `mcp__apps__start/stop` | `databricks apps start/stop` |
-| Logs | `mcp__apps__logs` | `databricks apps logs` |
-| Deploy | `mcp__apps__deploy` | `databricks apps deploy` |
-| List | `mcp__apps__list` | `databricks apps list` |
+| Create app | `mcp__apps__create_app` | `databricks apps create` |
+| Get app | `mcp__apps__show_app` | `databricks apps get` |
+| Start/Stop | `mcp__apps__start_app/stop_app` | `databricks apps start/stop` |
+| Deploy | `mcp__apps__deploy_app` | `databricks apps deploy` |
+| List deployments | `mcp__apps__list_deployments` | `databricks apps list-deployments` |
+| Logs | Check in browser | Check in browser |
+| Update | - | `databricks apps update` |
+| List | - | `databricks apps list` |
 | Permissions | - | `databricks apps get-permissions` |
+
+> **Note:** App logs are not available via MCP tools. Users must check logs in the Databricks workspace browser UI.
 
 ## Resource Types
 
@@ -109,10 +113,8 @@ databricks apps get-deployment APP_NAME DEPLOYMENT_ID
 
 ### Logs
 
-```bash
-databricks apps logs APP_NAME
-databricks apps logs APP_NAME --deployment-id DEPLOYMENT_ID
-```
+> **Note:** App logs are not available via API (PAT not supported). Direct users to check logs in the browser:
+> **Compute** > **Apps** > Select app > **Logs** tab
 
 ### Permissions
 

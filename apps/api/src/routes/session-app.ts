@@ -66,7 +66,7 @@ const sessionAppRoute: FastifyPluginAsync = async fastify => {
       });
     }
 
-    // 4. AuthProvider を取得してクライアントを作成（PAT → SP フォールバック）
+    // 4. AuthProvider を取得してクライアントを作成（PAT 優先）
     const authProvider = await getAuthProvider(fastify, user.id);
     const appsClient = new DatabricksAppsClient(authProvider);
 

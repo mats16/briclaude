@@ -1,6 +1,6 @@
 ---
 name: databricks-apps
-description: Databricks Apps deployment, debugging, and configuration management. Use when working with Databricks Apps issues including deployment failures, app configuration (app.yaml), checking logs, granting permissions to SQL warehouses or Unity Catalog resources, troubleshooting app errors, or managing app state (start/stop). Triggered by mentions of SESSION_APP_NAME, app.yaml, deployment errors, or permission issues with Apps.
+description: Databricks Apps deployment, debugging, and configuration management. Use when working with Databricks Apps issues including deployment failures, app configuration (app.yaml), granting permissions to SQL warehouses or Unity Catalog resources, troubleshooting app errors, or managing app state (start/stop). Triggered by mentions of SESSION_APP_NAME, app.yaml, deployment errors, or permission issues with Apps.
 metadata:
   version: 1.0.0
 ---
@@ -9,9 +9,16 @@ metadata:
 
 ## Tools
 
-**Primary**: Use `mcp__apps__*` tools (get, update, start, stop, logs, deploy, list)
+**Primary**: Use `mcp__apps__*` tools (create, deploy, show, list_deployments, start, stop)
 **SQL Execution**: `mcp__databricks__run_sql` executes SQL with user permissions
 **Fallback**: CLI (`databricks apps ...`) only when MCP tools cannot handle the operation
+
+## Logs
+
+**App logs are not available via API.** Users must check logs in the browser:
+1. Open Databricks workspace
+2. Navigate to **Compute** > **Apps**
+3. Select the app and view **Logs** tab
 
 ## Environment
 
@@ -20,9 +27,9 @@ metadata:
 
 ## Core Workflow
 
-1. **Check Status**: `mcp__apps__get` → Check `compute_status.state`, `user_api_scopes`, `resources`
-2. **Check Logs**: `mcp__apps__logs` → Always check logs first on errors
-3. **After Config Change**: `mcp__apps__stop` → `mcp__apps__start` to restart
+1. **Check Status**: `mcp__apps__show_app` → Check `compute_status.state`, `user_api_scopes`, `resources`
+2. **Check Logs**: Direct user to check logs in browser (see Logs section above)
+3. **After Config Change**: `mcp__apps__stop_app` → `mcp__apps__start_app` to restart
 
 ## Authorization (OBO)
 
@@ -90,8 +97,8 @@ connection = sql.connect(
 
 | Issue | Action |
 |-------|--------|
-| Deployment failed | Check logs with `mcp__apps__logs` specifying deployment_id |
-| Permission error | Check `user_api_scopes` with `mcp__apps__get` |
+| Deployment failed | Direct user to check logs in browser |
+| Permission error | Check `user_api_scopes` with `mcp__apps__show_app` |
 | Table access denied | Verify all 4 scopes are configured |
 | App not accessible | Check if `compute_status.state` is ACTIVE |
 | OBO token is null | Check if `user_api_scopes` is not empty |
