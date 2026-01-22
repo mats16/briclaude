@@ -123,6 +123,8 @@ async function processAllEvents(
   sessionId: SessionId,
   initialUserEvent?: SessionCreateEventData
 ): Promise<void> {
+  let hasError = false;
+
   try {
     for await (const message of response) {
       // WebSocket 送信 & pg-boss 経由で DB 保存
@@ -159,18 +161,9 @@ async function processAllEvents(
           await saveAndBroadcastEvent(fastify, userId, sessionId, userMessageReplay);
         }
       }
-
-      // result イベント時に sessions.status を 'idle' に更新
-      if (message.type === 'result') {
-        await fastify.withUserContext(userId, async tx => {
-          await tx
-            .update(sessions)
-            .set({ status: 'idle' })
-            .where(eq(sessions.id, sessionId.toUUID()));
-        });
-      }
     }
   } catch (error) {
+    hasError = true;
     fastify.log.error({ sessionId: sessionId.toString(), error }, 'Error processing events');
 
     // セッション状態を error に更新
@@ -190,8 +183,26 @@ async function processAllEvents(
 
     throw error;
   } finally {
-    // AbortController を削除（result イベント受信時 or エラー時）
+    // AbortController を削除
     sessionAbortControllers.delete(sessionId.toString());
+
+    // エラーでない場合は status を idle に更新
+    // （正常終了 or result イベント受信で確実に idle にする）
+    if (!hasError) {
+      try {
+        await fastify.withUserContext(userId, async tx => {
+          await tx
+            .update(sessions)
+            .set({ status: 'idle' })
+            .where(eq(sessions.id, sessionId.toUUID()));
+        });
+      } catch (updateError) {
+        fastify.log.error(
+          { sessionId: sessionId.toString(), updateError },
+          'Failed to update session status to idle in finally'
+        );
+      }
+    }
   }
 }
 

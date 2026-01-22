@@ -47,16 +47,15 @@ export function MainArea({
     sessionId: sessionId ?? null,
   });
 
-  const { events, isLoading, error, sendMessage, abort } = useSessionEvents({
+  const { events, isLoading, error, sessionStatus, sendMessage, abort } = useSessionEvents({
     sessionId: sessionId ?? null,
+    initialSessionStatus: session?.session_status,
   });
 
-  // 最後のイベントが result でない場合、エージェントが応答中
+  // session status が init または running の場合、エージェントが応答中
   const isAgentThinking = useMemo(() => {
-    if (events.length === 0) return false;
-    const lastEvent = events[events.length - 1];
-    return lastEvent.type !== 'result';
-  }, [events]);
+    return sessionStatus === 'init' || sessionStatus === 'running';
+  }, [sessionStatus]);
 
   // session_context.outcomes から databricks_apps を取得
   const databricksAppsOutcome = useMemo(() => {
