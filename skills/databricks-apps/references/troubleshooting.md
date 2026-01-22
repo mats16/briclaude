@@ -12,15 +12,15 @@
 
 ## First Steps
 
-1. Check status with `mcp__apps__get`
-2. Check logs with `mcp__apps__logs`
-3. Check deployment history with `mcp__apps__list_-_deployments`
+1. Check status with `mcp__apps__show_app`
+2. Check logs in browser (**Compute** > **Apps** > Select app > **Logs** tab)
+3. Check deployment history with `mcp__apps__list_deployments`
 
 ## Deployment Issues
 
 ### Deployment Failed
 
-Check logs with `mcp__apps__logs` specifying `deployment_id`.
+Direct user to check logs in browser: **Compute** > **Apps** > Select app > **Logs** tab.
 
 | Cause | Solution |
 |-------|----------|
@@ -33,7 +33,7 @@ Check logs with `mcp__apps__logs` specifying `deployment_id`.
 
 ### Permission Errors
 
-Check `user_api_scopes` and `resources` with `mcp__apps__get`.
+Check `user_api_scopes` and `resources` with `mcp__apps__show_app`.
 
 ### Table Access Denied
 
@@ -43,7 +43,7 @@ Check `user_api_scopes` and `resources` with `mcp__apps__get`.
 - `catalog.tables:read`
 - `unity-catalog`
 
-After configuring with `mcp__apps__update`, restart with `mcp__apps__stop` → `mcp__apps__start`.
+After configuring, restart with `mcp__apps__stop_app` → `mcp__apps__start_app`.
 
 ### Other Access Denied
 
@@ -59,9 +59,9 @@ After configuring with `mcp__apps__update`, restart with `mcp__apps__stop` → `
 
 | Problem | Solution |
 |---------|----------|
-| `user_api_scopes` not configured | Add with `mcp__apps__update` |
+| `user_api_scopes` not configured | Add with `databricks apps update` CLI |
 | Missing catalog scopes | Add `catalog.schemas:read`, `catalog.tables:read` |
-| Configured in app.yaml | Not supported. Use `mcp__apps__update` |
+| Configured in app.yaml | Not supported. Use `databricks apps update` CLI |
 | User lacks permissions | GRANT directly to user |
 | Cannot get environment variables | Configure `resources` |
 
@@ -71,7 +71,7 @@ After configuring with `mcp__apps__update`, restart with `mcp__apps__stop` → `
 
 **Cause**: `user_api_scopes` not configured
 
-**Solution**: Configure scopes with `mcp__apps__update` and restart.
+**Solution**: Configure scopes with `databricks apps update` CLI and restart.
 
 ### Token Expired
 
@@ -106,15 +106,15 @@ Warehouse auto-starts on query execution, but first query may take time.
 
 ### App Not Accessible
 
-Check with `mcp__apps__get`:
+Check with `mcp__apps__show_app`:
 - `compute_status.state` = `ACTIVE`
 - `active_deployment.status.state` = `SUCCEEDED`
 
-If not `ACTIVE`, run `mcp__apps__start`.
+If not `ACTIVE`, run `mcp__apps__start_app`.
 
 ### App Crashes
 
-Check logs with `mcp__apps__logs`.
+Check logs in browser: **Compute** > **Apps** > Select app > **Logs** tab.
 
 **Common causes:**
 - Not binding to `APP_PORT` environment variable
@@ -124,7 +124,7 @@ Check logs with `mcp__apps__logs`.
 ### Cannot Get Environment Variables
 
 **Resource ID variables** (`DATABRICKS_RESOURCE_SQL_WAREHOUSE_ID`, etc.):
-Configure `resources` with `mcp__apps__update`.
+Configure `resources` with `databricks apps update` CLI.
 
 **Auto-injected variables**:
 - `DATABRICKS_HOST`

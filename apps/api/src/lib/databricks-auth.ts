@@ -130,6 +130,14 @@ export async function getUserPAT(
 
 type AuthType = 'pat' | 'oauth-m2m';
 
+/**
+ * 認証に使用するプリンシパルの種類
+ * - 'auto': PAT があれば PAT、なければ SP（デフォルト）
+ * - 'pat': PAT のみ使用（なければエラー）
+ * - 'sp': Service Principal のみ使用
+ */
+export type PrincipalType = 'auto' | 'pat' | 'sp';
+
 interface AuthEnvVars {
   /** Auth type (pat or oauth-m2m) */
   DATABRICKS_AUTH_TYPE: AuthType;
@@ -157,51 +165,82 @@ export type AuthProvider =
     };
 
 /**
- * ユーザーの認証プロバイダーを取得
- *
- * PAT が登録されている場合は PAT を使用し、なければ Service Principal を使用します。
- *
- * @param fastify - Fastify インスタンス
- * @param userId - ユーザー ID
- * @returns AuthProvider
+ * PAT を使用する AuthProvider を作成
  */
-export async function getAuthProvider(
-  fastify: FastifyInstance,
-  userId: string
-): Promise<AuthProvider> {
-  const host = `https://${fastify.config.DATABRICKS_HOST}`;
-  const token = await getUserPAT(fastify, userId);
+function createPatAuthProvider(host: string, token: string): AuthProvider {
+  return {
+    type: 'pat',
+    getEnvVars: () => ({
+      DATABRICKS_AUTH_TYPE: 'pat',
+      DATABRICKS_HOST: host,
+      DATABRICKS_TOKEN: token,
+    }),
+    getToken: async () => token,
+  };
+}
 
-  if (token) {
-    return {
-      type: 'pat',
-      getEnvVars: () => ({
-        DATABRICKS_AUTH_TYPE: 'pat',
-        DATABRICKS_HOST: host,
-        DATABRICKS_TOKEN: token,
-      }),
-      getToken: async () => token,
-    };
-  }
-
+/**
+ * Service Principal を使用する AuthProvider を作成
+ */
+function createSpAuthProvider(host: string, clientId: string, clientSecret: string): AuthProvider {
   return {
     type: 'oauth-m2m',
     getEnvVars: () => ({
       DATABRICKS_AUTH_TYPE: 'oauth-m2m',
       DATABRICKS_HOST: host,
-      DATABRICKS_CLIENT_ID: fastify.config.DATABRICKS_CLIENT_ID,
-      DATABRICKS_CLIENT_SECRET: fastify.config.DATABRICKS_CLIENT_SECRET,
+      DATABRICKS_CLIENT_ID: clientId,
+      DATABRICKS_CLIENT_SECRET: clientSecret,
     }),
     getToken: async () => {
-      const spToken = await getServicePrincipalToken(
-        host,
-        fastify.config.DATABRICKS_CLIENT_ID,
-        fastify.config.DATABRICKS_CLIENT_SECRET
-      );
+      const spToken = await getServicePrincipalToken(host, clientId, clientSecret);
       if (!spToken) {
         throw new Error('Service Principal token is not available');
       }
       return spToken;
     },
   };
+}
+
+/**
+ * ユーザーの認証プロバイダーを取得
+ *
+ * @param fastify - Fastify インスタンス
+ * @param userId - ユーザー ID
+ * @param principalType - 使用するプリンシパルの種類（デフォルト: 'auto'）
+ *   - 'auto': PAT があれば PAT、なければ SP
+ *   - 'pat': PAT のみ使用（なければエラー）
+ *   - 'sp': Service Principal のみ使用
+ * @returns AuthProvider
+ * @throws principalType='pat' で PAT が登録されていない場合
+ */
+export async function getAuthProvider(
+  fastify: FastifyInstance,
+  userId: string,
+  principalType: PrincipalType = 'auto'
+): Promise<AuthProvider> {
+  const host = `https://${fastify.config.DATABRICKS_HOST}`;
+  const { DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET } = fastify.config;
+
+  // SP のみを使用する場合は PAT を確認せずに返す
+  if (principalType === 'sp') {
+    return createSpAuthProvider(host, DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET);
+  }
+
+  // PAT を取得
+  const token = await getUserPAT(fastify, userId);
+
+  // PAT のみを要求する場合
+  if (principalType === 'pat') {
+    if (!token) {
+      throw new Error('PAT is not registered');
+    }
+    return createPatAuthProvider(host, token);
+  }
+
+  // auto: PAT があれば PAT、なければ SP
+  if (token) {
+    return createPatAuthProvider(host, token);
+  }
+
+  return createSpAuthProvider(host, DATABRICKS_CLIENT_ID, DATABRICKS_CLIENT_SECRET);
 }

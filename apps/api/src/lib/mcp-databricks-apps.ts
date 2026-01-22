@@ -19,7 +19,6 @@ import type { AuthProvider } from './databricks-auth.js';
  * | `mcp__dbapps__deploy_app` | アプリをデプロイ（自動的に outcomes の URL を更新） |
  * | `mcp__dbapps__show_app` | アプリ情報を取得 |
  * | `mcp__dbapps__list_deployments` | アプリのデプロイ履歴を取得 |
- * | `mcp__dbapps__list_logs` | アプリのランタイムログを取得 |
  * | `mcp__dbapps__start_app` | アプリを開始 |
  * | `mcp__dbapps__stop_app` | アプリを停止 |
  *
@@ -40,14 +39,13 @@ import type { AuthProvider } from './databricks-auth.js';
  *   prompt,
  *   options: {
  *     mcpServers: {
- *       dbapps: createDbAppsMcpServer(authProvider, sessionId, userName),
+ *       dbapps: createDbAppsMcpServer({ authProvider, sessionId }),
  *     },
  *     allowedTools: [
  *       'mcp__dbapps__create_app',
  *       'mcp__dbapps__deploy_app',
  *       'mcp__dbapps__show_app',
  *       'mcp__dbapps__list_deployments',
- *       'mcp__dbapps__list_logs',
  *       'mcp__dbapps__start_app',
  *       'mcp__dbapps__stop_app',
  *     ],
@@ -55,15 +53,20 @@ import type { AuthProvider } from './databricks-auth.js';
  * });
  * ```
  */
-export function createDbAppsMcpServer(
-  authProvider: AuthProvider,
-  sessionId: SessionId,
-  userName: string
-) {
+/**
+ * MCP サーバー作成オプション
+ */
+interface CreateDbAppsMcpServerOptions {
+  authProvider: AuthProvider;
+  sessionId: SessionId;
+}
+
+export function createDbAppsMcpServer(options: CreateDbAppsMcpServerOptions) {
+  const { authProvider, sessionId } = options;
+
   // アプリ名を生成（app-{suffix} 形式）
   const appName = `app-${sessionId.getSuffix()}`;
 
-  // クライアントを作成
   const client = new DatabricksAppsClient(authProvider);
 
   const createApp = tool(
@@ -77,15 +80,8 @@ This operation typically takes about 3 minutes to complete. After creating, you 
 **Note**: You don't need to specify an app name - it's automatically derived from the session ID.`,
     {},
     async () => {
-      const description = `Created by ${userName} via Briclaude`;
+      const description = 'Created via Briclaude';
       const app = await client.create(appName, description);
-
-      if (authProvider.type === 'oauth-m2m') {
-        // ユーザーに CAN_MANAGE 権限を付与
-        await client.updatePermissions(appName, [
-          { user_name: userName, permission_level: 'CAN_MANAGE' },
-        ]);
-      }
 
       return {
         content: [{ type: 'text' as const, text: JSON.stringify(app) }],
@@ -152,37 +148,6 @@ Returns all deployments for the app, including their status and timestamps.`,
     }
   );
 
-  const listLogs = tool(
-    'list_logs',
-    `Get runtime logs for the Databricks App.
-
-The app name is: **${appName}**
-
-Returns stdout/stderr logs from the running app. Note: Logs are not persisted when app compute shuts down.`,
-    {
-      tail_lines: z
-        .number()
-        .optional()
-        .describe('Number of lines to retrieve from the end (default: 100)'),
-      search: z.string().optional().describe('Filter logs by pattern'),
-      source: z
-        .enum(['APP', 'SYSTEM'])
-        .optional()
-        .describe('Filter by log source: APP (application logs) or SYSTEM (system logs)'),
-    },
-    async ({ tail_lines, search, source }) => {
-      const logs = await client.getLogs(appName, {
-        tailLines: tail_lines,
-        search,
-        source,
-      });
-      return {
-        content: [{ type: 'text' as const, text: logs }],
-        structuredContent: { logs: logs.split('\n') },
-      };
-    }
-  );
-
   const startApp = tool(
     'start_app',
     `Start the Databricks App.
@@ -230,6 +195,6 @@ Stops the app compute. The app can be restarted later using the start_app tool.
   return createSdkMcpServer({
     name: 'apps',
     version: '1.0.0',
-    tools: [createApp, deployApp, showApp, listDeployments, listLogs, startApp, stopApp],
+    tools: [createApp, deployApp, showApp, listDeployments, startApp, stopApp],
   });
 }

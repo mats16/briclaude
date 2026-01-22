@@ -1,7 +1,14 @@
 // apps/api/src/lib/databricks-auth.test.ts
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { getServicePrincipalToken, getUserPAT, clearSpTokenCache } from './databricks-auth.js';
+import {
+  getServicePrincipalToken,
+  getUserPAT,
+  clearSpTokenCache,
+  getAuthProvider,
+  type PatEnvVars,
+  type ServicePrincipalEnvVars,
+} from './databricks-auth.js';
 
 describe('databricks-auth', () => {
   const originalEnv = { ...process.env };
@@ -285,6 +292,118 @@ describe('databricks-auth', () => {
 
       expect(token).toBeUndefined();
       expect(mockLogWarn).toHaveBeenCalled();
+    });
+  });
+
+  describe('getAuthProvider', () => {
+    const mockConfig = {
+      DATABRICKS_HOST: 'example.databricks.com',
+      DATABRICKS_CLIENT_ID: 'sp-client-id',
+      DATABRICKS_CLIENT_SECRET: 'sp-client-secret',
+    };
+
+    // Helper to create mock Fastify with PAT
+    function createMockFastifyWithPAT(patToken: string | undefined) {
+      const mockWithUserContext = vi.fn().mockImplementation(async (_userId, callback) => {
+        return callback({
+          select: () => ({
+            from: () => ({
+              where: () => ({
+                limit: () => (patToken ? [{ accessToken: patToken }] : []),
+              }),
+            }),
+          }),
+        });
+      });
+
+      return {
+        config: mockConfig,
+        withUserContext: mockWithUserContext,
+        log: { warn: vi.fn() },
+      } as unknown as FastifyInstance;
+    }
+
+    describe('principalType = auto (default)', () => {
+      it('should return PAT provider when PAT is registered', async () => {
+        const mockFastify = createMockFastifyWithPAT('user-pat-token');
+
+        const authProvider = await getAuthProvider(mockFastify, 'user@example.com');
+
+        expect(authProvider.type).toBe('pat');
+        const envVars = authProvider.getEnvVars() as PatEnvVars;
+        expect(envVars.DATABRICKS_AUTH_TYPE).toBe('pat');
+        expect(envVars.DATABRICKS_TOKEN).toBe('user-pat-token');
+      });
+
+      it('should return SP provider when PAT is not registered', async () => {
+        const mockFastify = createMockFastifyWithPAT(undefined);
+
+        const authProvider = await getAuthProvider(mockFastify, 'user@example.com');
+
+        expect(authProvider.type).toBe('oauth-m2m');
+        const envVars = authProvider.getEnvVars() as ServicePrincipalEnvVars;
+        expect(envVars.DATABRICKS_AUTH_TYPE).toBe('oauth-m2m');
+        expect(envVars.DATABRICKS_CLIENT_ID).toBe('sp-client-id');
+      });
+    });
+
+    describe('principalType = pat', () => {
+      it('should return PAT provider when PAT is registered', async () => {
+        const mockFastify = createMockFastifyWithPAT('user-pat-token');
+
+        const authProvider = await getAuthProvider(mockFastify, 'user@example.com', 'pat');
+
+        expect(authProvider.type).toBe('pat');
+        const envVars = authProvider.getEnvVars() as PatEnvVars;
+        expect(envVars.DATABRICKS_AUTH_TYPE).toBe('pat');
+        expect(envVars.DATABRICKS_TOKEN).toBe('user-pat-token');
+      });
+
+      it('should throw error when PAT is not registered', async () => {
+        const mockFastify = createMockFastifyWithPAT(undefined);
+
+        await expect(getAuthProvider(mockFastify, 'user@example.com', 'pat')).rejects.toThrow(
+          'PAT is not registered'
+        );
+      });
+    });
+
+    describe('principalType = sp', () => {
+      it('should return SP provider even when PAT is registered', async () => {
+        const mockFastify = createMockFastifyWithPAT('user-pat-token');
+
+        const authProvider = await getAuthProvider(mockFastify, 'user@example.com', 'sp');
+
+        expect(authProvider.type).toBe('oauth-m2m');
+        const envVars = authProvider.getEnvVars() as ServicePrincipalEnvVars;
+        expect(envVars.DATABRICKS_AUTH_TYPE).toBe('oauth-m2m');
+        expect(envVars.DATABRICKS_CLIENT_ID).toBe('sp-client-id');
+      });
+
+      it('should return SP provider when PAT is not registered', async () => {
+        const mockFastify = createMockFastifyWithPAT(undefined);
+
+        const authProvider = await getAuthProvider(mockFastify, 'user@example.com', 'sp');
+
+        expect(authProvider.type).toBe('oauth-m2m');
+        const envVars = authProvider.getEnvVars() as ServicePrincipalEnvVars;
+        expect(envVars.DATABRICKS_AUTH_TYPE).toBe('oauth-m2m');
+        expect(envVars.DATABRICKS_CLIENT_ID).toBe('sp-client-id');
+      });
+
+      it('should not call getUserPAT when principalType is sp', async () => {
+        const mockWithUserContext = vi.fn();
+        const mockFastify = {
+          config: mockConfig,
+          withUserContext: mockWithUserContext,
+          log: { warn: vi.fn() },
+        } as unknown as FastifyInstance;
+
+        await getAuthProvider(mockFastify, 'user@example.com', 'sp');
+
+        // withUserContext should not be called because we skip PAT lookup
+        expect(mockWithUserContext).not.toHaveBeenCalled();
+      });
     });
   });
 });
