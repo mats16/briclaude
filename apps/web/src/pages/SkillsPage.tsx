@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { skillService } from '@/services';
+import { useUser } from '@/hooks/useUser';
 import type { SkillInfo, SkillDetail } from '@repo/types';
 
 /** プリセットリポジトリ */
@@ -80,6 +81,10 @@ const parseGitHubSource = (source: string): { owner: string; repo: string } | nu
 
 export function SkillsContent() {
   const { t } = useTranslation();
+  const { user } = useUser();
+  const workspacePath = user?.name
+    ? `/Workspace/Users/${user.name}/.claude/skills`
+    : '/Workspace/Users/{username}/.claude/skills';
   const [skills, setSkills] = useState<SkillInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -446,7 +451,12 @@ export function SkillsContent() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{t('skills.backupDialog.title')}</DialogTitle>
-                <DialogDescription>{t('skills.backupDialog.description')}</DialogDescription>
+                <DialogDescription className="space-y-1">
+                  <span>{t('skills.backupDialog.description')}</span>
+                  <code className="block text-xs bg-muted px-2 py-1 rounded break-all">
+                    {workspacePath}
+                  </code>
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="flex items-start gap-3 p-3 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 rounded-md text-sm">
@@ -478,7 +488,12 @@ export function SkillsContent() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{t('skills.restoreDialog.title')}</DialogTitle>
-                <DialogDescription>{t('skills.restoreDialog.description')}</DialogDescription>
+                <DialogDescription className="space-y-1">
+                  <span>{t('skills.restoreDialog.description')}</span>
+                  <code className="block text-xs bg-muted px-2 py-1 rounded break-all">
+                    {workspacePath}
+                  </code>
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="flex items-start gap-3 p-3 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 rounded-md text-sm">

@@ -179,7 +179,7 @@
     "updateSuccess": "Skill updated successfully",
     "backupDialog": {
       "title": "Backup to Workspace",
-      "description": "Backup skills to Databricks Workspace",
+      "description": "Backup skills to the following path:",
       "warning": "All existing skills in Workspace will be deleted and replaced with current skills.",
       "submit": "Start Backup",
       "success": "Skills backed up successfully",
@@ -187,7 +187,7 @@
     },
     "restoreDialog": {
       "title": "Restore from Workspace",
-      "description": "Restore skills from Databricks Workspace",
+      "description": "Restore skills from the following path:",
       "warning": "All existing local skills will be deleted and replaced with Workspace skills.",
       "submit": "Start Restore",
       "success": "Skills restored successfully",
