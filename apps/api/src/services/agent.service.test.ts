@@ -345,31 +345,45 @@ description: Test
     });
 
     it('should reject "." as agent name', () => {
-      expect(() => validateAgentName('.')).toThrow('only alphanumeric, hyphens, and underscores are allowed');
+      expect(() => validateAgentName('.')).toThrow(
+        'only alphanumeric, hyphens, and underscores are allowed'
+      );
     });
 
     it('should reject ".." as agent name', () => {
-      expect(() => validateAgentName('..')).toThrow('only alphanumeric, hyphens, and underscores are allowed');
+      expect(() => validateAgentName('..')).toThrow(
+        'only alphanumeric, hyphens, and underscores are allowed'
+      );
     });
 
     it('should reject agent name with forward slash', () => {
-      expect(() => validateAgentName('agent/name')).toThrow('only alphanumeric, hyphens, and underscores are allowed');
+      expect(() => validateAgentName('agent/name')).toThrow(
+        'only alphanumeric, hyphens, and underscores are allowed'
+      );
     });
 
     it('should reject agent name with backslash', () => {
-      expect(() => validateAgentName('agent\\name')).toThrow('only alphanumeric, hyphens, and underscores are allowed');
+      expect(() => validateAgentName('agent\\name')).toThrow(
+        'only alphanumeric, hyphens, and underscores are allowed'
+      );
     });
 
     it('should reject agent name with null byte', () => {
-      expect(() => validateAgentName('agent\x00name')).toThrow('only alphanumeric, hyphens, and underscores are allowed');
+      expect(() => validateAgentName('agent\x00name')).toThrow(
+        'only alphanumeric, hyphens, and underscores are allowed'
+      );
     });
 
     it('should reject agent name with leading whitespace', () => {
-      expect(() => validateAgentName(' agent')).toThrow('only alphanumeric, hyphens, and underscores are allowed');
+      expect(() => validateAgentName(' agent')).toThrow(
+        'only alphanumeric, hyphens, and underscores are allowed'
+      );
     });
 
     it('should reject agent name with trailing whitespace', () => {
-      expect(() => validateAgentName('agent ')).toThrow('only alphanumeric, hyphens, and underscores are allowed');
+      expect(() => validateAgentName('agent ')).toThrow(
+        'only alphanumeric, hyphens, and underscores are allowed'
+      );
     });
 
     it('should reject very long agent name', () => {
