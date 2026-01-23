@@ -458,6 +458,13 @@ function spawnAsync(
 
 /**
  * 単一のスキルを一時ディレクトリからユーザーのスキルディレクトリにコピー
+ *
+ * @param skillsDir - コピー先のスキルディレクトリ（絶対パス）
+ * @param tempDir - 一時ディレクトリ（絶対パス、ベースディレクトリとして使用）
+ * @param importPath - インポート対象のパス（tempDir からの相対パス、例: "my-skill" または "skills/my-skill"）
+ *                     絶対パスやパストラバーサル（"../"）は validatePathWithinBase でセキュリティエラーとなる
+ * @param importMetadata - インポート時に付与するメタデータ
+ * @returns コピーされたスキル情報、または存在しない場合は null
  */
 async function copySkillFromDir(
   skillsDir: string,
