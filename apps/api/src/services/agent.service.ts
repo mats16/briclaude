@@ -535,7 +535,8 @@ async function copyAgentFromDir(
   importMetadata: AgentMetadata
 ): Promise<AgentInfo | null> {
   // インポート対象パスの確認（パストラバーサル対策）
-  const sourcePath = await validatePathWithinBase(importPath, tempDir);
+  const fullImportPath = join(tempDir, importPath);
+  const sourcePath = await validatePathWithinBase(fullImportPath, tempDir);
 
   let sourceStats;
   try {

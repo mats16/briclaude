@@ -466,7 +466,8 @@ async function copySkillFromDir(
   importMetadata: SkillMetadata
 ): Promise<SkillInfo | null> {
   // インポート対象パスの確認（パストラバーサル対策）
-  const sourcePath = await validatePathWithinBase(importPath, tempDir);
+  const fullImportPath = join(tempDir, importPath);
+  const sourcePath = await validatePathWithinBase(fullImportPath, tempDir);
 
   let sourceStats;
   try {
