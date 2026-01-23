@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Globe, Check, Settings, ExternalLink, Sparkles } from 'lucide-react';
+import { Globe, Check, Settings, ExternalLink, Sparkles, Bot } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -57,6 +57,10 @@ export function UserFooterExpanded({
           <DropdownMenuItem onClick={() => navigate('/skills')}>
             <Sparkles className="h-4 w-4 mr-2" />
             {t('user.skills')}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate('/agents')}>
+            <Bot className="h-4 w-4 mr-2" />
+            {t('user.agents')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onSettingsOpen}>

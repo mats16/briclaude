@@ -9,6 +9,7 @@ export * from './title.js';
 export * from './websocket.js';
 export * from './workspace.js';
 export * from './skill.js';
+export * from './agent.js';
 export * from './repos.js';
 export * from './jobs.js';
 export * from './apps.js';

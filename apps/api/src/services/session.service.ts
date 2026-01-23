@@ -29,6 +29,7 @@ import { sessions } from '../db/schema.js';
 import { createDbAppsMcpServer } from '../lib/mcp-databricks-apps.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 import { ensureDirectory, removeDirectory } from '../utils/directory.js';
+import { validatePathWithinBase } from '../utils/path-validation.js';
 import { DatabricksAppsClient } from '../lib/databricks-apps-client.js';
 import { getAuthProvider } from '../lib/databricks-auth.js';
 import { wsManager } from './websocket-manager.service.js';
@@ -805,12 +806,14 @@ export async function archiveSession(
 
     // 3. Working Directory を削除（user_home 配下に制限、トランザクション外で非同期実行）
     if (cwd && userHome) {
-      removeDirectory(cwd, userHome).catch(error => {
-        fastify.log.error(
-          { sessionId: sessionId.toString(), cwd, userHome, error },
-          'Failed to remove working directory'
-        );
-      });
+      validatePathWithinBase(cwd, userHome)
+        .then(safeCwd => removeDirectory(safeCwd))
+        .catch(error => {
+          fastify.log.error(
+            { sessionId: sessionId.toString(), cwd, userHome, error },
+            'Failed to remove working directory'
+          );
+        });
     }
 
     // 4. Databricks App を削除（databricks_apps outcome がある場合、トランザクション外で非同期実行）

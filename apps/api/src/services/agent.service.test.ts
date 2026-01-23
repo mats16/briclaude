@@ -1,62 +1,83 @@
 import { describe, it, expect } from 'vitest';
-import { __testing } from './skill.service.js';
+import { __testing } from './agent.service.js';
 
 const {
-  parseSkillFile,
-  generateSkillFileContent,
+  parseAgentFile,
+  generateAgentFileContent,
   extractAuthorFromGitUrl,
   validateBranchName,
-  validateSkillName,
-  getWorkspaceSkillsPath,
+  validateAgentName,
+  getWorkspaceAgentsPath,
 } = __testing;
 
-describe('skill.service', () => {
-  describe('parseSkillFile', () => {
+describe('agent.service', () => {
+  describe('parseAgentFile', () => {
     it('should parse valid YAML frontmatter with all fields', () => {
       const content = `---
-name: my-skill
-description: A test skill
+name: my-agent
+description: A test agent
+tools: Read, Write, Bash
 metadata:
   version: "1.0.0"
   author: test-author
   source: https://github.com/test/repo
 ---
 
-This is the skill content.`;
+This is the agent content.`;
 
-      const result = parseSkillFile(content);
+      const result = parseAgentFile(content);
 
       expect(result).not.toBeNull();
-      expect(result?.frontmatter.name).toBe('my-skill');
-      expect(result?.frontmatter.description).toBe('A test skill');
+      expect(result?.frontmatter.name).toBe('my-agent');
+      expect(result?.frontmatter.description).toBe('A test agent');
+      expect(result?.tools).toBe('Read, Write, Bash');
       const metadata = result?.frontmatter.metadata as Record<string, unknown> | undefined;
       expect(metadata?.version).toBe('1.0.0');
       expect(metadata?.author).toBe('test-author');
       expect(metadata?.source).toBe('https://github.com/test/repo');
-      expect(result?.content).toBe('This is the skill content.');
+      expect(result?.content).toBe('This is the agent content.');
     });
 
     it('should parse frontmatter without metadata', () => {
       const content = `---
-name: simple-skill
+name: simple-agent
 description: Simple description
 ---
 
 Content here.`;
 
-      const result = parseSkillFile(content);
+      const result = parseAgentFile(content);
 
       expect(result).not.toBeNull();
-      expect(result?.frontmatter.name).toBe('simple-skill');
+      expect(result?.frontmatter.name).toBe('simple-agent');
       expect(result?.frontmatter.description).toBe('Simple description');
       expect(result?.version).toBe(''); // version is extracted from metadata, so empty when no metadata
       expect(result?.frontmatter.metadata).toBeUndefined();
     });
 
+    it('should parse frontmatter with tools field', () => {
+      const content = `---
+name: tool-agent
+description: Agent with tools
+tools: Task, Read, Write
+metadata:
+  version: "1.0.0"
+---
+
+Agent content.`;
+
+      const result = parseAgentFile(content);
+
+      expect(result).not.toBeNull();
+      expect(result?.frontmatter.name).toBe('tool-agent');
+      expect(result?.tools).toBe('Task, Read, Write');
+      expect(result?.frontmatter.tools).toBe('Task, Read, Write');
+    });
+
     it('should return null for content without frontmatter', () => {
       const content = 'Just some regular content without frontmatter.';
 
-      const result = parseSkillFile(content);
+      const result = parseAgentFile(content);
 
       expect(result).toBeNull();
     });
@@ -69,7 +90,7 @@ description: missing bracket
 
 Content`;
 
-      const result = parseSkillFile(content);
+      const result = parseAgentFile(content);
 
       expect(result).toBeNull();
     });
@@ -84,7 +105,7 @@ description: |
 
 Content`;
 
-      const result = parseSkillFile(content);
+      const result = parseAgentFile(content);
 
       expect(result).not.toBeNull();
       expect(result?.frontmatter.description).toContain('This is a');
@@ -98,72 +119,91 @@ description: Test
 ---
 `;
 
-      const result = parseSkillFile(content);
+      const result = parseAgentFile(content);
 
       expect(result).not.toBeNull();
       expect(result?.content).toBe('');
     });
 
     it('should handle Windows-style line endings (CRLF)', () => {
-      const content = '---\r\nname: windows-skill\r\ndescription: Test\r\n---\r\n\r\nContent';
+      const content = '---\r\nname: windows-agent\r\ndescription: Test\r\n---\r\n\r\nContent';
 
-      const result = parseSkillFile(content);
+      const result = parseAgentFile(content);
 
       expect(result).not.toBeNull();
-      expect(result?.frontmatter.name).toBe('windows-skill');
+      expect(result?.frontmatter.name).toBe('windows-agent');
     });
   });
 
-  describe('generateSkillFileContent', () => {
-    it('should generate valid skill file with all fields', () => {
-      const result = generateSkillFileContent(
+  describe('generateAgentFileContent', () => {
+    it('should generate valid agent file with all fields', () => {
+      const result = generateAgentFileContent(
         {
-          name: 'test-skill',
+          name: 'test-agent',
           description: 'Test description',
+          tools: 'Read, Write, Bash',
           metadata: {
             version: '1.0.0',
             author: 'test-author',
             source: 'https://github.com/test/repo',
           },
         },
-        'Skill content here'
+        'Agent content here'
       );
 
       expect(result).toContain('---');
-      expect(result).toContain('name: test-skill');
-      expect(result).toContain('description: Test description');
-      expect(result).toContain('version: 1.0.0');
-      expect(result).toContain('author: test-author');
-      expect(result).toContain('source: https://github.com/test/repo');
-      expect(result).toContain('Skill content here');
+      expect(result).toContain('name: "test-agent"');
+      expect(result).toContain('description: "Test description"');
+      expect(result).toContain('tools: "Read, Write, Bash"');
+      expect(result).toContain('version: "1.0.0"');
+      expect(result).toContain('author: "test-author"');
+      expect(result).toContain('source: "https://github.com/test/repo"');
+      expect(result).toContain('Agent content here');
     });
 
     it('should generate file without metadata when not provided', () => {
-      const result = generateSkillFileContent(
-        { name: 'simple-skill', description: 'Simple description' },
+      const result = generateAgentFileContent(
+        { name: 'simple-agent', description: 'Simple description' },
         'Content'
       );
 
-      expect(result).toContain('name: simple-skill');
-      expect(result).toContain('description: Simple description');
+      expect(result).toContain('name: "simple-agent"');
+      expect(result).toContain('description: "Simple description"');
       expect(result).not.toContain('metadata:');
       expect(result).toContain('Content');
     });
 
-    it('should roundtrip through parse and generate', () => {
-      const original = generateSkillFileContent(
+    it('should generate file without tools when not provided', () => {
+      const result = generateAgentFileContent(
         {
-          name: 'roundtrip-skill',
+          name: 'no-tools-agent',
+          description: 'Agent without tools',
+          metadata: { version: '1.0.0' },
+        },
+        'Content'
+      );
+
+      expect(result).toContain('name: "no-tools-agent"');
+      expect(result).not.toContain('tools:');
+      expect(result).toContain('Content');
+    });
+
+    it('should roundtrip through parse and generate', () => {
+      const original = generateAgentFileContent(
+        {
+          name: 'roundtrip-agent',
           description: 'Roundtrip test',
+          tools: 'Task, Read',
           metadata: { version: '2.0.0', author: 'author', source: 'https://example.com' },
         },
         'Test content'
       );
 
-      const parsed = parseSkillFile(original);
+      const parsed = parseAgentFile(original);
 
       expect(parsed).not.toBeNull();
-      expect(parsed?.frontmatter.name).toBe('roundtrip-skill');
+      expect(parsed?.frontmatter.name).toBe('roundtrip-agent');
+      expect(parsed?.tools).toBe('Task, Read');
       const metadata = parsed?.frontmatter.metadata as Record<string, unknown> | undefined;
       expect(metadata?.version).toBe('2.0.0');
       expect(parsed?.frontmatter.description).toBe('Roundtrip test');
@@ -173,19 +213,19 @@ description: Test
 
   describe('extractAuthorFromGitUrl', () => {
     it('should extract author from HTTPS GitHub URL', () => {
-      const result = extractAuthorFromGitUrl('https://github.com/anthropic/skills.git');
+      const result = extractAuthorFromGitUrl('https://github.com/anthropic/agents.git');
 
       expect(result).toBe('anthropic');
     });
 
     it('should extract author from HTTPS GitHub URL without .git', () => {
-      const result = extractAuthorFromGitUrl('https://github.com/anthropic/skills');
+      const result = extractAuthorFromGitUrl('https://github.com/anthropic/agents');
 
       expect(result).toBe('anthropic');
     });
 
     it('should extract author from SSH GitHub URL', () => {
-      const result = extractAuthorFromGitUrl('git@github.com:anthropic/skills.git');
+      const result = extractAuthorFromGitUrl('git@github.com:anthropic/agents.git');
 
       expect(result).toBe('anthropic');
     });
@@ -259,69 +299,83 @@ description: Test
     });
   });
 
-  describe('validateSkillName', () => {
-    it('should accept valid skill names', () => {
-      expect(() => validateSkillName('my-skill')).not.toThrow();
-      expect(() => validateSkillName('skill_v2')).not.toThrow();
-      expect(() => validateSkillName('SimpleSkill')).not.toThrow();
-      expect(() => validateSkillName('skill123')).not.toThrow();
+  describe('validateAgentName', () => {
+    it('should accept valid agent names', () => {
+      expect(() => validateAgentName('my-agent')).not.toThrow();
+      expect(() => validateAgentName('agent_v2')).not.toThrow();
+      expect(() => validateAgentName('SimpleAgent')).not.toThrow();
+      expect(() => validateAgentName('agent123')).not.toThrow();
     });
 
-    it('should reject empty skill name', () => {
-      expect(() => validateSkillName('')).toThrow('must be 1-255 characters');
+    it('should reject empty agent name', () => {
+      expect(() => validateAgentName('')).toThrow('must be 1-255 characters');
     });
 
-    it('should reject "." as skill name', () => {
-      expect(() => validateSkillName('.')).toThrow('"." and ".." are not allowed');
+    it('should reject "." as agent name', () => {
+      expect(() => validateAgentName('.')).toThrow(
+        'only alphanumeric, hyphens, and underscores are allowed'
+      );
     });
 
-    it('should reject ".." as skill name', () => {
-      expect(() => validateSkillName('..')).toThrow('"." and ".." are not allowed');
+    it('should reject ".." as agent name', () => {
+      expect(() => validateAgentName('..')).toThrow(
+        'only alphanumeric, hyphens, and underscores are allowed'
+      );
     });
 
-    it('should reject skill name with forward slash', () => {
-      expect(() => validateSkillName('skill/name')).toThrow('path separators are not allowed');
+    it('should reject agent name with forward slash', () => {
+      expect(() => validateAgentName('agent/name')).toThrow(
+        'only alphanumeric, hyphens, and underscores are allowed'
+      );
     });
 
-    it('should reject skill name with backslash', () => {
-      expect(() => validateSkillName('skill\\name')).toThrow('path separators are not allowed');
+    it('should reject agent name with backslash', () => {
+      expect(() => validateAgentName('agent\\name')).toThrow(
+        'only alphanumeric, hyphens, and underscores are allowed'
+      );
     });
 
-    it('should reject skill name with null byte', () => {
-      expect(() => validateSkillName('skill\x00name')).toThrow('null bytes are not allowed');
+    it('should reject agent name with null byte', () => {
+      expect(() => validateAgentName('agent\x00name')).toThrow(
+        'only alphanumeric, hyphens, and underscores are allowed'
+      );
     });
 
-    it('should reject skill name with leading whitespace', () => {
-      expect(() => validateSkillName(' skill')).toThrow('leading/trailing whitespace');
+    it('should reject agent name with leading whitespace', () => {
+      expect(() => validateAgentName(' agent')).toThrow(
+        'only alphanumeric, hyphens, and underscores are allowed'
+      );
     });
 
-    it('should reject skill name with trailing whitespace', () => {
-      expect(() => validateSkillName('skill ')).toThrow('leading/trailing whitespace');
+    it('should reject agent name with trailing whitespace', () => {
+      expect(() => validateAgentName('agent ')).toThrow(
+        'only alphanumeric, hyphens, and underscores are allowed'
+      );
     });
 
-    it('should reject very long skill name', () => {
+    it('should reject very long agent name', () => {
       const longName = 'a'.repeat(256);
-      expect(() => validateSkillName(longName)).toThrow('must be 1-255 characters');
+      expect(() => validateAgentName(longName)).toThrow('must be 1-255 characters');
     });
   });
 
-  describe('getWorkspaceSkillsPath', () => {
+  describe('getWorkspaceAgentsPath', () => {
     it('should generate correct Workspace path for user', () => {
-      const result = getWorkspaceSkillsPath('test-user');
+      const result = getWorkspaceAgentsPath('test-user');
 
-      expect(result).toBe('/Workspace/Users/test-user/.claude/skills');
+      expect(result).toBe('/Workspace/Users/test-user/.claude/agents');
     });
 
     it('should handle email-style username', () => {
-      const result = getWorkspaceSkillsPath('user@example.com');
+      const result = getWorkspaceAgentsPath('user@example.com');
 
-      expect(result).toBe('/Workspace/Users/user@example.com/.claude/skills');
+      expect(result).toBe('/Workspace/Users/user@example.com/.claude/agents');
     });
 
     it('should handle username with special characters', () => {
-      const result = getWorkspaceSkillsPath('user.name-123');
+      const result = getWorkspaceAgentsPath('user.name-123');
 
-      expect(result).toBe('/Workspace/Users/user.name-123/.claude/skills');
+      expect(result).toBe('/Workspace/Users/user.name-123/.claude/agents');
     });
   });
 });

@@ -1,18 +1,18 @@
 import { readdir, readFile, writeFile, rm, stat, cp } from 'node:fs/promises';
-import { join, basename } from 'node:path';
+import { join, basename, extname } from 'node:path';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import yaml from 'js-yaml';
 import type {
-  SkillInfo,
-  SkillDetail,
-  SkillMetadata,
-  SkillCreateRequest,
-  SkillImportRequest,
-  SkillUpdateRequest,
-  SkillBackupResponse,
-  SkillRestoreResponse,
+  AgentInfo,
+  AgentDetail,
+  AgentMetadata,
+  AgentCreateRequest,
+  AgentImportRequest,
+  AgentUpdateRequest,
+  AgentBackupResponse,
+  AgentRestoreResponse,
 } from '@repo/types';
 import type { UserContext } from '../lib/user-context.js';
 import type { AuthProvider } from '../lib/databricks-auth.js';
@@ -26,20 +26,18 @@ import { validatePathWithinBase } from '../utils/path-validation.js';
 const logger = {
   warn: (message: string, context?: Record<string, unknown>) => {
     if (process.env.NODE_ENV !== 'test') {
-      console.warn(`[skill.service] ${message}`, context ?? '');
+      console.warn(`[agent.service] ${message}`, context ?? '');
     }
   },
   error: (message: string, context?: Record<string, unknown>) => {
     if (process.env.NODE_ENV !== 'test') {
-      console.error(`[skill.service] ${message}`, context ?? '');
+      console.error(`[agent.service] ${message}`, context ?? '');
     }
   },
 };
 
-/** スキルディレクトリ名 */
-const SKILLS_DIR = '.claude/skills';
-/** スキルファイル名 */
-const SKILL_FILE = 'SKILL.md';
+/** エージェントディレクトリ名 */
+const AGENTS_DIR = '.claude/agents';
 
 /**
  * Git ブランチ名のバリデーション（コマンドインジェクション対策）
@@ -86,69 +84,66 @@ function validateBranchName(branch: string): void {
 }
 
 /**
- * スキル名のバリデーション
- * パス区切り文字、`.`、`..` のみの名前を拒否
+ * エージェント名のバリデーション
+ * 英数字、ハイフン、アンダースコアのみを許可し、パストラバーサルや特殊文字を拒否
  */
-function validateSkillName(name: string): void {
+function validateAgentName(name: string): void {
   if (!name || name.length > 255) {
-    throw new Error('Invalid skill name: must be 1-255 characters');
+    throw new Error('Invalid agent name: must be 1-255 characters');
   }
 
-  // `.` または `..` のみの名前を拒否
+  // フォーマットチェック（英数字、ハイフン、アンダースコアのみ）
+  // これにより `.`, `..`, 空白、特殊文字がすべて拒否される
+  if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+    throw new Error('Invalid agent name: only alphanumeric, hyphens, and underscores are allowed');
+  }
+
+  // 以下は正規表現で既に拒否されるが、明示的にチェック（防衛的プログラミング）
   if (name === '.' || name === '..') {
-    throw new Error('Invalid skill name: "." and ".." are not allowed');
+    throw new Error('Invalid agent name: "." and ".." are not allowed');
   }
 
-  // パス区切り文字を含む名前を拒否
   if (name.includes('/') || name.includes('\\')) {
-    throw new Error('Invalid skill name: path separators are not allowed');
+    throw new Error('Invalid agent name: path separators are not allowed');
   }
 
-  // null バイトを含む名前を拒否
   if (name.includes('\0')) {
-    throw new Error('Invalid skill name: null bytes are not allowed');
+    throw new Error('Invalid agent name: null bytes are not allowed');
   }
 
-  // 先頭・末尾の空白を拒否
   if (name !== name.trim()) {
-    throw new Error('Invalid skill name: leading/trailing whitespace is not allowed');
+    throw new Error('Invalid agent name: leading/trailing whitespace is not allowed');
   }
 }
 
 /**
- * スキルディレクトリのパスを取得
+ * エージェントディレクトリのパスを取得
  */
-function getSkillsDir(ctx: UserContext): string {
-  return join(ctx.userHome, SKILLS_DIR);
+function getAgentsDir(ctx: UserContext): string {
+  return join(ctx.userHome, AGENTS_DIR);
 }
 
 /**
- * 特定スキルのディレクトリパスを取得
- * 内部でスキル名のバリデーションを行うため、呼び出し元での重複チェックは不要
+ * 特定エージェントのファイルパスを取得（フラット構造）
+ * 内部でエージェント名のバリデーションを行うため、呼び出し元での重複チェックは不要
  */
-function getSkillDir(ctx: UserContext, skillName: string): string {
-  validateSkillName(skillName);
-  return join(getSkillsDir(ctx), skillName);
-}
-
-/**
- * スキルファイルのパスを取得
- */
-function getSkillFilePath(ctx: UserContext, skillName: string): string {
-  return join(getSkillDir(ctx, skillName), SKILL_FILE);
+function getAgentFilePath(ctx: UserContext, agentName: string): string {
+  validateAgentName(agentName);
+  return join(getAgentsDir(ctx), `${agentName}.md`);
 }
 
 /**
  * YAML frontmatter + content を Markdown ファイルコンテンツとして生成
  * 元の frontmatter オブジェクトを保持し、必要な部分だけをマージ
+ * セキュリティ: forceQuotes: true により特殊文字を安全にエスケープ
  */
-function generateSkillFileContent(frontmatter: Record<string, unknown>, content: string): string {
+function generateAgentFileContent(frontmatter: Record<string, unknown>, content: string): string {
   // js-yaml で YAML を生成（マルチライン文字列も適切に処理）
   const frontmatterYaml = yaml
     .dump(frontmatter, {
       lineWidth: -1, // 折り返しなし
       quotingType: '"',
-      forceQuotes: false,
+      forceQuotes: true, // 常にクォートしてYAMLインジェクション攻撃を防止
     })
     .trim();
 
@@ -163,12 +158,13 @@ ${content}`;
  * Markdown ファイルから frontmatter と content をパース
  * 元の YAML 全体を保持する
  */
-function parseSkillFile(fileContent: string): {
+function parseAgentFile(fileContent: string): {
   frontmatter: Record<string, unknown>;
   name: string;
   version: string;
   description: string;
-  metadata?: SkillMetadata;
+  tools?: string;
+  metadata?: AgentMetadata;
   content: string;
 } | null {
   // より柔軟な正規表現（改行の数に依存しない）
@@ -193,8 +189,11 @@ function parseSkillFile(fileContent: string): {
     const name = typeof parsed.name === 'string' ? parsed.name : '';
     const description = typeof parsed.description === 'string' ? parsed.description : '';
 
+    // tools をトップレベルから取得（文字列として）
+    const tools = typeof parsed.tools === 'string' ? parsed.tools : undefined;
+
     // メタデータをパース（version は metadata 内に配置）
-    let metadata: SkillMetadata | undefined;
+    let metadata: AgentMetadata | undefined;
     let version = '';
     if (parsed.metadata && typeof parsed.metadata === 'object') {
       const meta = parsed.metadata as Record<string, unknown>;
@@ -215,6 +214,7 @@ function parseSkillFile(fileContent: string): {
       name,
       version,
       description,
+      tools,
       metadata,
       content: content.trim(),
     };
@@ -248,52 +248,54 @@ function extractAuthorFromGitUrl(url: string): string | undefined {
 }
 
 /**
- * スキル一覧を取得
+ * エージェント一覧を取得（フラット構造）
  */
-export async function listSkills(ctx: UserContext): Promise<SkillInfo[]> {
-  const skillsDir = getSkillsDir(ctx);
+export async function listAgents(ctx: UserContext): Promise<AgentInfo[]> {
+  const agentsDir = getAgentsDir(ctx);
 
   try {
-    await ensureDirectory(skillsDir);
-    const entries = await readdir(skillsDir, { withFileTypes: true });
+    await ensureDirectory(agentsDir);
+    const entries = await readdir(agentsDir, { withFileTypes: true });
 
-    const skills: SkillInfo[] = [];
+    const agents: AgentInfo[] = [];
 
     for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
+      // .md ファイルのみを対象とする
+      if (!entry.isFile() || extname(entry.name) !== '.md') continue;
 
-      const skillFilePath = join(skillsDir, entry.name, SKILL_FILE);
+      const agentFilePath = join(agentsDir, entry.name);
 
       try {
-        const stats = await stat(skillFilePath);
-        const content = await readFile(skillFilePath, 'utf-8');
-        const parsed = parseSkillFile(content);
+        const stats = await stat(agentFilePath);
+        const content = await readFile(agentFilePath, 'utf-8');
+        const parsed = parseAgentFile(content);
 
         if (!parsed) continue;
 
-        skills.push({
-          name: parsed.name || entry.name,
+        // ファイル名から .md を除いたものをエージェント名として使用
+        const agentName = basename(entry.name, '.md');
+
+        agents.push({
+          name: parsed.name || agentName,
           version: parsed.version,
           description: parsed.description,
-          file_path: `${entry.name}/${SKILL_FILE}`,
+          tools: parsed.tools,
+          file_path: entry.name,
           metadata: parsed.metadata,
           created_at: stats.birthtime.toISOString(),
           updated_at: stats.mtime.toISOString(),
         });
       } catch (error) {
-        // SKILL.md が存在しないディレクトリはスキップ
-        // ENOENT以外のエラーはログに記録
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-          logger.warn('Failed to read skill file', {
-            skillDir: entry.name,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
+        // ファイル読み取りエラーはログに記録
+        logger.warn('Failed to read agent file', {
+          agentFile: entry.name,
+          error: error instanceof Error ? error.message : String(error),
+        });
         continue;
       }
     }
 
-    return skills.sort((a, b) => a.name.localeCompare(b.name));
+    return agents.sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
     // ディレクトリが存在しない場合は空配列を返す
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -304,24 +306,25 @@ export async function listSkills(ctx: UserContext): Promise<SkillInfo[]> {
 }
 
 /**
- * スキル詳細を取得
+ * エージェント詳細を取得（フラット構造）
  */
-export async function getSkill(ctx: UserContext, skillName: string): Promise<SkillDetail | null> {
-  // バリデーションは getSkillFilePath -> getSkillDir 内で実行される
-  const skillFilePath = getSkillFilePath(ctx, skillName);
+export async function getAgent(ctx: UserContext, agentName: string): Promise<AgentDetail | null> {
+  // バリデーションは getAgentFilePath 内で実行される
+  const agentFilePath = getAgentFilePath(ctx, agentName);
 
   try {
-    const stats = await stat(skillFilePath);
-    const fileContent = await readFile(skillFilePath, 'utf-8');
-    const parsed = parseSkillFile(fileContent);
+    const stats = await stat(agentFilePath);
+    const fileContent = await readFile(agentFilePath, 'utf-8');
+    const parsed = parseAgentFile(fileContent);
 
     if (!parsed) return null;
 
     return {
-      name: parsed.name || skillName,
+      name: parsed.name || agentName,
       version: parsed.version,
       description: parsed.description,
-      file_path: `${skillName}/${SKILL_FILE}`,
+      tools: parsed.tools,
+      file_path: `${agentName}.md`,
       metadata: parsed.metadata,
       content: parsed.content,
       raw_content: fileContent,
@@ -337,26 +340,26 @@ export async function getSkill(ctx: UserContext, skillName: string): Promise<Ski
 }
 
 /**
- * スキルを作成
+ * エージェントを作成（フラット構造）
  */
-export async function createSkill(
+export async function createAgent(
   ctx: UserContext,
-  request: SkillCreateRequest,
+  request: AgentCreateRequest,
   authorName?: string
-): Promise<SkillInfo> {
-  const { name, version, description, content } = request;
+): Promise<AgentInfo> {
+  const { name, version, description, content, tools } = request;
 
-  // バリデーションは getSkillDir 内で実行される
-  const skillDir = getSkillDir(ctx, name);
-  const skillFilePath = getSkillFilePath(ctx, name);
+  // バリデーションは getAgentFilePath 内で実行される
+  const agentFilePath = getAgentFilePath(ctx, name);
+  const agentsDir = getAgentsDir(ctx);
 
   // ディレクトリを確保
-  await ensureDirectory(skillDir);
+  await ensureDirectory(agentsDir);
 
   // 既存チェック
   try {
-    await stat(skillFilePath);
-    throw new Error(`Skill '${name}' already exists`);
+    await stat(agentFilePath);
+    throw new Error(`Agent '${name}' already exists`);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
       throw error;
@@ -368,6 +371,11 @@ export async function createSkill(
     name,
     description,
   };
+
+  // tools をトップレベルに追加（文字列として）
+  if (tools && tools.trim().length > 0) {
+    frontmatter.tools = tools;
+  }
 
   // metadata を構築（author を追加）
   const metadataObj: Record<string, string> = {};
@@ -382,8 +390,8 @@ export async function createSkill(
     frontmatter.metadata = metadataObj;
   }
 
-  // metadata を SkillMetadata 型として構築
-  const metadata: SkillMetadata | undefined =
+  // metadata を AgentMetadata 型として構築
+  const metadata: AgentMetadata | undefined =
     Object.keys(metadataObj).length > 0
       ? {
           version: version || undefined,
@@ -392,16 +400,17 @@ export async function createSkill(
       : undefined;
 
   // ファイル作成
-  const fileContent = generateSkillFileContent(frontmatter, content);
-  await writeFile(skillFilePath, fileContent, 'utf-8');
+  const fileContent = generateAgentFileContent(frontmatter, content);
+  await writeFile(agentFilePath, fileContent, 'utf-8');
 
-  const stats = await stat(skillFilePath);
+  const stats = await stat(agentFilePath);
 
   return {
     name,
     version,
     description,
-    file_path: `${name}/${SKILL_FILE}`,
+    tools,
+    file_path: `${name}.md`,
     metadata,
     created_at: stats.birthtime.toISOString(),
     updated_at: stats.mtime.toISOString(),
@@ -457,14 +466,74 @@ function spawnAsync(
 }
 
 /**
- * 単一のスキルを一時ディレクトリからユーザーのスキルディレクトリにコピー
+ * エージェントファイルのメタデータをマージして書き戻す
+ * @param destFile - 対象ファイルパス
+ * @param importMetadata - インポート時に追加するメタデータ
+ * @param agentName - エージェント名（ファイル名から抽出）
+ * @returns AgentInfo | null
  */
-async function copySkillFromDir(
-  skillsDir: string,
+async function mergeAndWriteAgentMetadata(
+  destFile: string,
+  importMetadata: AgentMetadata,
+  agentName: string
+): Promise<AgentInfo | null> {
+  // 1. ファイルを読み取り、パース
+  const content = await readFile(destFile, 'utf-8');
+  const parsed = parseAgentFile(content);
+
+  if (!parsed) {
+    return null;
+  }
+
+  // 2. frontmatter の metadata とインポート情報をマージ
+  const frontmatter = { ...parsed.frontmatter };
+  const existingMetadata =
+    frontmatter.metadata && typeof frontmatter.metadata === 'object'
+      ? (frontmatter.metadata as Record<string, unknown>)
+      : {};
+  const mergedMetadataObj = { ...existingMetadata };
+
+  if (importMetadata.source) {
+    mergedMetadataObj.source = importMetadata.source;
+  }
+
+  frontmatter.metadata = mergedMetadataObj;
+
+  // 3. AgentMetadata 型として構築
+  const mergedMetadata: AgentMetadata = {
+    version: typeof mergedMetadataObj.version === 'string' ? mergedMetadataObj.version : undefined,
+    author: typeof mergedMetadataObj.author === 'string' ? mergedMetadataObj.author : undefined,
+    source: typeof mergedMetadataObj.source === 'string' ? mergedMetadataObj.source : undefined,
+  };
+
+  // 4. ファイルを書き戻し
+  const newFileContent = generateAgentFileContent(frontmatter, parsed.content);
+  await writeFile(destFile, newFileContent, 'utf-8');
+
+  const stats = await stat(destFile);
+
+  // 5. AgentInfo を返却
+  return {
+    name: parsed.name || agentName,
+    version: parsed.version,
+    description: parsed.description,
+    tools: parsed.tools,
+    file_path: basename(destFile),
+    metadata: mergedMetadata,
+    created_at: stats.birthtime.toISOString(),
+    updated_at: stats.mtime.toISOString(),
+  };
+}
+
+/**
+ * 単一のエージェントを一時ディレクトリからユーザーのエージェントディレクトリにコピー（フラット構造）
+ */
+async function copyAgentFromDir(
+  agentsDir: string,
   tempDir: string,
   importPath: string,
-  importMetadata: SkillMetadata
-): Promise<SkillInfo | null> {
+  importMetadata: AgentMetadata
+): Promise<AgentInfo | null> {
   // インポート対象パスの確認（パストラバーサル対策）
   const sourcePath = await validatePathWithinBase(importPath, tempDir);
 
@@ -479,124 +548,37 @@ async function copySkillFromDir(
     throw error;
   }
 
-  if (sourceStats.isDirectory()) {
-    // ディレクトリの場合: スキルディレクトリとしてコピー
-    const skillName = basename(importPath);
-    const destDir = join(skillsDir, skillName);
+  if (sourceStats.isFile() && extname(sourcePath) === '.md') {
+    // .md ファイルの場合: そのままコピー
+    const agentName = basename(sourcePath, '.md');
+    const destFile = join(agentsDir, `${agentName}.md`);
 
-    // ディレクトリごとコピー
-    await cp(sourcePath, destDir, { recursive: true, force: true });
-
-    // SKILL.md を読み取り・metadata を追加して書き戻し
-    const skillFilePath = join(destDir, SKILL_FILE);
-    try {
-      const content = await readFile(skillFilePath, 'utf-8');
-      const parsed = parseSkillFile(content);
-
-      if (parsed) {
-        // frontmatter の metadata とインポート情報をマージ
-        const frontmatter = { ...parsed.frontmatter };
-        const existingMetadata =
-          frontmatter.metadata && typeof frontmatter.metadata === 'object'
-            ? (frontmatter.metadata as Record<string, unknown>)
-            : {};
-        const mergedMetadataObj = { ...existingMetadata };
-
-        // importMetadata.source のみをマージ（author は追加しない）
-        if (importMetadata.source) {
-          mergedMetadataObj.source = importMetadata.source;
-        }
-
-        frontmatter.metadata = mergedMetadataObj;
-
-        // SkillMetadata 型として構築
-        const mergedMetadata: SkillMetadata = {
-          version:
-            typeof mergedMetadataObj.version === 'string' ? mergedMetadataObj.version : undefined,
-          author:
-            typeof mergedMetadataObj.author === 'string' ? mergedMetadataObj.author : undefined,
-          source:
-            typeof mergedMetadataObj.source === 'string' ? mergedMetadataObj.source : undefined,
-        };
-
-        // metadata を追加してファイルを書き戻し
-        const newFileContent = generateSkillFileContent(frontmatter, parsed.content);
-        await writeFile(skillFilePath, newFileContent, 'utf-8');
-
-        const stats = await stat(skillFilePath);
-
-        return {
-          name: parsed.name || skillName,
-          version: parsed.version,
-          description: parsed.description,
-          file_path: `${skillName}/${SKILL_FILE}`,
-          metadata: mergedMetadata,
-          created_at: stats.birthtime.toISOString(),
-          updated_at: stats.mtime.toISOString(),
-        };
-      }
-    } catch (error) {
-      // SKILL.md が存在しない場合は無視
-      // ENOENT以外のエラーはログに記録
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        logger.warn('Failed to process imported skill', {
-          skillName,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-  } else if (sourceStats.isFile() && basename(importPath) === SKILL_FILE) {
-    // 単一のSKILL.mdファイルの場合
-    // 親ディレクトリ名をスキル名として使用
-    const parentDirName = basename(join(importPath, '..'));
-    const skillDir = join(skillsDir, parentDirName);
-
-    await ensureDirectory(skillDir);
-    const destFile = join(skillDir, SKILL_FILE);
     await cp(sourcePath, destFile, { force: true });
 
-    const content = await readFile(destFile, 'utf-8');
-    const parsed = parseSkillFile(content);
+    // ヘルパー関数を使用してメタデータをマージ・書き戻し
+    return await mergeAndWriteAgentMetadata(destFile, importMetadata, agentName);
+  } else if (sourceStats.isDirectory()) {
+    // ディレクトリの場合: 中の .md ファイルをコピー
+    const entries = await readdir(sourcePath, { withFileTypes: true });
 
-    if (parsed) {
-      // frontmatter の metadata とインポート情報をマージ
-      const frontmatter = { ...parsed.frontmatter };
-      const existingMetadata =
-        frontmatter.metadata && typeof frontmatter.metadata === 'object'
-          ? (frontmatter.metadata as Record<string, unknown>)
-          : {};
-      const mergedMetadataObj = { ...existingMetadata };
+    for (const entry of entries) {
+      if (entry.isFile() && extname(entry.name) === '.md') {
+        const sourceFile = join(sourcePath, entry.name);
+        const destFile = join(agentsDir, entry.name);
 
-      // importMetadata.source のみをマージ（author は追加しない）
-      if (importMetadata.source) {
-        mergedMetadataObj.source = importMetadata.source;
+        await cp(sourceFile, destFile, { force: true });
+
+        // ヘルパー関数を使用してメタデータをマージ・書き戻し
+        const result = await mergeAndWriteAgentMetadata(
+          destFile,
+          importMetadata,
+          basename(entry.name, '.md')
+        );
+
+        if (result) {
+          return result;
+        }
       }
-
-      frontmatter.metadata = mergedMetadataObj;
-
-      // SkillMetadata 型として構築
-      const mergedMetadata: SkillMetadata = {
-        version:
-          typeof mergedMetadataObj.version === 'string' ? mergedMetadataObj.version : undefined,
-        author: typeof mergedMetadataObj.author === 'string' ? mergedMetadataObj.author : undefined,
-        source: typeof mergedMetadataObj.source === 'string' ? mergedMetadataObj.source : undefined,
-      };
-
-      // metadata を追加してファイルを書き戻し
-      const newFileContent = generateSkillFileContent(frontmatter, parsed.content);
-      await writeFile(destFile, newFileContent, 'utf-8');
-
-      const stats = await stat(destFile);
-
-      return {
-        name: parsed.name || parentDirName,
-        version: parsed.version,
-        description: parsed.description,
-        file_path: `${parentDirName}/${SKILL_FILE}`,
-        metadata: mergedMetadata,
-        created_at: stats.birthtime.toISOString(),
-        updated_at: stats.mtime.toISOString(),
-      };
     }
   }
 
@@ -604,23 +586,23 @@ async function copySkillFromDir(
 }
 
 /**
- * Git リポジトリからスキルをインポート（複数パス対応、sparse-checkout で効率化）
+ * Git リポジトリからエージェントをインポート（複数パス対応、sparse-checkout で効率化）
  */
-export async function importSkillsFromGit(
+export async function importAgentsFromGit(
   ctx: UserContext,
-  request: SkillImportRequest
-): Promise<SkillInfo[]> {
+  request: AgentImportRequest
+): Promise<AgentInfo[]> {
   const { repository_url, paths, branch = 'main' } = request;
-  const skillsDir = getSkillsDir(ctx);
+  const agentsDir = getAgentsDir(ctx);
 
   // ブランチ名のバリデーション（コマンドインジェクション対策）
   validateBranchName(branch);
 
   // 一時ディレクトリを作成
-  const tempDir = join(tmpdir(), `skill-import-${randomUUID()}`);
+  const tempDir = join(tmpdir(), `agent-import-${randomUUID()}`);
 
   // metadata を構築（source のみ）
-  const importMetadata: SkillMetadata = {
+  const importMetadata: AgentMetadata = {
     source: repository_url,
   };
 
@@ -669,14 +651,14 @@ export async function importSkillsFromGit(
       );
     }
 
-    await ensureDirectory(skillsDir);
+    await ensureDirectory(agentsDir);
 
     // 4. 各パスを並列でコピー
     const results = await Promise.all(
-      paths.map(importPath => copySkillFromDir(skillsDir, tempDir, importPath, importMetadata))
+      paths.map(importPath => copyAgentFromDir(agentsDir, tempDir, importPath, importMetadata))
     );
 
-    return results.filter((skill): skill is SkillInfo => skill !== null);
+    return results.filter((agent): agent is AgentInfo => agent !== null);
   } finally {
     // 5. 一時ディレクトリを削除
     await removeDirectory(tempDir);
@@ -684,15 +666,15 @@ export async function importSkillsFromGit(
 }
 
 /**
- * スキルを削除
+ * エージェントを削除（フラット構造）
  */
-export async function deleteSkill(ctx: UserContext, skillName: string): Promise<boolean> {
-  // バリデーションは getSkillDir 内で実行される
-  const skillDir = getSkillDir(ctx, skillName);
+export async function deleteAgent(ctx: UserContext, agentName: string): Promise<boolean> {
+  // バリデーションは getAgentFilePath 内で実行される
+  const agentFilePath = getAgentFilePath(ctx, agentName);
 
   try {
-    await stat(skillDir);
-    await rm(skillDir, { recursive: true });
+    await stat(agentFilePath);
+    await rm(agentFilePath);
     return true;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -703,20 +685,20 @@ export async function deleteSkill(ctx: UserContext, skillName: string): Promise<
 }
 
 /**
- * スキルを更新
+ * エージェントを更新（フラット構造）
  */
-export async function updateSkill(
+export async function updateAgent(
   ctx: UserContext,
-  skillName: string,
-  request: SkillUpdateRequest
-): Promise<SkillInfo | null> {
-  // バリデーションは getSkillFilePath -> getSkillDir 内で実行される
-  const skillFilePath = getSkillFilePath(ctx, skillName);
+  agentName: string,
+  request: AgentUpdateRequest
+): Promise<AgentInfo | null> {
+  // バリデーションは getAgentFilePath 内で実行される
+  const agentFilePath = getAgentFilePath(ctx, agentName);
 
   try {
-    // 既存スキルが存在するか確認
+    // 既存エージェントが存在するか確認
     try {
-      await stat(skillFilePath);
+      await stat(agentFilePath);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return null;
@@ -725,29 +707,31 @@ export async function updateSkill(
     }
 
     // raw_content をそのまま保存
-    await writeFile(skillFilePath, request.raw_content, 'utf-8');
+    await writeFile(agentFilePath, request.raw_content, 'utf-8');
 
     // 保存後にパースして情報を取得
-    const parsed = parseSkillFile(request.raw_content);
-    const stats = await stat(skillFilePath);
+    const parsed = parseAgentFile(request.raw_content);
+    const stats = await stat(agentFilePath);
 
     if (!parsed) {
       // パースに失敗しても保存は成功しているので、基本情報だけ返す
       return {
-        name: skillName,
+        name: agentName,
         version: '',
         description: '',
-        file_path: `${skillName}/${SKILL_FILE}`,
+        tools: undefined,
+        file_path: `${agentName}.md`,
         created_at: stats.birthtime.toISOString(),
         updated_at: stats.mtime.toISOString(),
       };
     }
 
     return {
-      name: parsed.name || skillName,
+      name: parsed.name || agentName,
       version: parsed.version,
       description: parsed.description,
-      file_path: `${skillName}/${SKILL_FILE}`,
+      tools: parsed.tools,
+      file_path: `${agentName}.md`,
       metadata: parsed.metadata,
       created_at: stats.birthtime.toISOString(),
       updated_at: stats.mtime.toISOString(),
@@ -761,11 +745,11 @@ export async function updateSkill(
 }
 
 /**
- * Workspace上のスキルパスを生成
- * /Workspace/Users/{userName}/.claude/skills
+ * Workspace上のエージェントパスを生成
+ * /Workspace/Users/{userName}/.claude/agents
  */
-function getWorkspaceSkillsPath(userName: string): string {
-  return `/Workspace/Users/${userName}/.claude/skills`;
+function getWorkspaceAgentsPath(userName: string): string {
+  return `/Workspace/Users/${userName}/.claude/agents`;
 }
 
 /**
@@ -825,12 +809,12 @@ function spawnDatabricksCli(
 }
 
 /**
- * スキルを Workspace にバックアップ
- * ローカルの .claude/skills/ → /Workspace/Users/{user}/.claude/skills/
+ * エージェントを Workspace にバックアップ
+ * ローカルの .claude/agents/ → /Workspace/Users/{user}/.claude/agents/
  */
-export async function backupSkillsToWorkspace(ctx: UserContext): Promise<SkillBackupResponse> {
-  const localSkillsDir = getSkillsDir(ctx);
-  const workspacePath = getWorkspaceSkillsPath(ctx.userName);
+export async function backupAgentsToWorkspace(ctx: UserContext): Promise<AgentBackupResponse> {
+  const localAgentsDir = getAgentsDir(ctx);
+  const workspacePath = getWorkspaceAgentsPath(ctx.userName);
 
   // 認証情報を取得
   const authProvider = await ctx.getAuthProvider();
@@ -838,14 +822,14 @@ export async function backupSkillsToWorkspace(ctx: UserContext): Promise<SkillBa
     throw new Error('PAT is required for backup operation');
   }
 
-  // ローカルスキルディレクトリが存在するか確認
+  // ローカルエージェントディレクトリが存在するか確認
   try {
-    await stat(localSkillsDir);
+    await stat(localAgentsDir);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return {
         success: true,
-        message: 'No skills to backup',
+        message: 'No agents to backup',
         workspace_path: workspacePath,
       };
     }
@@ -864,7 +848,7 @@ export async function backupSkillsToWorkspace(ctx: UserContext): Promise<SkillBa
 
   // 2. Workspace にインポート
   await spawnDatabricksCli(
-    ['workspace', 'import-dir', localSkillsDir, workspacePath, '--overwrite'],
+    ['workspace', 'import-dir', localAgentsDir, workspacePath, '--overwrite'],
     {
       authProvider,
       timeout: 120000,
@@ -873,18 +857,18 @@ export async function backupSkillsToWorkspace(ctx: UserContext): Promise<SkillBa
 
   return {
     success: true,
-    message: 'Skills backed up successfully',
+    message: 'Agents backed up successfully',
     workspace_path: workspacePath,
   };
 }
 
 /**
- * Workspace からスキルをリストア
- * /Workspace/Users/{user}/.claude/skills/ → ローカルの .claude/skills/
+ * Workspace からエージェントをリストア
+ * /Workspace/Users/{user}/.claude/agents/ → ローカルの .claude/agents/
  */
-export async function restoreSkillsFromWorkspace(ctx: UserContext): Promise<SkillRestoreResponse> {
-  const localSkillsDir = getSkillsDir(ctx);
-  const workspacePath = getWorkspaceSkillsPath(ctx.userName);
+export async function restoreAgentsFromWorkspace(ctx: UserContext): Promise<AgentRestoreResponse> {
+  const localAgentsDir = getAgentsDir(ctx);
+  const workspacePath = getWorkspaceAgentsPath(ctx.userName);
 
   // 認証情報を取得
   const authProvider = await ctx.getAuthProvider();
@@ -894,15 +878,15 @@ export async function restoreSkillsFromWorkspace(ctx: UserContext): Promise<Skil
 
   // 1. ローカルの既存ディレクトリを削除
   // セキュリティ: ユーザーホーム配下であることを検証
-  const safeSkillsDir = await validatePathWithinBase(localSkillsDir, ctx.userHome);
-  await removeDirectory(safeSkillsDir);
+  const safeAgentsDir = await validatePathWithinBase(localAgentsDir, ctx.userHome);
+  await removeDirectory(safeAgentsDir);
 
   // 2. ローカルディレクトリを再作成
-  await ensureDirectory(localSkillsDir);
+  await ensureDirectory(localAgentsDir);
 
   // 3. Workspace からエクスポート
   await spawnDatabricksCli(
-    ['workspace', 'export-dir', workspacePath, localSkillsDir, '--overwrite'],
+    ['workspace', 'export-dir', workspacePath, localAgentsDir, '--overwrite'],
     {
       authProvider,
       timeout: 120000,
@@ -911,16 +895,17 @@ export async function restoreSkillsFromWorkspace(ctx: UserContext): Promise<Skil
 
   return {
     success: true,
-    message: 'Skills restored successfully',
+    message: 'Agents restored successfully',
   };
 }
 
 // テスト用エクスポート（内部関数のユニットテスト用）
 export const __testing = {
-  parseSkillFile,
-  generateSkillFileContent,
+  parseAgentFile,
+  generateAgentFileContent,
   extractAuthorFromGitUrl,
   validateBranchName,
-  validateSkillName,
-  getWorkspaceSkillsPath,
+  validateAgentName,
+  getWorkspaceAgentsPath,
+  mergeAndWriteAgentMetadata,
 };
