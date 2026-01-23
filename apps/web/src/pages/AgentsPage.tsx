@@ -138,7 +138,7 @@ export function AgentsContent() {
   // フォーム状態（インポート）
   const [importForm, setImportForm] = useState({
     repository_url: '',
-    path: 'categories/05-data-ai',
+    path: 'agents',
     branch: 'main',
   });
   const [isImporting, setIsImporting] = useState(false);

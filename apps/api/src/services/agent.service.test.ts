@@ -153,12 +153,12 @@ description: Test
       );
 
       expect(result).toContain('---');
-      expect(result).toContain('name: test-agent');
-      expect(result).toContain('description: Test description');
-      expect(result).toContain('tools: Read, Write, Bash');
-      expect(result).toContain('version: 1.0.0');
-      expect(result).toContain('author: test-author');
-      expect(result).toContain('source: https://github.com/test/repo');
+      expect(result).toContain('name: "test-agent"');
+      expect(result).toContain('description: "Test description"');
+      expect(result).toContain('tools: "Read, Write, Bash"');
+      expect(result).toContain('version: "1.0.0"');
+      expect(result).toContain('author: "test-author"');
+      expect(result).toContain('source: "https://github.com/test/repo"');
       expect(result).toContain('Agent content here');
     });
 
@@ -168,8 +168,8 @@ description: Test
         'Content'
       );
 
-      expect(result).toContain('name: simple-agent');
-      expect(result).toContain('description: Simple description');
+      expect(result).toContain('name: "simple-agent"');
+      expect(result).toContain('description: "Simple description"');
       expect(result).not.toContain('metadata:');
       expect(result).toContain('Content');
     });
@@ -184,7 +184,7 @@ description: Test
         'Content'
       );
 
-      expect(result).toContain('name: no-tools-agent');
+      expect(result).toContain('name: "no-tools-agent"');
       expect(result).not.toContain('tools:');
       expect(result).toContain('Content');
     });
@@ -345,31 +345,31 @@ description: Test
     });
 
     it('should reject "." as agent name', () => {
-      expect(() => validateAgentName('.')).toThrow('"." and ".." are not allowed');
+      expect(() => validateAgentName('.')).toThrow('only alphanumeric, hyphens, and underscores are allowed');
     });
 
     it('should reject ".." as agent name', () => {
-      expect(() => validateAgentName('..')).toThrow('"." and ".." are not allowed');
+      expect(() => validateAgentName('..')).toThrow('only alphanumeric, hyphens, and underscores are allowed');
     });
 
     it('should reject agent name with forward slash', () => {
-      expect(() => validateAgentName('agent/name')).toThrow('path separators are not allowed');
+      expect(() => validateAgentName('agent/name')).toThrow('only alphanumeric, hyphens, and underscores are allowed');
     });
 
     it('should reject agent name with backslash', () => {
-      expect(() => validateAgentName('agent\\name')).toThrow('path separators are not allowed');
+      expect(() => validateAgentName('agent\\name')).toThrow('only alphanumeric, hyphens, and underscores are allowed');
     });
 
     it('should reject agent name with null byte', () => {
-      expect(() => validateAgentName('agent\x00name')).toThrow('null bytes are not allowed');
+      expect(() => validateAgentName('agent\x00name')).toThrow('only alphanumeric, hyphens, and underscores are allowed');
     });
 
     it('should reject agent name with leading whitespace', () => {
-      expect(() => validateAgentName(' agent')).toThrow('leading/trailing whitespace');
+      expect(() => validateAgentName(' agent')).toThrow('only alphanumeric, hyphens, and underscores are allowed');
     });
 
     it('should reject agent name with trailing whitespace', () => {
-      expect(() => validateAgentName('agent ')).toThrow('leading/trailing whitespace');
+      expect(() => validateAgentName('agent ')).toThrow('only alphanumeric, hyphens, and underscores are allowed');
     });
 
     it('should reject very long agent name', () => {

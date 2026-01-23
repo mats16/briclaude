@@ -99,29 +99,32 @@ function validatePathWithinBase(baseDir: string, targetPath: string): string {
 
 /**
  * エージェント名のバリデーション
- * パス区切り文字、`.`、`..` のみの名前を拒否
+ * 英数字、ハイフン、アンダースコアのみを許可し、パストラバーサルや特殊文字を拒否
  */
 function validateAgentName(name: string): void {
   if (!name || name.length > 255) {
     throw new Error('Invalid agent name: must be 1-255 characters');
   }
 
-  // `.` または `..` のみの名前を拒否
+  // フォーマットチェック（英数字、ハイフン、アンダースコアのみ）
+  // これにより `.`, `..`, 空白、特殊文字がすべて拒否される
+  if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+    throw new Error('Invalid agent name: only alphanumeric, hyphens, and underscores are allowed');
+  }
+
+  // 以下は正規表現で既に拒否されるが、明示的にチェック（防衛的プログラミング）
   if (name === '.' || name === '..') {
     throw new Error('Invalid agent name: "." and ".." are not allowed');
   }
 
-  // パス区切り文字を含む名前を拒否
   if (name.includes('/') || name.includes('\\')) {
     throw new Error('Invalid agent name: path separators are not allowed');
   }
 
-  // null バイトを含む名前を拒否
   if (name.includes('\0')) {
     throw new Error('Invalid agent name: null bytes are not allowed');
   }
 
-  // 先頭・末尾の空白を拒否
   if (name !== name.trim()) {
     throw new Error('Invalid agent name: leading/trailing whitespace is not allowed');
   }
@@ -146,6 +149,7 @@ function getAgentFilePath(ctx: UserContext, agentName: string): string {
 /**
  * YAML frontmatter + content を Markdown ファイルコンテンツとして生成
  * 元の frontmatter オブジェクトを保持し、必要な部分だけをマージ
+ * セキュリティ: forceQuotes: true により特殊文字を安全にエスケープ
  */
 function generateAgentFileContent(frontmatter: Record<string, unknown>, content: string): string {
   // js-yaml で YAML を生成（マルチライン文字列も適切に処理）
@@ -153,7 +157,7 @@ function generateAgentFileContent(frontmatter: Record<string, unknown>, content:
     .dump(frontmatter, {
       lineWidth: -1, // 折り返しなし
       quotingType: '"',
-      forceQuotes: false,
+      forceQuotes: true, // 常にクォートしてYAMLインジェクション攻撃を防止
     })
     .trim();
 
@@ -476,6 +480,66 @@ function spawnAsync(
 }
 
 /**
+ * エージェントファイルのメタデータをマージして書き戻す
+ * @param destFile - 対象ファイルパス
+ * @param importMetadata - インポート時に追加するメタデータ
+ * @param agentName - エージェント名（ファイル名から抽出）
+ * @returns AgentInfo | null
+ */
+async function mergeAndWriteAgentMetadata(
+  destFile: string,
+  importMetadata: AgentMetadata,
+  agentName: string
+): Promise<AgentInfo | null> {
+  // 1. ファイルを読み取り、パース
+  const content = await readFile(destFile, 'utf-8');
+  const parsed = parseAgentFile(content);
+
+  if (!parsed) {
+    return null;
+  }
+
+  // 2. frontmatter の metadata とインポート情報をマージ
+  const frontmatter = { ...parsed.frontmatter };
+  const existingMetadata =
+    frontmatter.metadata && typeof frontmatter.metadata === 'object'
+      ? (frontmatter.metadata as Record<string, unknown>)
+      : {};
+  const mergedMetadataObj = { ...existingMetadata };
+
+  if (importMetadata.source) {
+    mergedMetadataObj.source = importMetadata.source;
+  }
+
+  frontmatter.metadata = mergedMetadataObj;
+
+  // 3. AgentMetadata 型として構築
+  const mergedMetadata: AgentMetadata = {
+    version: typeof mergedMetadataObj.version === 'string' ? mergedMetadataObj.version : undefined,
+    author: typeof mergedMetadataObj.author === 'string' ? mergedMetadataObj.author : undefined,
+    source: typeof mergedMetadataObj.source === 'string' ? mergedMetadataObj.source : undefined,
+  };
+
+  // 4. ファイルを書き戻し
+  const newFileContent = generateAgentFileContent(frontmatter, parsed.content);
+  await writeFile(destFile, newFileContent, 'utf-8');
+
+  const stats = await stat(destFile);
+
+  // 5. AgentInfo を返却
+  return {
+    name: parsed.name || agentName,
+    version: parsed.version,
+    description: parsed.description,
+    tools: parsed.tools,
+    file_path: basename(destFile),
+    metadata: mergedMetadata,
+    created_at: stats.birthtime.toISOString(),
+    updated_at: stats.mtime.toISOString(),
+  };
+}
+
+/**
  * 単一のエージェントを一時ディレクトリからユーザーのエージェントディレクトリにコピー（フラット構造）
  */
 async function copyAgentFromDir(
@@ -505,50 +569,8 @@ async function copyAgentFromDir(
 
     await cp(sourcePath, destFile, { force: true });
 
-    const content = await readFile(destFile, 'utf-8');
-    const parsed = parseAgentFile(content);
-
-    if (parsed) {
-      // frontmatter の metadata とインポート情報をマージ
-      const frontmatter = { ...parsed.frontmatter };
-      const existingMetadata =
-        frontmatter.metadata && typeof frontmatter.metadata === 'object'
-          ? (frontmatter.metadata as Record<string, unknown>)
-          : {};
-      const mergedMetadataObj = { ...existingMetadata };
-
-      // importMetadata.source のみをマージ（author は追加しない）
-      if (importMetadata.source) {
-        mergedMetadataObj.source = importMetadata.source;
-      }
-
-      frontmatter.metadata = mergedMetadataObj;
-
-      // AgentMetadata 型として構築
-      const mergedMetadata: AgentMetadata = {
-        version:
-          typeof mergedMetadataObj.version === 'string' ? mergedMetadataObj.version : undefined,
-        author: typeof mergedMetadataObj.author === 'string' ? mergedMetadataObj.author : undefined,
-        source: typeof mergedMetadataObj.source === 'string' ? mergedMetadataObj.source : undefined,
-      };
-
-      // metadata を追加してファイルを書き戻し
-      const newFileContent = generateAgentFileContent(frontmatter, parsed.content);
-      await writeFile(destFile, newFileContent, 'utf-8');
-
-      const stats = await stat(destFile);
-
-      return {
-        name: parsed.name || agentName,
-        version: parsed.version,
-        description: parsed.description,
-        tools: parsed.tools,
-        file_path: `${agentName}.md`,
-        metadata: mergedMetadata,
-        created_at: stats.birthtime.toISOString(),
-        updated_at: stats.mtime.toISOString(),
-      };
-    }
+    // ヘルパー関数を使用してメタデータをマージ・書き戻し
+    return await mergeAndWriteAgentMetadata(destFile, importMetadata, agentName);
   } else if (sourceStats.isDirectory()) {
     // ディレクトリの場合: 中の .md ファイルをコピー
     const entries = await readdir(sourcePath, { withFileTypes: true });
@@ -560,51 +582,15 @@ async function copyAgentFromDir(
 
         await cp(sourceFile, destFile, { force: true });
 
-        const content = await readFile(destFile, 'utf-8');
-        const parsed = parseAgentFile(content);
+        // ヘルパー関数を使用してメタデータをマージ・書き戻し
+        const result = await mergeAndWriteAgentMetadata(
+          destFile,
+          importMetadata,
+          basename(entry.name, '.md')
+        );
 
-        if (parsed) {
-          // frontmatter の metadata とインポート情報をマージ
-          const frontmatter = { ...parsed.frontmatter };
-          const existingMetadata =
-            frontmatter.metadata && typeof frontmatter.metadata === 'object'
-              ? (frontmatter.metadata as Record<string, unknown>)
-              : {};
-          const mergedMetadataObj = { ...existingMetadata };
-
-          // importMetadata.source のみをマージ
-          if (importMetadata.source) {
-            mergedMetadataObj.source = importMetadata.source;
-          }
-
-          frontmatter.metadata = mergedMetadataObj;
-
-          // AgentMetadata 型として構築
-          const mergedMetadata: AgentMetadata = {
-            version:
-              typeof mergedMetadataObj.version === 'string' ? mergedMetadataObj.version : undefined,
-            author:
-              typeof mergedMetadataObj.author === 'string' ? mergedMetadataObj.author : undefined,
-            source:
-              typeof mergedMetadataObj.source === 'string' ? mergedMetadataObj.source : undefined,
-          };
-
-          // metadata を追加してファイルを書き戻し
-          const newFileContent = generateAgentFileContent(frontmatter, parsed.content);
-          await writeFile(destFile, newFileContent, 'utf-8');
-
-          const stats = await stat(destFile);
-
-          return {
-            name: parsed.name || basename(entry.name, '.md'),
-            version: parsed.version,
-            description: parsed.description,
-            tools: parsed.tools,
-            file_path: entry.name,
-            metadata: mergedMetadata,
-            created_at: stats.birthtime.toISOString(),
-            updated_at: stats.mtime.toISOString(),
-          };
+        if (result) {
+          return result;
         }
       }
     }
@@ -934,4 +920,5 @@ export const __testing = {
   validatePathWithinBase,
   validateAgentName,
   getWorkspaceAgentsPath,
+  mergeAndWriteAgentMetadata,
 };

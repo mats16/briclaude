@@ -76,16 +76,6 @@ const userAgentsRoute: FastifyPluginAsync = async fastify => {
       });
     }
 
-    // バリデーション: エージェント名のフォーマットチェック（英数字、ハイフン、アンダースコアのみ）
-    if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
-      return reply.status(400).send({
-        error: 'BadRequest',
-        message:
-          'Invalid agent name format. Only alphanumeric, hyphens, and underscores are allowed.',
-        statusCode: 400,
-      });
-    }
-
     try {
       const ctx = createUserContext(fastify, request);
       const agent = await getAgent(ctx, name);
@@ -100,6 +90,15 @@ const userAgentsRoute: FastifyPluginAsync = async fastify => {
 
       return reply.send({ agent });
     } catch (error) {
+      // バリデーションエラーは 400 Bad Request を返す
+      if (error instanceof Error && error.message.includes('Invalid agent name')) {
+        return reply.status(400).send({
+          error: 'BadRequest',
+          message: error.message,
+          statusCode: 400,
+        });
+      }
+
       request.log.error(error, 'Failed to get agent');
       return reply.status(500).send({
         error: 'InternalServerError',
@@ -137,16 +136,6 @@ const userAgentsRoute: FastifyPluginAsync = async fastify => {
       });
     }
 
-    // バリデーション: エージェント名のフォーマットチェック
-    if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
-      return reply.status(400).send({
-        error: 'BadRequest',
-        message:
-          'Invalid agent name format. Only alphanumeric, hyphens, and underscores are allowed.',
-        statusCode: 400,
-      });
-    }
-
     // バリデーション: バージョンフォーマット（semver）
     if (!/^\d+\.\d+\.\d+$/.test(version)) {
       return reply.status(400).send({
@@ -172,6 +161,15 @@ const userAgentsRoute: FastifyPluginAsync = async fastify => {
       });
     } catch (error) {
       request.log.error(error, 'Failed to create agent');
+
+      // バリデーションエラーは 400 Bad Request を返す
+      if (error instanceof Error && error.message.includes('Invalid agent name')) {
+        return reply.status(400).send({
+          error: 'BadRequest',
+          message: error.message,
+          statusCode: 400,
+        });
+      }
 
       // 重複エラーの場合
       if ((error as Error).message?.includes('already exists')) {
@@ -305,15 +303,6 @@ const userAgentsRoute: FastifyPluginAsync = async fastify => {
       });
     }
 
-    // バリデーション: エージェント名のフォーマットチェック
-    if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
-      return reply.status(400).send({
-        error: 'BadRequest',
-        message: 'Invalid agent name format',
-        statusCode: 400,
-      });
-    }
-
     // バリデーション: raw_content が必須
     if (!raw_content) {
       return reply.status(400).send({
@@ -341,6 +330,15 @@ const userAgentsRoute: FastifyPluginAsync = async fastify => {
         agent,
       });
     } catch (error) {
+      // バリデーションエラーは 400 Bad Request を返す
+      if (error instanceof Error && error.message.includes('Invalid agent name')) {
+        return reply.status(400).send({
+          error: 'BadRequest',
+          message: error.message,
+          statusCode: 400,
+        });
+      }
+
       request.log.error(error, 'Failed to update agent');
       return reply.status(500).send({
         error: 'InternalServerError',
@@ -369,15 +367,6 @@ const userAgentsRoute: FastifyPluginAsync = async fastify => {
       });
     }
 
-    // バリデーション: エージェント名のフォーマットチェック
-    if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
-      return reply.status(400).send({
-        error: 'BadRequest',
-        message: 'Invalid agent name format',
-        statusCode: 400,
-      });
-    }
-
     try {
       const ctx = createUserContext(fastify, request);
       const deleted = await deleteAgent(ctx, name);
@@ -395,6 +384,15 @@ const userAgentsRoute: FastifyPluginAsync = async fastify => {
         message: 'Agent deleted successfully',
       });
     } catch (error) {
+      // バリデーションエラーは 400 Bad Request を返す
+      if (error instanceof Error && error.message.includes('Invalid agent name')) {
+        return reply.status(400).send({
+          error: 'BadRequest',
+          message: error.message,
+          statusCode: 400,
+        });
+      }
+
       request.log.error(error, 'Failed to delete agent');
       return reply.status(500).send({
         error: 'InternalServerError',
