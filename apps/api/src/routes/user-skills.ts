@@ -184,14 +184,14 @@ const userSkillsRoute: FastifyPluginAsync = async fastify => {
 
   /**
    * POST /user/skills/import
-   * Gitリポジトリからインポート
+   * Gitリポジトリからインポート（複数パス対応）
    */
   fastify.post<{
     Body: SkillImportRequest;
     Reply: SkillImportResponse | ApiError;
   }>('/user/skills/import', async (request, reply) => {
     const { user } = request.ctx!;
-    const { repository_url, path, branch } = request.body;
+    const { repository_url, paths, branch } = request.body;
 
     if (!user.id) {
       return reply.status(401).send({
@@ -202,10 +202,42 @@ const userSkillsRoute: FastifyPluginAsync = async fastify => {
     }
 
     // バリデーション: 必須フィールドチェック
-    if (!repository_url || !path) {
+    if (!repository_url || !paths || !Array.isArray(paths) || paths.length === 0) {
       return reply.status(400).send({
         error: 'BadRequest',
-        message: 'Missing required fields: repository_url, path',
+        message: 'Missing required fields: repository_url, paths (non-empty array)',
+        statusCode: 400,
+      });
+    }
+
+    // バリデーション: パス配列のサイズ制限（DoS対策）
+    const MAX_PATHS = 20;
+    if (paths.length > MAX_PATHS) {
+      return reply.status(400).send({
+        error: 'BadRequest',
+        message: `Too many paths specified. Maximum is ${MAX_PATHS}.`,
+        statusCode: 400,
+      });
+    }
+
+    // バリデーション: 各パスが有効な文字列であることを確認
+    const invalidPaths = paths.filter(
+      p => typeof p !== 'string' || p.trim() === '' || p.includes('\0')
+    );
+    if (invalidPaths.length > 0) {
+      return reply.status(400).send({
+        error: 'BadRequest',
+        message: 'Invalid path in paths array: each path must be a non-empty string',
+        statusCode: 400,
+      });
+    }
+
+    // バリデーション: 重複パスのチェック
+    const uniquePaths = new Set(paths);
+    if (uniquePaths.size !== paths.length) {
+      return reply.status(400).send({
+        error: 'BadRequest',
+        message: 'Duplicate paths detected. Each path must be unique.',
         statusCode: 400,
       });
     }
@@ -225,7 +257,7 @@ const userSkillsRoute: FastifyPluginAsync = async fastify => {
       const ctx = createUserContext(fastify, request);
       const importedSkills = await importSkillsFromGit(ctx, {
         repository_url,
-        path,
+        paths,
         branch: branch ?? 'main',
       });
 

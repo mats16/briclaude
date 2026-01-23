@@ -157,9 +157,14 @@
       "branchPlaceholder": "main",
       "fetchSkills": "Fetch Skills",
       "selectSkill": "Select a Skill",
+      "selectSkills": "Select Skills",
+      "selectedCount": "{{count}} selected",
+      "selectAll": "Select All",
+      "deselectAll": "Deselect All",
       "invalidUrl": "Invalid Repository URL",
       "fetchError": "Failed to fetch skills",
-      "submit": "Import"
+      "submit": "Import",
+      "submitCount": "Import {{count}} skill(s)"
     },
     "previewDialog": {
       "content": "Content",

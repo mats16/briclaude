@@ -86,8 +86,8 @@ export interface SkillCreateResponse {
 export interface SkillImportRequest {
   /** GitリポジトリURL（HTTPSまたはSSH） */
   repository_url: string;
-  /** インポートするパス（リポジトリルートからの相対パス） */
-  path: string;
+  /** インポートするパス（リポジトリルートからの相対パス）- 複数指定可能 */
+  paths: string[];
   /** ブランチ名（デフォルト: main） */
   branch?: string;
 }

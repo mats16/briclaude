@@ -157,9 +157,14 @@
       "branchPlaceholder": "main",
       "fetchSkills": "スキル一覧を取得",
       "selectSkill": "スキルを選択",
+      "selectSkills": "スキルを選択",
+      "selectedCount": "{{count}} 件選択中",
+      "selectAll": "すべて選択",
+      "deselectAll": "すべて解除",
       "invalidUrl": "無効なリポジトリ URL",
       "fetchError": "スキルの取得に失敗しました",
-      "submit": "インポート"
+      "submit": "インポート",
+      "submitCount": "{{count}} 件インポート"
     },
     "previewDialog": {
       "content": "コンテンツ",

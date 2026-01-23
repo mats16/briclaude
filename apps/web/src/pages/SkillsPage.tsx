@@ -60,6 +60,13 @@ interface GitHubContent {
   type: 'file' | 'dir';
 }
 
+/** metadata.sourceからGitHub repository情報を抽出 */
+const parseGitHubSource = (source: string): { owner: string; repo: string } | null => {
+  const match = source.match(/github\.com\/([^/]+)\/([^/.]+)/);
+  if (!match) return null;
+  return { owner: match[1], repo: match[2] };
+};
+
 export function SkillsContent() {
   const { t } = useTranslation();
   const [skills, setSkills] = useState<SkillInfo[]>([]);
@@ -95,7 +102,7 @@ export function SkillsContent() {
   // スキル一覧
   const [availableSkills, setAvailableSkills] = useState<string[]>([]);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
-  const [selectedSkillName, setSelectedSkillName] = useState<string | null>(null);
+  const [selectedSkillNames, setSelectedSkillNames] = useState<Set<string>>(new Set());
 
   // 削除中のスキル名
   const [deletingSkill, setDeletingSkill] = useState<string | null>(null);
@@ -158,7 +165,7 @@ export function SkillsContent() {
   const handleSelectRepo = (url: string) => {
     setImportForm(f => ({ ...f, repository_url: url }));
     setAvailableSkills([]);
-    setSelectedSkillName(null);
+    setSelectedSkillNames(new Set());
     setImportError(null);
     setRepoComboOpen(false);
   };
@@ -173,7 +180,7 @@ export function SkillsContent() {
     setIsLoadingSkills(true);
     setImportError(null);
     setAvailableSkills([]);
-    setSelectedSkillName(null);
+    setSelectedSkillNames(new Set());
     try {
       const response = await fetch(apiUrl);
       if (!response.ok) throw new Error('Failed to fetch');
@@ -190,29 +197,47 @@ export function SkillsContent() {
     }
   };
 
-  // スキルを選択
+  // スキルを選択（複数選択対応）
   const handleSelectSkillName = (skillName: string) => {
-    if (selectedSkillName === skillName) {
-      setSelectedSkillName(null);
+    setSelectedSkillNames(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(skillName)) {
+        newSet.delete(skillName);
+      } else {
+        newSet.add(skillName);
+      }
+      return newSet;
+    });
+  };
+
+  // 全選択/全解除
+  const handleSelectAll = () => {
+    if (selectedSkillNames.size === availableSkills.length) {
+      setSelectedSkillNames(new Set());
     } else {
-      setSelectedSkillName(skillName);
+      setSelectedSkillNames(new Set(availableSkills));
     }
   };
 
-  // Gitインポート
+  // Gitインポート（複数パス対応）
   const handleImport = async () => {
     setIsImporting(true);
     setImportError(null);
-    // スキル選択時はパスを更新
-    const finalForm = selectedSkillName
-      ? { ...importForm, path: `${importForm.path}/${selectedSkillName}` }
-      : importForm;
+    // 選択されたスキルのパス配列を構築
+    const paths =
+      selectedSkillNames.size > 0
+        ? Array.from(selectedSkillNames).map(name => `${importForm.path}/${name}`)
+        : [importForm.path];
     try {
-      await skillService.importFromGit(finalForm);
+      await skillService.importFromGit({
+        repository_url: importForm.repository_url,
+        paths,
+        branch: importForm.branch,
+      });
       setShowImportDialog(false);
       setImportForm({ repository_url: '', path: 'skills', branch: 'main' });
       setAvailableSkills([]);
-      setSelectedSkillName(null);
+      setSelectedSkillNames(new Set());
       await fetchSkills();
     } catch (err) {
       setImportError(err instanceof Error ? err.message : t('skills.importError'));
@@ -324,7 +349,7 @@ export function SkillsContent() {
               setShowImportDialog(open);
               if (!open) {
                 setAvailableSkills([]);
-                setSelectedSkillName(null);
+                setSelectedSkillNames(new Set());
                 setImportForm({ repository_url: '', path: 'skills', branch: 'main' });
                 setImportError(null);
               }
@@ -338,7 +363,7 @@ export function SkillsContent() {
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               {availableSkills.length > 0 ? (
-                /* スキル一覧表示画面 */
+                /* スキル一覧表示画面（複数選択対応） */
                 <div className="flex flex-col h-[400px]">
                   <div className="flex items-center gap-2 mb-4">
                     <Button
@@ -346,7 +371,7 @@ export function SkillsContent() {
                       size="icon"
                       onClick={() => {
                         setAvailableSkills([]);
-                        setSelectedSkillName(null);
+                        setSelectedSkillNames(new Set());
                       }}
                     >
                       <svg
@@ -363,12 +388,23 @@ export function SkillsContent() {
                         <path d="m15 18-6-6 6-6" />
                       </svg>
                     </Button>
-                    <div>
-                      <DialogTitle>{t('skills.importDialog.selectSkill')}</DialogTitle>
+                    <div className="flex-1">
+                      <DialogTitle>{t('skills.importDialog.selectSkills')}</DialogTitle>
                       <DialogDescription className="text-xs mt-1">
                         {importForm.repository_url}
                       </DialogDescription>
                     </div>
+                  </div>
+                  {/* 全選択ボタン */}
+                  <div className="flex items-center justify-between mb-2 px-1">
+                    <span className="text-sm text-muted-foreground">
+                      {t('skills.importDialog.selectedCount', { count: selectedSkillNames.size })}
+                    </span>
+                    <Button variant="ghost" size="sm" onClick={handleSelectAll}>
+                      {selectedSkillNames.size === availableSkills.length
+                        ? t('skills.importDialog.deselectAll')
+                        : t('skills.importDialog.selectAll')}
+                    </Button>
                   </div>
                   <ScrollArea className="flex-1 rounded-md border">
                     <div className="p-2 space-y-1">
@@ -376,15 +412,28 @@ export function SkillsContent() {
                         <button
                           key={skillName}
                           type="button"
-                          className={`w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-md transition-colors ${
-                            selectedSkillName === skillName
-                              ? 'bg-primary text-primary-foreground'
+                          role="checkbox"
+                          aria-checked={selectedSkillNames.has(skillName)}
+                          aria-label={`Select skill ${skillName}`}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-md transition-colors ${
+                            selectedSkillNames.has(skillName)
+                              ? 'bg-primary/10 text-primary'
                               : 'hover:bg-muted'
                           }`}
                           onClick={() => handleSelectSkillName(skillName)}
                         >
+                          <div
+                            className={`w-4 h-4 rounded border flex items-center justify-center ${
+                              selectedSkillNames.has(skillName)
+                                ? 'bg-primary border-primary'
+                                : 'border-muted-foreground'
+                            }`}
+                          >
+                            {selectedSkillNames.has(skillName) && (
+                              <Check className="h-3 w-3 text-primary-foreground" />
+                            )}
+                          </div>
                           <span>{skillName}</span>
-                          {selectedSkillName === skillName && <Check className="h-4 w-4" />}
                         </button>
                       ))}
                     </div>
@@ -397,11 +446,13 @@ export function SkillsContent() {
                   )}
                   <Button
                     onClick={handleImport}
-                    disabled={isImporting || !selectedSkillName}
+                    disabled={isImporting || selectedSkillNames.size === 0}
                     className="w-full mt-4"
                   >
                     {isImporting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                    {t('skills.importDialog.submit')}
+                    {selectedSkillNames.size > 0
+                      ? t('skills.importDialog.submitCount', { count: selectedSkillNames.size })
+                      : t('skills.importDialog.submit')}
                   </Button>
                 </div>
               ) : (
@@ -609,11 +660,28 @@ export function SkillsContent() {
                           {skill.version}
                         </span>
                       )}
-                      {skill.metadata?.source && (
-                        <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded">
-                          Imported
-                        </span>
-                      )}
+                      {skill.metadata?.source && (() => {
+                        const githubInfo = parseGitHubSource(skill.metadata.source);
+                        if (githubInfo) {
+                          return (
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded">
+                              <svg
+                                viewBox="0 0 24 24"
+                                className="h-3 w-3"
+                                fill="currentColor"
+                              >
+                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                              </svg>
+                              {githubInfo.owner}/{githubInfo.repo}
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded">
+                            {skill.metadata.source}
+                          </span>
+                        );
+                      })()}
                     </div>
                     <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap line-clamp-2">
                       {skill.description}
@@ -667,11 +735,28 @@ export function SkillsContent() {
                       {previewSkill.version}
                     </span>
                   )}
-                  {previewSkill.metadata?.source && (
-                    <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded font-normal">
-                      Imported
-                    </span>
-                  )}
+                  {previewSkill.metadata?.source && (() => {
+                    const githubInfo = parseGitHubSource(previewSkill.metadata.source);
+                    if (githubInfo) {
+                      return (
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded font-normal">
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="h-3 w-3"
+                            fill="currentColor"
+                          >
+                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                          </svg>
+                          {githubInfo.owner}/{githubInfo.repo}
+                        </span>
+                      );
+                    }
+                    return (
+                      <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded font-normal">
+                        {previewSkill.metadata.source}
+                      </span>
+                    );
+                  })()}
                   {isEditMode && (
                     <span className="text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded font-normal">
                       {t('skills.previewDialog.editing')}
