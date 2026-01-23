@@ -50,7 +50,7 @@ Content here.`;
       expect(result).not.toBeNull();
       expect(result?.frontmatter.name).toBe('simple-skill');
       expect(result?.frontmatter.description).toBe('Simple description');
-      expect(result?.frontmatter.version).toBe('');
+      expect(result?.version).toBe(''); // version is extracted from metadata, so empty when no metadata
       expect(result?.frontmatter.metadata).toBeUndefined();
     });
 
