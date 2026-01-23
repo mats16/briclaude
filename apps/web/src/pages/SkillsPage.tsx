@@ -14,6 +14,7 @@ import {
   Upload,
   Download,
   TriangleAlert,
+  ChevronDown,
 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
@@ -30,6 +31,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -122,6 +129,7 @@ export function SkillsContent() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // バックアップ/リストア状態
+  const [syncAction, setSyncAction] = useState<'backup' | 'restore'>('backup');
   const [showBackupDialog, setShowBackupDialog] = useState(false);
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
@@ -382,6 +390,47 @@ export function SkillsContent() {
           <p className="text-sm text-muted-foreground">{t('skills.description')}</p>
         </div>
         <div className="flex gap-2">
+          {/* バックアップ/リストア スプリットボタン */}
+          <div className="flex">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-r-none border-r-0 min-w-[140px] justify-start"
+              onClick={() =>
+                syncAction === 'backup' ? setShowBackupDialog(true) : setShowRestoreDialog(true)
+              }
+            >
+              {syncAction === 'backup' ? (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  {t('skills.backup')}
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  {t('skills.restore')}
+                </>
+              )}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-l-none px-2">
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setSyncAction('backup')}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  {t('skills.backup')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSyncAction('restore')}>
+                  <Download className="h-4 w-4 mr-2" />
+                  {t('skills.restore')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           {/* バックアップダイアログ */}
           <Dialog
             open={showBackupDialog}
@@ -390,12 +439,6 @@ export function SkillsContent() {
               if (!open) setBackupError(null);
             }}
           >
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Upload className="h-4 w-4 mr-2" />
-                {t('skills.backup')}
-              </Button>
-            </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{t('skills.backupDialog.title')}</DialogTitle>
@@ -428,12 +471,6 @@ export function SkillsContent() {
               if (!open) setRestoreError(null);
             }}
           >
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                {t('skills.restore')}
-              </Button>
-            </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{t('skills.restoreDialog.title')}</DialogTitle>
