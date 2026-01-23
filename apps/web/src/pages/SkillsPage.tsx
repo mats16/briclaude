@@ -692,7 +692,13 @@ export function SkillsContent() {
                                   <CommandItem
                                     key={repo.url}
                                     value={repo.url}
-                                    onSelect={() => handleSelectRepo(repo.url, repo.defaultPath, repo.defaultBranch)}
+                                    onSelect={() =>
+                                      handleSelectRepo(
+                                        repo.url,
+                                        repo.defaultPath,
+                                        repo.defaultBranch
+                                      )
+                                    }
                                   >
                                     <Check
                                       className={cn(
