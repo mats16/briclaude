@@ -232,6 +232,16 @@ const userSkillsRoute: FastifyPluginAsync = async fastify => {
       });
     }
 
+    // バリデーション: 重複パスのチェック
+    const uniquePaths = new Set(paths);
+    if (uniquePaths.size !== paths.length) {
+      return reply.status(400).send({
+        error: 'BadRequest',
+        message: 'Duplicate paths detected. Each path must be unique.',
+        statusCode: 400,
+      });
+    }
+
     // バリデーション: URLフォーマット（HTTPSまたはSSH）
     const isHttps = repository_url.startsWith('https://');
     const isSsh = repository_url.startsWith('git@');

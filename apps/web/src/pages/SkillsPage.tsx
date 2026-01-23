@@ -412,6 +412,9 @@ export function SkillsContent() {
                         <button
                           key={skillName}
                           type="button"
+                          role="checkbox"
+                          aria-checked={selectedSkillNames.has(skillName)}
+                          aria-label={`Select skill ${skillName}`}
                           className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-md transition-colors ${
                             selectedSkillNames.has(skillName)
                               ? 'bg-primary/10 text-primary'
