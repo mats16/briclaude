@@ -468,9 +468,9 @@ function spawnAsync(
 }
 
 /**
- * 単一のスキルパスをインポートするヘルパー関数
+ * 単一のスキルを一時ディレクトリからユーザーのスキルディレクトリにコピー
  */
-async function importSingleSkill(
+async function copySkillFromDir(
   skillsDir: string,
   tempDir: string,
   importPath: string,
@@ -652,17 +652,12 @@ export async function importSkillsFromGit(
 
     await ensureDirectory(skillsDir);
 
-    // 4. 各パスをインポート
-    const importedSkills: SkillInfo[] = [];
+    // 4. 各パスを並列でコピー
+    const results = await Promise.all(
+      paths.map(importPath => copySkillFromDir(skillsDir, tempDir, importPath, importMetadata))
+    );
 
-    for (const importPath of paths) {
-      const skill = await importSingleSkill(skillsDir, tempDir, importPath, importMetadata);
-      if (skill) {
-        importedSkills.push(skill);
-      }
-    }
-
-    return importedSkills;
+    return results.filter((skill): skill is SkillInfo => skill !== null);
   } finally {
     // 5. 一時ディレクトリを削除
     await removeDirectory(tempDir);
