@@ -9,6 +9,8 @@ import type {
   SkillUpdateRequest,
   SkillUpdateResponse,
   SkillDeleteResponse,
+  SkillBackupResponse,
+  SkillRestoreResponse,
   ApiError,
 } from '@repo/types';
 import {
@@ -18,6 +20,8 @@ import {
   importSkillsFromGit,
   updateSkill,
   deleteSkill,
+  backupSkillsToWorkspace,
+  restoreSkillsFromWorkspace,
 } from '../services/skill.service.js';
 import { createUserContext } from '../lib/user-context.js';
 
@@ -391,6 +395,88 @@ const userSkillsRoute: FastifyPluginAsync = async fastify => {
       return reply.status(500).send({
         error: 'InternalServerError',
         message: 'Failed to delete skill',
+        statusCode: 500,
+      });
+    }
+  });
+
+  /**
+   * POST /user/skills/backup
+   * スキルを Workspace にバックアップ
+   */
+  fastify.post<{
+    Reply: SkillBackupResponse | ApiError;
+  }>('/user/skills/backup', async (request, reply) => {
+    const { user } = request.ctx!;
+
+    if (!user.id) {
+      return reply.status(401).send({
+        error: 'Unauthorized',
+        message: 'User ID not found in request context',
+        statusCode: 401,
+      });
+    }
+
+    try {
+      const ctx = createUserContext(fastify, request);
+      const result = await backupSkillsToWorkspace(ctx);
+      return reply.send(result);
+    } catch (error) {
+      request.log.error(error, 'Failed to backup skills');
+
+      // PAT未登録エラー
+      if ((error as Error).message?.includes('PAT is required')) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'PAT is required for backup operation',
+          statusCode: 401,
+        });
+      }
+
+      return reply.status(500).send({
+        error: 'InternalServerError',
+        message: 'Failed to backup skills to Workspace',
+        statusCode: 500,
+      });
+    }
+  });
+
+  /**
+   * POST /user/skills/restore
+   * Workspace からスキルをリストア
+   */
+  fastify.post<{
+    Reply: SkillRestoreResponse | ApiError;
+  }>('/user/skills/restore', async (request, reply) => {
+    const { user } = request.ctx!;
+
+    if (!user.id) {
+      return reply.status(401).send({
+        error: 'Unauthorized',
+        message: 'User ID not found in request context',
+        statusCode: 401,
+      });
+    }
+
+    try {
+      const ctx = createUserContext(fastify, request);
+      const result = await restoreSkillsFromWorkspace(ctx);
+      return reply.send(result);
+    } catch (error) {
+      request.log.error(error, 'Failed to restore skills');
+
+      // PAT未登録エラー
+      if ((error as Error).message?.includes('PAT is required')) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'PAT is required for restore operation',
+          statusCode: 401,
+        });
+      }
+
+      return reply.status(500).send({
+        error: 'InternalServerError',
+        message: 'Failed to restore skills from Workspace',
         statusCode: 500,
       });
     }

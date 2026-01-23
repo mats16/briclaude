@@ -179,6 +179,29 @@ Skills can be imported from public Git repositories:
 - **Branch specification**: Can import from specific branch
 - **Path specification**: Can specify specific directory within repository
 
+### Backup/Restore to Workspace
+
+You can backup skills to Databricks Workspace and restore them later. This enables skill persistence and sharing across devices.
+
+#### Backup Destination
+
+Skills are backed up to the following path:
+
+```
+/Workspace/Users/{username}/.claude/skills/
+```
+
+#### How to Use
+
+1. **Backup**: Select "Backup" from the split button on the skills management screen, then click "Start Backup" in the confirmation dialog
+2. **Restore**: Select "Restore" from the split button dropdown, then click "Start Restore" in the confirmation dialog
+
+#### Important Notes
+
+- **PAT Required**: Backup/restore operations require PAT registration
+- **Overwrite Behavior**: Backup overwrites existing Workspace skills; restore overwrites existing local skills completely
+- **Entire Directory**: The entire skills directory is synced, not individual skills
+
 ## Sessions and Workspace Integration
 
 ### How Sessions Work

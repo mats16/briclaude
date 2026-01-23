@@ -129,3 +129,23 @@ export interface SkillDeleteResponse {
   success: boolean;
   message: string;
 }
+
+/**
+ * スキルバックアップレスポンス
+ * POST /api/user/skills/backup
+ */
+export interface SkillBackupResponse {
+  success: boolean;
+  message: string;
+  /** バックアップ先Workspaceパス */
+  workspace_path: string;
+}
+
+/**
+ * スキルリストアレスポンス
+ * POST /api/user/skills/restore
+ */
+export interface SkillRestoreResponse {
+  success: boolean;
+  message: string;
+}

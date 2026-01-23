@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import {
   Plus,
   GitBranch,
@@ -11,6 +12,10 @@ import {
   Pencil,
   Check,
   ChevronsUpDown,
+  Upload,
+  Download,
+  TriangleAlert,
+  ChevronDown,
 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
@@ -27,6 +32,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -39,6 +50,7 @@ import {
 } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { skillService } from '@/services';
+import { useUser } from '@/hooks/useUser';
 import type { SkillInfo, SkillDetail } from '@repo/types';
 
 /** プリセットリポジトリ */
@@ -69,6 +81,10 @@ const parseGitHubSource = (source: string): { owner: string; repo: string } | nu
 
 export function SkillsContent() {
   const { t } = useTranslation();
+  const { user } = useUser();
+  const workspacePath = user?.name
+    ? `/Workspace/Users/${user.name}/.claude/skills`
+    : '/Workspace/Users/{username}/.claude/skills';
   const [skills, setSkills] = useState<SkillInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -117,6 +133,15 @@ export function SkillsContent() {
   const [editedRawContent, setEditedRawContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // バックアップ/リストア状態
+  const [syncAction, setSyncAction] = useState<'backup' | 'restore'>('backup');
+  const [showBackupDialog, setShowBackupDialog] = useState(false);
+  const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
 
   // スキル一覧取得
   const fetchSkills = useCallback(async () => {
@@ -325,6 +350,38 @@ export function SkillsContent() {
     }
   };
 
+  // バックアップ
+  const handleBackup = async () => {
+    setIsBackingUp(true);
+    setBackupError(null);
+    try {
+      await skillService.backup();
+      setShowBackupDialog(false);
+      toast.success(t('skills.backupDialog.success'));
+      await fetchSkills();
+    } catch (err) {
+      setBackupError(err instanceof Error ? err.message : t('skills.backupDialog.error'));
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
+  // リストア
+  const handleRestore = async () => {
+    setIsRestoring(true);
+    setRestoreError(null);
+    try {
+      await skillService.restore();
+      setShowRestoreDialog(false);
+      toast.success(t('skills.restoreDialog.success'));
+      await fetchSkills();
+    } catch (err) {
+      setRestoreError(err instanceof Error ? err.message : t('skills.restoreDialog.error'));
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -342,6 +399,121 @@ export function SkillsContent() {
           <p className="text-sm text-muted-foreground">{t('skills.description')}</p>
         </div>
         <div className="flex gap-2">
+          {/* バックアップ/リストア スプリットボタン */}
+          <div className="flex">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-r-none border-r-0 min-w-[140px] justify-start"
+              onClick={() =>
+                syncAction === 'backup' ? setShowBackupDialog(true) : setShowRestoreDialog(true)
+              }
+            >
+              {syncAction === 'backup' ? (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  {t('skills.backup')}
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  {t('skills.restore')}
+                </>
+              )}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-l-none px-2">
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setSyncAction('backup')}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  {t('skills.backup')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSyncAction('restore')}>
+                  <Download className="h-4 w-4 mr-2" />
+                  {t('skills.restore')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* バックアップダイアログ */}
+          <Dialog
+            open={showBackupDialog}
+            onOpenChange={open => {
+              setShowBackupDialog(open);
+              if (!open) setBackupError(null);
+            }}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t('skills.backupDialog.title')}</DialogTitle>
+                <DialogDescription className="space-y-1">
+                  <span>{t('skills.backupDialog.description')}</span>
+                  <code className="block text-xs bg-muted px-2 py-1 rounded break-all">
+                    {workspacePath}
+                  </code>
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="flex items-start gap-3 p-3 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 rounded-md text-sm">
+                  <TriangleAlert className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                  <p>{t('skills.backupDialog.warning')}</p>
+                </div>
+                {backupError && (
+                  <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    {backupError}
+                  </div>
+                )}
+                <Button onClick={handleBackup} disabled={isBackingUp} className="w-full">
+                  {isBackingUp && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  {t('skills.backupDialog.submit')}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* リストアダイアログ */}
+          <Dialog
+            open={showRestoreDialog}
+            onOpenChange={open => {
+              setShowRestoreDialog(open);
+              if (!open) setRestoreError(null);
+            }}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t('skills.restoreDialog.title')}</DialogTitle>
+                <DialogDescription className="space-y-1">
+                  <span>{t('skills.restoreDialog.description')}</span>
+                  <code className="block text-xs bg-muted px-2 py-1 rounded break-all">
+                    {workspacePath}
+                  </code>
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="flex items-start gap-3 p-3 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 rounded-md text-sm">
+                  <TriangleAlert className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                  <p>{t('skills.restoreDialog.warning')}</p>
+                </div>
+                {restoreError && (
+                  <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    {restoreError}
+                  </div>
+                )}
+                <Button onClick={handleRestore} disabled={isRestoring} className="w-full">
+                  {isRestoring && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  {t('skills.restoreDialog.submit')}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           {/* Gitインポートダイアログ */}
           <Dialog
             open={showImportDialog}
@@ -660,28 +832,25 @@ export function SkillsContent() {
                           {skill.version}
                         </span>
                       )}
-                      {skill.metadata?.source && (() => {
-                        const githubInfo = parseGitHubSource(skill.metadata.source);
-                        if (githubInfo) {
+                      {skill.metadata?.source &&
+                        (() => {
+                          const githubInfo = parseGitHubSource(skill.metadata.source);
+                          if (githubInfo) {
+                            return (
+                              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded">
+                                <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor">
+                                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                                </svg>
+                                {githubInfo.owner}/{githubInfo.repo}
+                              </span>
+                            );
+                          }
                           return (
-                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded">
-                              <svg
-                                viewBox="0 0 24 24"
-                                className="h-3 w-3"
-                                fill="currentColor"
-                              >
-                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                              </svg>
-                              {githubInfo.owner}/{githubInfo.repo}
+                            <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded">
+                              {skill.metadata.source}
                             </span>
                           );
-                        }
-                        return (
-                          <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded">
-                            {skill.metadata.source}
-                          </span>
-                        );
-                      })()}
+                        })()}
                     </div>
                     <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap line-clamp-2">
                       {skill.description}
@@ -735,28 +904,25 @@ export function SkillsContent() {
                       {previewSkill.version}
                     </span>
                   )}
-                  {previewSkill.metadata?.source && (() => {
-                    const githubInfo = parseGitHubSource(previewSkill.metadata.source);
-                    if (githubInfo) {
+                  {previewSkill.metadata?.source &&
+                    (() => {
+                      const githubInfo = parseGitHubSource(previewSkill.metadata.source);
+                      if (githubInfo) {
+                        return (
+                          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded font-normal">
+                            <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor">
+                              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                            </svg>
+                            {githubInfo.owner}/{githubInfo.repo}
+                          </span>
+                        );
+                      }
                       return (
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded font-normal">
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="h-3 w-3"
-                            fill="currentColor"
-                          >
-                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                          </svg>
-                          {githubInfo.owner}/{githubInfo.repo}
+                        <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded font-normal">
+                          {previewSkill.metadata.source}
                         </span>
                       );
-                    }
-                    return (
-                      <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded font-normal">
-                        {previewSkill.metadata.source}
-                      </span>
-                    );
-                  })()}
+                    })()}
                   {isEditMode && (
                     <span className="text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded font-normal">
                       {t('skills.previewDialog.editing')}

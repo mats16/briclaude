@@ -39,32 +39,35 @@ export function useSessionEvents({
   }, [initialSessionStatus]);
 
   // 過去イベントの取得
-  const loadPastEvents = useCallback(async (targetSessionId: string) => {
-    if (!targetSessionId) return;
+  const loadPastEvents = useCallback(
+    async (targetSessionId: string) => {
+      if (!targetSessionId) return;
 
-    setIsLoading(true);
-    setError(null);
-    setShouldAutoConnect(false);
+      setIsLoading(true);
+      setError(null);
+      setShouldAutoConnect(false);
 
-    try {
-      const response = await sessionService.getSessionEvents(targetSessionId);
-      setEvents(response.data);
-      // SDKMessage.uuid を使用して seen set を構築（uuid がない場合はスキップ）
-      seenUuidsRef.current = new Set(
-        response.data.filter(e => 'uuid' in e && e.uuid).map(e => e.uuid as string)
-      );
+      try {
+        const response = await sessionService.getSessionEvents(targetSessionId);
+        setEvents(response.data);
+        // SDKMessage.uuid を使用して seen set を構築（uuid がない場合はスキップ）
+        seenUuidsRef.current = new Set(
+          response.data.filter(e => 'uuid' in e && e.uuid).map(e => e.uuid as string)
+        );
 
-      // session_status が init/running の場合のみ自動接続
-      // （initialSessionStatus を使って判定）
-      const needsWebSocket =
-        initialSessionStatus === 'init' || initialSessionStatus === 'running';
-      setShouldAutoConnect(needsWebSocket);
-    } catch (e) {
-      setError(e instanceof Error ? e : new Error('Failed to load events'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [initialSessionStatus]);
+        // session_status が init/running の場合のみ自動接続
+        // （initialSessionStatus を使って判定）
+        const needsWebSocket =
+          initialSessionStatus === 'init' || initialSessionStatus === 'running';
+        setShouldAutoConnect(needsWebSocket);
+      } catch (e) {
+        setError(e instanceof Error ? e : new Error('Failed to load events'));
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [initialSessionStatus]
+  );
 
   // WebSocket イベントハンドラ
   const handleEvent = useCallback((event: SDKMessage) => {
