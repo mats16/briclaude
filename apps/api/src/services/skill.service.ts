@@ -151,41 +151,15 @@ function getSkillFilePath(ctx: UserContext, skillName: string): string {
 
 /**
  * YAML frontmatter + content を Markdown ファイルコンテンツとして生成
- * version は metadata.version に配置
+ * 元の frontmatter オブジェクトを保持し、必要な部分だけをマージ
  */
 function generateSkillFileContent(
-  name: string,
-  version: string,
-  description: string,
-  content: string,
-  metadata?: SkillMetadata
+  frontmatter: Record<string, unknown>,
+  content: string
 ): string {
-  // frontmatter オブジェクトを構築
-  const frontmatterObj: Record<string, unknown> = {
-    name,
-    description,
-  };
-
-  // metadata を構築（version は常に metadata 内に配置）
-  const metadataObj: Record<string, string> = {};
-  if (version) {
-    metadataObj.version = version;
-  }
-  if (metadata?.author) {
-    metadataObj.author = metadata.author;
-  }
-  if (metadata?.source) {
-    metadataObj.source = metadata.source;
-  }
-
-  // metadata に何かあれば追加
-  if (Object.keys(metadataObj).length > 0) {
-    frontmatterObj.metadata = metadataObj;
-  }
-
   // js-yaml で YAML を生成（マルチライン文字列も適切に処理）
   const frontmatterYaml = yaml
-    .dump(frontmatterObj, {
+    .dump(frontmatter, {
       lineWidth: -1, // 折り返しなし
       quotingType: '"',
       forceQuotes: false,
@@ -201,14 +175,14 @@ ${content}`;
 
 /**
  * Markdown ファイルから frontmatter と content をパース
+ * 元の YAML 全体を保持する
  */
 function parseSkillFile(fileContent: string): {
-  frontmatter: {
-    name: string;
-    version: string;
-    description: string;
-    metadata?: SkillMetadata;
-  };
+  frontmatter: Record<string, unknown>;
+  name: string;
+  version: string;
+  description: string;
+  metadata?: SkillMetadata;
   content: string;
 } | null {
   // より柔軟な正規表現（改行の数に依存しない）
@@ -251,7 +225,11 @@ function parseSkillFile(fileContent: string): {
     }
 
     return {
-      frontmatter: { name, version, description, metadata },
+      frontmatter: parsed,
+      name,
+      version,
+      description,
+      metadata,
       content: content.trim(),
     };
   } catch (error) {
@@ -308,11 +286,11 @@ export async function listSkills(ctx: UserContext): Promise<SkillInfo[]> {
         if (!parsed) continue;
 
         skills.push({
-          name: parsed.frontmatter.name || entry.name,
-          version: parsed.frontmatter.version,
-          description: parsed.frontmatter.description,
+          name: parsed.name || entry.name,
+          version: parsed.version,
+          description: parsed.description,
           file_path: `${entry.name}/${SKILL_FILE}`,
-          metadata: parsed.frontmatter.metadata,
+          metadata: parsed.metadata,
           created_at: stats.birthtime.toISOString(),
           updated_at: stats.mtime.toISOString(),
         });
@@ -354,11 +332,11 @@ export async function getSkill(ctx: UserContext, skillName: string): Promise<Ski
     if (!parsed) return null;
 
     return {
-      name: parsed.frontmatter.name || skillName,
-      version: parsed.frontmatter.version,
-      description: parsed.frontmatter.description,
+      name: parsed.name || skillName,
+      version: parsed.version,
+      description: parsed.description,
       file_path: `${skillName}/${SKILL_FILE}`,
-      metadata: parsed.frontmatter.metadata,
+      metadata: parsed.metadata,
       content: parsed.content,
       raw_content: fileContent,
       created_at: stats.birthtime.toISOString(),
@@ -399,11 +377,36 @@ export async function createSkill(
     }
   }
 
+  // frontmatter オブジェクトを構築
+  const frontmatter: Record<string, unknown> = {
+    name,
+    description,
+  };
+
   // metadata を構築（author を追加）
-  const metadata: SkillMetadata | undefined = authorName ? { author: authorName } : undefined;
+  const metadataObj: Record<string, string> = {};
+  if (version) {
+    metadataObj.version = version;
+  }
+  if (authorName) {
+    metadataObj.author = authorName;
+  }
+
+  if (Object.keys(metadataObj).length > 0) {
+    frontmatter.metadata = metadataObj;
+  }
+
+  // metadata を SkillMetadata 型として構築
+  const metadata: SkillMetadata | undefined =
+    Object.keys(metadataObj).length > 0
+      ? {
+          version: version || undefined,
+          author: authorName || undefined,
+        }
+      : undefined;
 
   // ファイル作成
-  const fileContent = generateSkillFileContent(name, version, description, content, metadata);
+  const fileContent = generateSkillFileContent(frontmatter, content);
   await writeFile(skillFilePath, fileContent, 'utf-8');
 
   const stats = await stat(skillFilePath);
@@ -505,28 +508,38 @@ async function copySkillFromDir(
       const parsed = parseSkillFile(content);
 
       if (parsed) {
-        // 既存の metadata とマージ（インポート情報で上書き）
+        // frontmatter の metadata とインポート情報をマージ
+        const frontmatter = { ...parsed.frontmatter };
+        const existingMetadata =
+          frontmatter.metadata && typeof frontmatter.metadata === 'object'
+            ? (frontmatter.metadata as Record<string, unknown>)
+            : {};
+        const mergedMetadataObj = { ...existingMetadata };
+
+        // importMetadata.source のみをマージ（author は追加しない）
+        if (importMetadata.source) {
+          mergedMetadataObj.source = importMetadata.source;
+        }
+
+        frontmatter.metadata = mergedMetadataObj;
+
+        // SkillMetadata 型として構築
         const mergedMetadata: SkillMetadata = {
-          ...parsed.frontmatter.metadata,
-          ...importMetadata,
+          version: typeof mergedMetadataObj.version === 'string' ? mergedMetadataObj.version : undefined,
+          author: typeof mergedMetadataObj.author === 'string' ? mergedMetadataObj.author : undefined,
+          source: typeof mergedMetadataObj.source === 'string' ? mergedMetadataObj.source : undefined,
         };
 
         // metadata を追加してファイルを書き戻し
-        const newFileContent = generateSkillFileContent(
-          parsed.frontmatter.name || skillName,
-          parsed.frontmatter.version,
-          parsed.frontmatter.description,
-          parsed.content,
-          mergedMetadata
-        );
+        const newFileContent = generateSkillFileContent(frontmatter, parsed.content);
         await writeFile(skillFilePath, newFileContent, 'utf-8');
 
         const stats = await stat(skillFilePath);
 
         return {
-          name: parsed.frontmatter.name || skillName,
-          version: parsed.frontmatter.version,
-          description: parsed.frontmatter.description,
+          name: parsed.name || skillName,
+          version: parsed.version,
+          description: parsed.description,
           file_path: `${skillName}/${SKILL_FILE}`,
           metadata: mergedMetadata,
           created_at: stats.birthtime.toISOString(),
@@ -557,28 +570,38 @@ async function copySkillFromDir(
     const parsed = parseSkillFile(content);
 
     if (parsed) {
-      // 既存の metadata とマージ（インポート情報で上書き）
+      // frontmatter の metadata とインポート情報をマージ
+      const frontmatter = { ...parsed.frontmatter };
+      const existingMetadata =
+        frontmatter.metadata && typeof frontmatter.metadata === 'object'
+          ? (frontmatter.metadata as Record<string, unknown>)
+          : {};
+      const mergedMetadataObj = { ...existingMetadata };
+
+      // importMetadata.source のみをマージ（author は追加しない）
+      if (importMetadata.source) {
+        mergedMetadataObj.source = importMetadata.source;
+      }
+
+      frontmatter.metadata = mergedMetadataObj;
+
+      // SkillMetadata 型として構築
       const mergedMetadata: SkillMetadata = {
-        ...parsed.frontmatter.metadata,
-        ...importMetadata,
+        version: typeof mergedMetadataObj.version === 'string' ? mergedMetadataObj.version : undefined,
+        author: typeof mergedMetadataObj.author === 'string' ? mergedMetadataObj.author : undefined,
+        source: typeof mergedMetadataObj.source === 'string' ? mergedMetadataObj.source : undefined,
       };
 
       // metadata を追加してファイルを書き戻し
-      const newFileContent = generateSkillFileContent(
-        parsed.frontmatter.name || parentDirName,
-        parsed.frontmatter.version,
-        parsed.frontmatter.description,
-        parsed.content,
-        mergedMetadata
-      );
+      const newFileContent = generateSkillFileContent(frontmatter, parsed.content);
       await writeFile(destFile, newFileContent, 'utf-8');
 
       const stats = await stat(destFile);
 
       return {
-        name: parsed.frontmatter.name || parentDirName,
-        version: parsed.frontmatter.version,
-        description: parsed.frontmatter.description,
+        name: parsed.name || parentDirName,
+        version: parsed.version,
+        description: parsed.description,
         file_path: `${parentDirName}/${SKILL_FILE}`,
         metadata: mergedMetadata,
         created_at: stats.birthtime.toISOString(),
@@ -606,10 +629,8 @@ export async function importSkillsFromGit(
   // 一時ディレクトリを作成
   const tempDir = join(tmpdir(), `skill-import-${randomUUID()}`);
 
-  // metadata を抽出
-  const author = extractAuthorFromGitUrl(repository_url);
+  // metadata を構築（source のみ）
   const importMetadata: SkillMetadata = {
-    author,
     source: repository_url,
   };
 
@@ -731,11 +752,11 @@ export async function updateSkill(
     }
 
     return {
-      name: parsed.frontmatter.name || skillName,
-      version: parsed.frontmatter.version,
-      description: parsed.frontmatter.description,
+      name: parsed.name || skillName,
+      version: parsed.version,
+      description: parsed.description,
       file_path: `${skillName}/${SKILL_FILE}`,
-      metadata: parsed.frontmatter.metadata,
+      metadata: parsed.metadata,
       created_at: stats.birthtime.toISOString(),
       updated_at: stats.mtime.toISOString(),
     };
