@@ -184,14 +184,14 @@ const userSkillsRoute: FastifyPluginAsync = async fastify => {
 
   /**
    * POST /user/skills/import
-   * Gitリポジトリからインポート
+   * Gitリポジトリからインポート（複数パス対応）
    */
   fastify.post<{
     Body: SkillImportRequest;
     Reply: SkillImportResponse | ApiError;
   }>('/user/skills/import', async (request, reply) => {
     const { user } = request.ctx!;
-    const { repository_url, path, branch } = request.body;
+    const { repository_url, paths, branch } = request.body;
 
     if (!user.id) {
       return reply.status(401).send({
@@ -202,10 +202,10 @@ const userSkillsRoute: FastifyPluginAsync = async fastify => {
     }
 
     // バリデーション: 必須フィールドチェック
-    if (!repository_url || !path) {
+    if (!repository_url || !paths || !Array.isArray(paths) || paths.length === 0) {
       return reply.status(400).send({
         error: 'BadRequest',
-        message: 'Missing required fields: repository_url, path',
+        message: 'Missing required fields: repository_url, paths (non-empty array)',
         statusCode: 400,
       });
     }
@@ -225,7 +225,7 @@ const userSkillsRoute: FastifyPluginAsync = async fastify => {
       const ctx = createUserContext(fastify, request);
       const importedSkills = await importSkillsFromGit(ctx, {
         repository_url,
-        path,
+        paths,
         branch: branch ?? 'main',
       });
 

@@ -468,13 +468,136 @@ function spawnAsync(
 }
 
 /**
- * Git リポジトリからスキルをインポート
+ * 単一のスキルパスをインポートするヘルパー関数
+ */
+async function importSingleSkill(
+  skillsDir: string,
+  tempDir: string,
+  importPath: string,
+  importMetadata: SkillMetadata
+): Promise<SkillInfo | null> {
+  // インポート対象パスの確認（パストラバーサル対策）
+  const sourcePath = validatePathWithinBase(tempDir, importPath);
+
+  let sourceStats;
+  try {
+    sourceStats = await stat(sourcePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      logger.warn('Import path not found', { importPath });
+      return null;
+    }
+    throw error;
+  }
+
+  if (sourceStats.isDirectory()) {
+    // ディレクトリの場合: スキルディレクトリとしてコピー
+    const skillName = basename(importPath);
+    const destDir = join(skillsDir, skillName);
+
+    // ディレクトリごとコピー
+    await cp(sourcePath, destDir, { recursive: true, force: true });
+
+    // SKILL.md を読み取り・metadata を追加して書き戻し
+    const skillFilePath = join(destDir, SKILL_FILE);
+    try {
+      const content = await readFile(skillFilePath, 'utf-8');
+      const parsed = parseSkillFile(content);
+
+      if (parsed) {
+        // 既存の metadata とマージ（インポート情報で上書き）
+        const mergedMetadata: SkillMetadata = {
+          ...parsed.frontmatter.metadata,
+          ...importMetadata,
+        };
+
+        // metadata を追加してファイルを書き戻し
+        const newFileContent = generateSkillFileContent(
+          parsed.frontmatter.name || skillName,
+          parsed.frontmatter.version,
+          parsed.frontmatter.description,
+          parsed.content,
+          mergedMetadata
+        );
+        await writeFile(skillFilePath, newFileContent, 'utf-8');
+
+        const stats = await stat(skillFilePath);
+
+        return {
+          name: parsed.frontmatter.name || skillName,
+          version: parsed.frontmatter.version,
+          description: parsed.frontmatter.description,
+          file_path: `${skillName}/${SKILL_FILE}`,
+          metadata: mergedMetadata,
+          created_at: stats.birthtime.toISOString(),
+          updated_at: stats.mtime.toISOString(),
+        };
+      }
+    } catch (error) {
+      // SKILL.md が存在しない場合は無視
+      // ENOENT以外のエラーはログに記録
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        logger.warn('Failed to process imported skill', {
+          skillName,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  } else if (sourceStats.isFile() && basename(importPath) === SKILL_FILE) {
+    // 単一のSKILL.mdファイルの場合
+    // 親ディレクトリ名をスキル名として使用
+    const parentDirName = basename(join(importPath, '..'));
+    const skillDir = join(skillsDir, parentDirName);
+
+    await ensureDirectory(skillDir);
+    const destFile = join(skillDir, SKILL_FILE);
+    await cp(sourcePath, destFile, { force: true });
+
+    const content = await readFile(destFile, 'utf-8');
+    const parsed = parseSkillFile(content);
+
+    if (parsed) {
+      // 既存の metadata とマージ（インポート情報で上書き）
+      const mergedMetadata: SkillMetadata = {
+        ...parsed.frontmatter.metadata,
+        ...importMetadata,
+      };
+
+      // metadata を追加してファイルを書き戻し
+      const newFileContent = generateSkillFileContent(
+        parsed.frontmatter.name || parentDirName,
+        parsed.frontmatter.version,
+        parsed.frontmatter.description,
+        parsed.content,
+        mergedMetadata
+      );
+      await writeFile(destFile, newFileContent, 'utf-8');
+
+      const stats = await stat(destFile);
+
+      return {
+        name: parsed.frontmatter.name || parentDirName,
+        version: parsed.frontmatter.version,
+        description: parsed.frontmatter.description,
+        file_path: `${parentDirName}/${SKILL_FILE}`,
+        metadata: mergedMetadata,
+        created_at: stats.birthtime.toISOString(),
+        updated_at: stats.mtime.toISOString(),
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Git リポジトリからスキルをインポート（複数パス対応）
  */
 export async function importSkillsFromGit(
   ctx: UserContext,
   request: SkillImportRequest
 ): Promise<SkillInfo[]> {
-  const { repository_url, path: importPath, branch = 'main' } = request;
+  const { repository_url, paths, branch = 'main' } = request;
   const skillsDir = getSkillsDir(ctx);
 
   // ブランチ名のバリデーション（コマンドインジェクション対策）
@@ -499,108 +622,15 @@ export async function importSkillsFromGit(
       { timeout: 60000 } // 60秒タイムアウト
     );
 
-    // 2. インポート対象パスの確認（パストラバーサル対策）
-    const sourcePath = validatePathWithinBase(tempDir, importPath);
-    const sourceStats = await stat(sourcePath);
-
     await ensureDirectory(skillsDir);
 
+    // 2. 各パスをインポート
     const importedSkills: SkillInfo[] = [];
 
-    if (sourceStats.isDirectory()) {
-      // ディレクトリの場合: スキルディレクトリとしてコピー
-      const skillName = basename(importPath);
-      const destDir = join(skillsDir, skillName);
-
-      // ディレクトリごとコピー
-      await cp(sourcePath, destDir, { recursive: true, force: true });
-
-      // SKILL.md を読み取り・metadata を追加して書き戻し
-      const skillFilePath = join(destDir, SKILL_FILE);
-      try {
-        const content = await readFile(skillFilePath, 'utf-8');
-        const parsed = parseSkillFile(content);
-
-        if (parsed) {
-          // 既存の metadata とマージ（インポート情報で上書き）
-          const mergedMetadata: SkillMetadata = {
-            ...parsed.frontmatter.metadata,
-            ...importMetadata,
-          };
-
-          // metadata を追加してファイルを書き戻し
-          const newFileContent = generateSkillFileContent(
-            parsed.frontmatter.name || skillName,
-            parsed.frontmatter.version,
-            parsed.frontmatter.description,
-            parsed.content,
-            mergedMetadata
-          );
-          await writeFile(skillFilePath, newFileContent, 'utf-8');
-
-          const stats = await stat(skillFilePath);
-
-          importedSkills.push({
-            name: parsed.frontmatter.name || skillName,
-            version: parsed.frontmatter.version,
-            description: parsed.frontmatter.description,
-            file_path: `${skillName}/${SKILL_FILE}`,
-            metadata: mergedMetadata,
-            created_at: stats.birthtime.toISOString(),
-            updated_at: stats.mtime.toISOString(),
-          });
-        }
-      } catch (error) {
-        // SKILL.md が存在しない場合は無視
-        // ENOENT以外のエラーはログに記録
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-          logger.warn('Failed to process imported skill', {
-            skillName,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-      }
-    } else if (sourceStats.isFile() && basename(importPath) === SKILL_FILE) {
-      // 単一のSKILL.mdファイルの場合
-      // 親ディレクトリ名をスキル名として使用
-      const parentDirName = basename(join(importPath, '..'));
-      const skillDir = join(skillsDir, parentDirName);
-
-      await ensureDirectory(skillDir);
-      const destFile = join(skillDir, SKILL_FILE);
-      await cp(sourcePath, destFile, { force: true });
-
-      const content = await readFile(destFile, 'utf-8');
-      const parsed = parseSkillFile(content);
-
-      if (parsed) {
-        // 既存の metadata とマージ（インポート情報で上書き）
-        const mergedMetadata: SkillMetadata = {
-          ...parsed.frontmatter.metadata,
-          ...importMetadata,
-        };
-
-        // metadata を追加してファイルを書き戻し
-        const newFileContent = generateSkillFileContent(
-          parsed.frontmatter.name || parentDirName,
-          parsed.frontmatter.version,
-          parsed.frontmatter.description,
-          parsed.content,
-          mergedMetadata
-        );
-        await writeFile(destFile, newFileContent, 'utf-8');
-
-        const stats = await stat(destFile);
-
-        importedSkills.push({
-          name: parsed.frontmatter.name || parentDirName,
-          version: parsed.frontmatter.version,
-          description: parsed.frontmatter.description,
-          file_path: `${parentDirName}/${SKILL_FILE}`,
-          metadata: mergedMetadata,
-          created_at: stats.birthtime.toISOString(),
-          updated_at: stats.mtime.toISOString(),
-        });
+    for (const importPath of paths) {
+      const skill = await importSingleSkill(skillsDir, tempDir, importPath, importMetadata);
+      if (skill) {
+        importedSkills.push(skill);
       }
     }
 
