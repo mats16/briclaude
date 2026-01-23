@@ -156,10 +156,7 @@ function getSkillFilePath(ctx: UserContext, skillName: string): string {
  * YAML frontmatter + content を Markdown ファイルコンテンツとして生成
  * 元の frontmatter オブジェクトを保持し、必要な部分だけをマージ
  */
-function generateSkillFileContent(
-  frontmatter: Record<string, unknown>,
-  content: string
-): string {
+function generateSkillFileContent(frontmatter: Record<string, unknown>, content: string): string {
   // js-yaml で YAML を生成（マルチライン文字列も適切に処理）
   const frontmatterYaml = yaml
     .dump(frontmatter, {
@@ -528,9 +525,12 @@ async function copySkillFromDir(
 
         // SkillMetadata 型として構築
         const mergedMetadata: SkillMetadata = {
-          version: typeof mergedMetadataObj.version === 'string' ? mergedMetadataObj.version : undefined,
-          author: typeof mergedMetadataObj.author === 'string' ? mergedMetadataObj.author : undefined,
-          source: typeof mergedMetadataObj.source === 'string' ? mergedMetadataObj.source : undefined,
+          version:
+            typeof mergedMetadataObj.version === 'string' ? mergedMetadataObj.version : undefined,
+          author:
+            typeof mergedMetadataObj.author === 'string' ? mergedMetadataObj.author : undefined,
+          source:
+            typeof mergedMetadataObj.source === 'string' ? mergedMetadataObj.source : undefined,
         };
 
         // metadata を追加してファイルを書き戻し
@@ -590,7 +590,8 @@ async function copySkillFromDir(
 
       // SkillMetadata 型として構築
       const mergedMetadata: SkillMetadata = {
-        version: typeof mergedMetadataObj.version === 'string' ? mergedMetadataObj.version : undefined,
+        version:
+          typeof mergedMetadataObj.version === 'string' ? mergedMetadataObj.version : undefined,
         author: typeof mergedMetadataObj.author === 'string' ? mergedMetadataObj.author : undefined,
         source: typeof mergedMetadataObj.source === 'string' ? mergedMetadataObj.source : undefined,
       };
@@ -677,7 +678,9 @@ export async function importSkillsFromGit(
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logger.error('Git sparse-checkout failed', { paths, error: message });
-      throw new Error(`Failed to checkout specified paths from repository. Please verify the paths exist in the repository.`);
+      throw new Error(
+        `Failed to checkout specified paths from repository. Please verify the paths exist in the repository.`
+      );
     }
 
     await ensureDirectory(skillsDir);
@@ -893,9 +896,7 @@ export async function backupSkillsToWorkspace(ctx: UserContext): Promise<SkillBa
  * Workspace からスキルをリストア
  * /Workspace/Users/{user}/.claude/skills/ → ローカルの .claude/skills/
  */
-export async function restoreSkillsFromWorkspace(
-  ctx: UserContext
-): Promise<SkillRestoreResponse> {
+export async function restoreSkillsFromWorkspace(ctx: UserContext): Promise<SkillRestoreResponse> {
   const localSkillsDir = getSkillsDir(ctx);
   const workspacePath = getWorkspaceSkillsPath(ctx.userName);
 

@@ -120,7 +120,11 @@ description: Test
         {
           name: 'test-skill',
           description: 'Test description',
-          metadata: { version: '1.0.0', author: 'test-author', source: 'https://github.com/test/repo' },
+          metadata: {
+            version: '1.0.0',
+            author: 'test-author',
+            source: 'https://github.com/test/repo',
+          },
         },
         'Skill content here'
       );
