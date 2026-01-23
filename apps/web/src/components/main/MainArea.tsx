@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { isNewSessionNavigationState } from '@/types/navigation';
 import type {
   SessionCreateRequest,
   UserMessageContentBlock,
@@ -35,8 +36,17 @@ export function MainArea({
 }: MainAreaProps) {
   const { sessionId } = useParams<{ sessionId?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const [createSessionError, setCreateSessionError] = useState<string | null>(null);
+
+  // navigate state から初期メッセージを取得
+  const initialMessage = useMemo(() => {
+    if (isNewSessionNavigationState(location.state)) {
+      return location.state.initialMessage;
+    }
+    return undefined;
+  }, [location.state]);
 
   const {
     session,
@@ -50,6 +60,7 @@ export function MainArea({
   const { events, isLoading, error, sessionStatus, sendMessage, abort } = useSessionEvents({
     sessionId: sessionId ?? null,
     initialSessionStatus: session?.session_status,
+    initialMessage,
   });
 
   // session status が init または running の場合、エージェントが応答中
@@ -100,6 +111,10 @@ export function MainArea({
   ) => {
     try {
       setCreateSessionError(null);
+
+      // UUID を外で生成（API と navigate state の両方で使用）
+      const messageUuid = crypto.randomUUID();
+
       // タイトル生成用にテキストを抽出
       const textContent = extractTextFromContent(content);
       const title = await sessionService.generateTitle(textContent);
@@ -123,7 +138,7 @@ export function MainArea({
           {
             type: 'event',
             data: {
-              uuid: crypto.randomUUID(),
+              uuid: messageUuid,
               session_id: '',
               type: 'user',
               parent_tool_use_id: null,
@@ -155,7 +170,22 @@ export function MainArea({
 
       const response = await sessionService.createSession(request);
       onSessionCreated?.();
-      navigate(`/${response.id}`);
+
+      // navigate state に初期メッセージを渡す
+      navigate(`/${response.id}`, {
+        state: {
+          initialMessage: {
+            type: 'user',
+            uuid: messageUuid,
+            session_id: response.id,
+            parent_tool_use_id: null,
+            message: {
+              role: 'user',
+              content: content,
+            },
+          },
+        },
+      });
     } catch (err) {
       console.error('Failed to create session:', err);
       setCreateSessionError(t('sidebar.sessionCreateError'));

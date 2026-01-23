@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { SDKMessage, UserMessageContentBlock, SessionStatus } from '@repo/types';
+import type {
+  SDKMessage,
+  SDKUserMessage,
+  UserMessageContentBlock,
+  SessionStatus,
+} from '@repo/types';
 import { sessionService } from '@/services/session.service';
 import { useSessionWebSocket } from './useSessionWebSocket';
 
@@ -7,6 +12,8 @@ interface UseSessionEventsOptions {
   sessionId: string | null;
   /** GET /api/sessions/:sessionId から取得した初期 sessionStatus */
   initialSessionStatus?: SessionStatus | null;
+  /** 新規セッション作成時に navigate state から渡される初期メッセージ */
+  initialMessage?: SDKUserMessage;
 }
 
 interface UseSessionEventsReturn {
@@ -23,6 +30,7 @@ interface UseSessionEventsReturn {
 export function useSessionEvents({
   sessionId,
   initialSessionStatus,
+  initialMessage,
 }: UseSessionEventsOptions): UseSessionEventsReturn {
   const [events, setEvents] = useState<SDKMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,11 +57,27 @@ export function useSessionEvents({
 
       try {
         const response = await sessionService.getSessionEvents(targetSessionId);
-        setEvents(response.data);
-        // SDKMessage.uuid を使用して seen set を構築（uuid がない場合はスキップ）
-        seenUuidsRef.current = new Set(
-          response.data.filter(e => 'uuid' in e && e.uuid).map(e => e.uuid as string)
-        );
+
+        // 既存の seenUuidsRef を保持しながら更新
+        response.data.forEach(e => {
+          if ('uuid' in e && e.uuid) {
+            seenUuidsRef.current.add(e.uuid as string);
+          }
+        });
+
+        // events をマージ（重複排除）
+        setEvents(prev => {
+          const existingUuids = new Set(
+            prev.filter(e => 'uuid' in e && e.uuid).map(e => e.uuid as string)
+          );
+          const newEvents = response.data.filter(e => {
+            if ('uuid' in e && e.uuid) {
+              return !existingUuids.has(e.uuid as string);
+            }
+            return true;
+          });
+          return [...prev, ...newEvents];
+        });
 
         // session_status が init/running の場合のみ自動接続
         // （initialSessionStatus を使って判定）
@@ -108,9 +132,18 @@ export function useSessionEvents({
     if (sessionId) {
       setEvents([]);
       seenUuidsRef.current.clear();
+
+      // 初期メッセージがある場合は即座に追加
+      if (initialMessage) {
+        if (initialMessage.uuid) {
+          seenUuidsRef.current.add(initialMessage.uuid);
+        }
+        setEvents([initialMessage]);
+      }
+
       loadPastEvents(sessionId);
     }
-  }, [sessionId, loadPastEvents]);
+  }, [sessionId, loadPastEvents, initialMessage]);
 
   return {
     events,
