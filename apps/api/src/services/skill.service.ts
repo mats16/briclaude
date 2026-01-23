@@ -591,7 +591,7 @@ async function importSingleSkill(
 }
 
 /**
- * Git リポジトリからスキルをインポート（複数パス対応）
+ * Git リポジトリからスキルをインポート（複数パス対応、sparse-checkout で効率化）
  */
 export async function importSkillsFromGit(
   ctx: UserContext,
@@ -614,17 +614,45 @@ export async function importSkillsFromGit(
   };
 
   try {
-    // 1. git clone（指定ブランチ、shallow clone）
+    // 1. git clone（blobless clone + no-checkout で最小限のメタデータのみ取得）
     // spawn を使用してコマンドインジェクションを防止
     await spawnAsync(
       'git',
-      ['clone', '--depth', '1', '--branch', branch, repository_url, tempDir],
+      [
+        'clone',
+        '--filter=blob:none',
+        '--no-checkout',
+        '--depth',
+        '1',
+        '--branch',
+        branch,
+        repository_url,
+        tempDir,
+      ],
       { timeout: 60000 } // 60秒タイムアウト
     );
 
+    // 2. sparse-checkout を設定して必要なパスのみをチェックアウト
+    await spawnAsync('git', ['sparse-checkout', 'init', '--cone'], {
+      cwd: tempDir,
+      timeout: 10000,
+    });
+
+    // sparse-checkout set に全パスを渡す
+    await spawnAsync('git', ['sparse-checkout', 'set', ...paths], {
+      cwd: tempDir,
+      timeout: 10000,
+    });
+
+    // 3. チェックアウト実行（必要なファイルのみダウンロード）
+    await spawnAsync('git', ['checkout'], {
+      cwd: tempDir,
+      timeout: 60000,
+    });
+
     await ensureDirectory(skillsDir);
 
-    // 2. 各パスをインポート
+    // 4. 各パスをインポート
     const importedSkills: SkillInfo[] = [];
 
     for (const importPath of paths) {
@@ -636,7 +664,7 @@ export async function importSkillsFromGit(
 
     return importedSkills;
   } finally {
-    // 3. 一時ディレクトリを削除
+    // 5. 一時ディレクトリを削除
     await removeDirectory(tempDir);
   }
 }
