@@ -121,6 +121,8 @@
   "skills": {
     "title": "Skill Management",
     "description": "Add and manage custom skills",
+    "backup": "Backup",
+    "restore": "Restore",
     "createNew": "Create New",
     "importFromGit": "Import",
     "fetchError": "Failed to fetch skills",
@@ -174,7 +176,21 @@
       "editing": "Editing"
     },
     "updateError": "Failed to update skill",
-    "updateSuccess": "Skill updated successfully"
+    "updateSuccess": "Skill updated successfully",
+    "backupDialog": {
+      "title": "Backup to Workspace",
+      "description": "Backup skills to Databricks Workspace",
+      "warning": "All existing skills in Workspace will be deleted and replaced with current skills.",
+      "submit": "Start Backup",
+      "error": "Backup failed"
+    },
+    "restoreDialog": {
+      "title": "Restore from Workspace",
+      "description": "Restore skills from Databricks Workspace",
+      "warning": "All existing local skills will be deleted and replaced with Workspace skills.",
+      "submit": "Start Restore",
+      "error": "Restore failed"
+    }
   },
   "welcome": {
     "heading": "Claude Code on Databricks",

@@ -29,9 +29,10 @@ This is the skill content.`;
       expect(result).not.toBeNull();
       expect(result?.frontmatter.name).toBe('my-skill');
       expect(result?.frontmatter.description).toBe('A test skill');
-      expect(result?.frontmatter.version).toBe('1.0.0');
-      expect(result?.frontmatter.metadata?.author).toBe('test-author');
-      expect(result?.frontmatter.metadata?.source).toBe('https://github.com/test/repo');
+      const metadata = result?.frontmatter.metadata as Record<string, unknown> | undefined;
+      expect(metadata?.version).toBe('1.0.0');
+      expect(metadata?.author).toBe('test-author');
+      expect(metadata?.source).toBe('https://github.com/test/repo');
       expect(result?.content).toBe('This is the skill content.');
     });
 
@@ -116,11 +117,12 @@ description: Test
   describe('generateSkillFileContent', () => {
     it('should generate valid skill file with all fields', () => {
       const result = generateSkillFileContent(
-        'test-skill',
-        '1.0.0',
-        'Test description',
-        'Skill content here',
-        { version: '1.0.0', author: 'test-author', source: 'https://github.com/test/repo' }
+        {
+          name: 'test-skill',
+          description: 'Test description',
+          metadata: { version: '1.0.0', author: 'test-author', source: 'https://github.com/test/repo' },
+        },
+        'Skill content here'
       );
 
       expect(result).toContain('---');
@@ -133,7 +135,10 @@ description: Test
     });
 
     it('should generate file without metadata when not provided', () => {
-      const result = generateSkillFileContent('simple-skill', '', 'Simple description', 'Content');
+      const result = generateSkillFileContent(
+        { name: 'simple-skill', description: 'Simple description' },
+        'Content'
+      );
 
       expect(result).toContain('name: simple-skill');
       expect(result).toContain('description: Simple description');
@@ -143,18 +148,20 @@ description: Test
 
     it('should roundtrip through parse and generate', () => {
       const original = generateSkillFileContent(
-        'roundtrip-skill',
-        '2.0.0',
-        'Roundtrip test',
-        'Test content',
-        { version: '2.0.0', author: 'author', source: 'https://example.com' }
+        {
+          name: 'roundtrip-skill',
+          description: 'Roundtrip test',
+          metadata: { version: '2.0.0', author: 'author', source: 'https://example.com' },
+        },
+        'Test content'
       );
 
       const parsed = parseSkillFile(original);
 
       expect(parsed).not.toBeNull();
       expect(parsed?.frontmatter.name).toBe('roundtrip-skill');
-      expect(parsed?.frontmatter.version).toBe('2.0.0');
+      const metadata = parsed?.frontmatter.metadata as Record<string, unknown> | undefined;
+      expect(metadata?.version).toBe('2.0.0');
       expect(parsed?.frontmatter.description).toBe('Roundtrip test');
       expect(parsed?.content).toBe('Test content');
     });

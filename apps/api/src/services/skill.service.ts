@@ -11,8 +11,11 @@ import type {
   SkillCreateRequest,
   SkillImportRequest,
   SkillUpdateRequest,
+  SkillBackupResponse,
+  SkillRestoreResponse,
 } from '@repo/types';
 import type { UserContext } from '../lib/user-context.js';
+import type { AuthProvider } from '../lib/databricks-auth.js';
 import { ensureDirectory, removeDirectory } from '../utils/directory.js';
 
 /**
@@ -768,6 +771,161 @@ export async function updateSkill(
   }
 }
 
+/**
+ * Workspace上のスキルパスを生成
+ * /Workspace/Users/{userName}/.claude/skills
+ */
+function getWorkspaceSkillsPath(userName: string): string {
+  return `/Workspace/Users/${userName}/.claude/skills`;
+}
+
+/**
+ * Databricks CLI を実行するヘルパー関数
+ * 認証情報を環境変数として渡す
+ */
+function spawnDatabricksCli(
+  args: string[],
+  options: {
+    authProvider: AuthProvider;
+    timeout?: number;
+    cwd?: string;
+  }
+): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('databricks', args, {
+      cwd: options.cwd,
+      shell: false,
+      env: {
+        PATH: process.env.PATH,
+        HOME: process.env.HOME,
+        ...options.authProvider.getEnvVars(),
+      },
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (data: Buffer) => {
+      stdout += data.toString();
+    });
+
+    child.stderr.on('data', (data: Buffer) => {
+      stderr += data.toString();
+    });
+
+    const timeoutMs = options.timeout ?? 120000; // デフォルト2分
+    const timeoutId = setTimeout(() => {
+      child.kill('SIGTERM');
+      reject(new Error(`Databricks CLI timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    child.on('close', code => {
+      clearTimeout(timeoutId);
+      if (code === 0) {
+        resolve({ stdout, stderr });
+      } else {
+        reject(new Error(`Databricks CLI failed with exit code ${code}: ${stderr}`));
+      }
+    });
+
+    child.on('error', err => {
+      clearTimeout(timeoutId);
+      reject(err);
+    });
+  });
+}
+
+/**
+ * スキルを Workspace にバックアップ
+ * ローカルの .claude/skills/ → /Workspace/Users/{user}/.claude/skills/
+ */
+export async function backupSkillsToWorkspace(ctx: UserContext): Promise<SkillBackupResponse> {
+  const localSkillsDir = getSkillsDir(ctx);
+  const workspacePath = getWorkspaceSkillsPath(ctx.userName);
+
+  // 認証情報を取得
+  const authProvider = await ctx.getAuthProvider();
+  if (authProvider.type !== 'pat') {
+    throw new Error('PAT is required for backup operation');
+  }
+
+  // ローカルスキルディレクトリが存在するか確認
+  try {
+    await stat(localSkillsDir);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return {
+        success: true,
+        message: 'No skills to backup',
+        workspace_path: workspacePath,
+      };
+    }
+    throw error;
+  }
+
+  // 1. Workspace 上の既存ディレクトリを削除（エラーは無視）
+  try {
+    await spawnDatabricksCli(['workspace', 'delete', workspacePath, '--recursive'], {
+      authProvider,
+      timeout: 30000,
+    });
+  } catch {
+    // ディレクトリが存在しない場合のエラーは無視
+  }
+
+  // 2. Workspace にインポート
+  await spawnDatabricksCli(
+    ['workspace', 'import-dir', localSkillsDir, workspacePath, '--overwrite'],
+    {
+      authProvider,
+      timeout: 120000,
+    }
+  );
+
+  return {
+    success: true,
+    message: 'Skills backed up successfully',
+    workspace_path: workspacePath,
+  };
+}
+
+/**
+ * Workspace からスキルをリストア
+ * /Workspace/Users/{user}/.claude/skills/ → ローカルの .claude/skills/
+ */
+export async function restoreSkillsFromWorkspace(
+  ctx: UserContext
+): Promise<SkillRestoreResponse> {
+  const localSkillsDir = getSkillsDir(ctx);
+  const workspacePath = getWorkspaceSkillsPath(ctx.userName);
+
+  // 認証情報を取得
+  const authProvider = await ctx.getAuthProvider();
+  if (authProvider.type !== 'pat') {
+    throw new Error('PAT is required for restore operation');
+  }
+
+  // 1. ローカルの既存ディレクトリを削除
+  await removeDirectory(localSkillsDir, ctx.userHome);
+
+  // 2. ローカルディレクトリを再作成
+  await ensureDirectory(localSkillsDir);
+
+  // 3. Workspace からエクスポート
+  await spawnDatabricksCli(
+    ['workspace', 'export-dir', workspacePath, localSkillsDir, '--overwrite'],
+    {
+      authProvider,
+      timeout: 120000,
+    }
+  );
+
+  return {
+    success: true,
+    message: 'Skills restored successfully',
+  };
+}
+
 // テスト用エクスポート（内部関数のユニットテスト用）
 export const __testing = {
   parseSkillFile,
@@ -776,4 +934,5 @@ export const __testing = {
   validateBranchName,
   validatePathWithinBase,
   validateSkillName,
+  getWorkspaceSkillsPath,
 };

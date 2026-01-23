@@ -8,6 +8,8 @@ import type {
   SkillUpdateRequest,
   SkillUpdateResponse,
   SkillDeleteResponse,
+  SkillBackupResponse,
+  SkillRestoreResponse,
 } from '@repo/types';
 import { apiClient } from './api-client';
 
@@ -44,6 +46,20 @@ export const skillService = {
   deleteSkill: (name: string) =>
     apiClient<SkillDeleteResponse>(`/api/user/skills/${encodeURIComponent(name)}`, {
       method: 'DELETE',
+      body: JSON.stringify({}),
+    }),
+
+  /** Workspace にバックアップ */
+  backup: () =>
+    apiClient<SkillBackupResponse>('/api/user/skills/backup', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
+
+  /** Workspace からリストア */
+  restore: () =>
+    apiClient<SkillRestoreResponse>('/api/user/skills/restore', {
+      method: 'POST',
       body: JSON.stringify({}),
     }),
 };

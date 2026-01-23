@@ -121,6 +121,8 @@
   "skills": {
     "title": "スキル管理",
     "description": "カスタムスキルの追加・管理ができます",
+    "backup": "バックアップ",
+    "restore": "リストア",
     "createNew": "新規作成",
     "importFromGit": "インポート",
     "fetchError": "スキル一覧の取得に失敗しました",
@@ -174,7 +176,21 @@
       "editing": "編集中"
     },
     "updateError": "スキルの更新に失敗しました",
-    "updateSuccess": "スキルを更新しました"
+    "updateSuccess": "スキルを更新しました",
+    "backupDialog": {
+      "title": "Workspace へバックアップ",
+      "description": "スキルを Databricks Workspace にバックアップします",
+      "warning": "Workspace 上の既存スキルは全て削除され、現在のスキルで置き換えられます。",
+      "submit": "バックアップ開始",
+      "error": "バックアップに失敗しました"
+    },
+    "restoreDialog": {
+      "title": "Workspace からリストア",
+      "description": "Databricks Workspace からスキルをリストアします",
+      "warning": "ローカルの既存スキルは全て削除され、Workspace のスキルで置き換えられます。",
+      "submit": "リストア開始",
+      "error": "リストアに失敗しました"
+    }
   },
   "welcome": {
     "heading": "Claude Code on Databricks",

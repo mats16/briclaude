@@ -11,6 +11,9 @@ import {
   Pencil,
   Check,
   ChevronsUpDown,
+  Upload,
+  Download,
+  TriangleAlert,
 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
@@ -117,6 +120,14 @@ export function SkillsContent() {
   const [editedRawContent, setEditedRawContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // バックアップ/リストア状態
+  const [showBackupDialog, setShowBackupDialog] = useState(false);
+  const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
 
   // スキル一覧取得
   const fetchSkills = useCallback(async () => {
@@ -325,6 +336,35 @@ export function SkillsContent() {
     }
   };
 
+  // バックアップ
+  const handleBackup = async () => {
+    setIsBackingUp(true);
+    setBackupError(null);
+    try {
+      await skillService.backup();
+      setShowBackupDialog(false);
+    } catch (err) {
+      setBackupError(err instanceof Error ? err.message : t('skills.backupDialog.error'));
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
+  // リストア
+  const handleRestore = async () => {
+    setIsRestoring(true);
+    setRestoreError(null);
+    try {
+      await skillService.restore();
+      setShowRestoreDialog(false);
+      await fetchSkills();
+    } catch (err) {
+      setRestoreError(err instanceof Error ? err.message : t('skills.restoreDialog.error'));
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -342,6 +382,82 @@ export function SkillsContent() {
           <p className="text-sm text-muted-foreground">{t('skills.description')}</p>
         </div>
         <div className="flex gap-2">
+          {/* バックアップダイアログ */}
+          <Dialog
+            open={showBackupDialog}
+            onOpenChange={open => {
+              setShowBackupDialog(open);
+              if (!open) setBackupError(null);
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Upload className="h-4 w-4 mr-2" />
+                {t('skills.backup')}
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t('skills.backupDialog.title')}</DialogTitle>
+                <DialogDescription>{t('skills.backupDialog.description')}</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="flex items-start gap-3 p-3 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 rounded-md text-sm">
+                  <TriangleAlert className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                  <p>{t('skills.backupDialog.warning')}</p>
+                </div>
+                {backupError && (
+                  <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    {backupError}
+                  </div>
+                )}
+                <Button onClick={handleBackup} disabled={isBackingUp} className="w-full">
+                  {isBackingUp && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  {t('skills.backupDialog.submit')}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* リストアダイアログ */}
+          <Dialog
+            open={showRestoreDialog}
+            onOpenChange={open => {
+              setShowRestoreDialog(open);
+              if (!open) setRestoreError(null);
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                {t('skills.restore')}
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t('skills.restoreDialog.title')}</DialogTitle>
+                <DialogDescription>{t('skills.restoreDialog.description')}</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="flex items-start gap-3 p-3 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 rounded-md text-sm">
+                  <TriangleAlert className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                  <p>{t('skills.restoreDialog.warning')}</p>
+                </div>
+                {restoreError && (
+                  <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    {restoreError}
+                  </div>
+                )}
+                <Button onClick={handleRestore} disabled={isRestoring} className="w-full">
+                  {isRestoring && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  {t('skills.restoreDialog.submit')}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           {/* Gitインポートダイアログ */}
           <Dialog
             open={showImportDialog}
