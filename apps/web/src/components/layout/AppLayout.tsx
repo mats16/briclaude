@@ -9,6 +9,7 @@ import { sessionService } from '@/services';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { MainArea } from '@/components/main/MainArea';
 import { SkillsContent } from '@/pages/SkillsPage';
+import { AgentsContent } from '@/pages/AgentsPage';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { SIDEBAR_WIDTH, SIDEBAR_WIDTH_ICON } from '@/constants';
@@ -19,6 +20,7 @@ export function AppLayout() {
   const location = useLocation();
   const { t } = useTranslation();
   const isSkillsPage = location.pathname === '/skills';
+  const isAgentsPage = location.pathname === '/agents';
   const {
     sessions,
     isLoading: isSessionsLoading,
@@ -95,6 +97,8 @@ export function AppLayout() {
               <div className="flex-1 min-h-0">
                 {isSkillsPage ? (
                   <SkillsContent />
+                ) : isAgentsPage ? (
+                  <AgentsContent />
                 ) : (
                   <MainArea
                     onSessionArchived={handleMainAreaArchive}
@@ -128,6 +132,8 @@ export function AppLayout() {
           <div className="flex-1 h-full min-w-0">
             {isSkillsPage ? (
               <SkillsContent />
+            ) : isAgentsPage ? (
+              <AgentsContent />
             ) : (
               <MainArea
                 onSessionArchived={handleMainAreaArchive}
