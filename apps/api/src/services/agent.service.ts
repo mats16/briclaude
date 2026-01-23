@@ -909,4 +909,5 @@ export const __testing = {
   validateAgentName,
   getWorkspaceAgentsPath,
   mergeAndWriteAgentMetadata,
+  copyAgentFromDir,
 };

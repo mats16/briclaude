@@ -924,4 +924,5 @@ export const __testing = {
   validateBranchName,
   validateSkillName,
   getWorkspaceSkillsPath,
+  copySkillFromDir,
 };
