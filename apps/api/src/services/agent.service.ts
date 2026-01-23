@@ -527,6 +527,13 @@ async function mergeAndWriteAgentMetadata(
 
 /**
  * 単一のエージェントを一時ディレクトリからユーザーのエージェントディレクトリにコピー（フラット構造）
+ *
+ * @param agentsDir - コピー先のエージェントディレクトリ（絶対パス）
+ * @param tempDir - 一時ディレクトリ（絶対パス、ベースディレクトリとして使用）
+ * @param importPath - インポート対象のパス（tempDir からの相対パス、例: "my-agent.md" または "agents/my-agent.md"）
+ *                     絶対パスやパストラバーサル（"../"）は validatePathWithinBase でセキュリティエラーとなる
+ * @param importMetadata - インポート時に付与するメタデータ
+ * @returns コピーされたエージェント情報、または存在しない場合は null
  */
 async function copyAgentFromDir(
   agentsDir: string,
@@ -535,7 +542,8 @@ async function copyAgentFromDir(
   importMetadata: AgentMetadata
 ): Promise<AgentInfo | null> {
   // インポート対象パスの確認（パストラバーサル対策）
-  const sourcePath = await validatePathWithinBase(importPath, tempDir);
+  const fullImportPath = join(tempDir, importPath);
+  const sourcePath = await validatePathWithinBase(fullImportPath, tempDir);
 
   let sourceStats;
   try {
@@ -908,4 +916,5 @@ export const __testing = {
   validateAgentName,
   getWorkspaceAgentsPath,
   mergeAndWriteAgentMetadata,
+  copyAgentFromDir,
 };

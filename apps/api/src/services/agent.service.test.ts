@@ -1,4 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdir, writeFile, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { randomUUID } from 'node:crypto';
 import { __testing } from './agent.service.js';
 
 const {
@@ -8,6 +12,7 @@ const {
   validateBranchName,
   validateAgentName,
   getWorkspaceAgentsPath,
+  copyAgentFromDir,
 } = __testing;
 
 describe('agent.service', () => {
@@ -376,6 +381,117 @@ description: Test
       const result = getWorkspaceAgentsPath('user.name-123');
 
       expect(result).toBe('/Workspace/Users/user.name-123/.claude/agents');
+    });
+  });
+
+  describe('copyAgentFromDir', () => {
+    let tempDir: string;
+    let agentsDir: string;
+
+    const validAgentContent = `---
+name: test-agent
+description: A test agent
+tools: Read, Write, Bash
+metadata:
+  version: "1.0.0"
+---
+
+# Test Agent
+
+This is a test agent content.
+`;
+
+    const importMetadata = {
+      source: 'https://github.com/example/repo',
+    };
+
+    beforeEach(async () => {
+      // テスト用の一時ディレクトリを作成
+      const baseTemp = tmpdir();
+      tempDir = join(baseTemp, `test-import-${randomUUID()}`);
+      agentsDir = join(baseTemp, `test-agents-${randomUUID()}`);
+      await mkdir(tempDir, { recursive: true });
+      await mkdir(agentsDir, { recursive: true });
+    });
+
+    afterEach(async () => {
+      // クリーンアップ
+      await rm(tempDir, { recursive: true, force: true });
+      await rm(agentsDir, { recursive: true, force: true });
+    });
+
+    describe('正常系', () => {
+      it('相対パス (my-agent.md) でのインポートが成功すること', async () => {
+        // エージェントファイルを作成
+        await writeFile(join(tempDir, 'my-agent.md'), validAgentContent);
+
+        const result = await copyAgentFromDir(agentsDir, tempDir, 'my-agent.md', importMetadata);
+
+        expect(result).not.toBeNull();
+        expect(result!.name).toBe('test-agent');
+        expect(result!.version).toBe('1.0.0');
+        expect(result!.file_path).toBe('my-agent.md');
+        expect(result!.metadata?.source).toBe('https://github.com/example/repo');
+      });
+
+      it('ネストされたディレクトリパス (agents/my-agent.md) でのインポートが成功すること', async () => {
+        // ネストされたエージェントファイルを作成
+        const nestedDir = join(tempDir, 'agents');
+        await mkdir(nestedDir, { recursive: true });
+        await writeFile(join(nestedDir, 'my-agent.md'), validAgentContent);
+
+        const result = await copyAgentFromDir(
+          agentsDir,
+          tempDir,
+          'agents/my-agent.md',
+          importMetadata
+        );
+
+        expect(result).not.toBeNull();
+        expect(result!.name).toBe('test-agent');
+        expect(result!.file_path).toBe('my-agent.md');
+      });
+
+      it('存在しないパスの場合は null を返すこと', async () => {
+        const result = await copyAgentFromDir(
+          agentsDir,
+          tempDir,
+          'non-existent-agent.md',
+          importMetadata
+        );
+
+        expect(result).toBeNull();
+      });
+    });
+
+    describe('異常系（セキュリティ）', () => {
+      it('パストラバーサル攻撃パターン (../../../etc/passwd) でエラーが発生すること', async () => {
+        await expect(
+          copyAgentFromDir(agentsDir, tempDir, '../../../etc/passwd', importMetadata)
+        ).rejects.toThrow('Security error');
+      });
+
+      it('パストラバーサル攻撃パターン (agent/../../../etc/passwd) でエラーが発生すること', async () => {
+        // エージェントディレクトリを作成（存在するパスを経由）
+        const agentDir = join(tempDir, 'agent');
+        await mkdir(agentDir, { recursive: true });
+
+        await expect(
+          copyAgentFromDir(agentsDir, tempDir, 'agent/../../../etc/passwd', importMetadata)
+        ).rejects.toThrow('Security error');
+      });
+
+      it('絶対パス (/etc/passwd) でエラーが発生すること', async () => {
+        await expect(
+          copyAgentFromDir(agentsDir, tempDir, '/etc/passwd', importMetadata)
+        ).rejects.toThrow('Security error');
+      });
+
+      it('絶対パス (/tmp/malicious) でエラーが発生すること', async () => {
+        await expect(
+          copyAgentFromDir(agentsDir, tempDir, '/tmp/malicious', importMetadata)
+        ).rejects.toThrow('Security error');
+      });
     });
   });
 });

@@ -1,4 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdir, writeFile, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { randomUUID } from 'node:crypto';
 import { __testing } from './skill.service.js';
 
 const {
@@ -8,6 +12,7 @@ const {
   validateBranchName,
   validateSkillName,
   getWorkspaceSkillsPath,
+  copySkillFromDir,
 } = __testing;
 
 describe('skill.service', () => {
@@ -322,6 +327,113 @@ description: Test
       const result = getWorkspaceSkillsPath('user.name-123');
 
       expect(result).toBe('/Workspace/Users/user.name-123/.claude/skills');
+    });
+  });
+
+  describe('copySkillFromDir', () => {
+    let tempDir: string;
+    let skillsDir: string;
+
+    const validSkillContent = `---
+name: test-skill
+description: A test skill
+metadata:
+  version: "1.0.0"
+---
+
+# Test Skill
+
+This is a test skill content.
+`;
+
+    const importMetadata = {
+      source: 'https://github.com/example/repo',
+    };
+
+    beforeEach(async () => {
+      // テスト用の一時ディレクトリを作成
+      const baseTemp = tmpdir();
+      tempDir = join(baseTemp, `test-import-${randomUUID()}`);
+      skillsDir = join(baseTemp, `test-skills-${randomUUID()}`);
+      await mkdir(tempDir, { recursive: true });
+      await mkdir(skillsDir, { recursive: true });
+    });
+
+    afterEach(async () => {
+      // クリーンアップ
+      await rm(tempDir, { recursive: true, force: true });
+      await rm(skillsDir, { recursive: true, force: true });
+    });
+
+    describe('正常系', () => {
+      it('相対パス (my-skill) でのインポートが成功すること', async () => {
+        // スキルディレクトリを作成
+        const skillDir = join(tempDir, 'my-skill');
+        await mkdir(skillDir, { recursive: true });
+        await writeFile(join(skillDir, 'SKILL.md'), validSkillContent);
+
+        const result = await copySkillFromDir(skillsDir, tempDir, 'my-skill', importMetadata);
+
+        expect(result).not.toBeNull();
+        expect(result!.name).toBe('test-skill');
+        expect(result!.version).toBe('1.0.0');
+        expect(result!.file_path).toBe('my-skill/SKILL.md');
+        expect(result!.metadata?.source).toBe('https://github.com/example/repo');
+      });
+
+      it('ネストされたディレクトリパス (skills/my-skill) でのインポートが成功すること', async () => {
+        // ネストされたスキルディレクトリを作成
+        const nestedSkillDir = join(tempDir, 'skills', 'my-skill');
+        await mkdir(nestedSkillDir, { recursive: true });
+        await writeFile(join(nestedSkillDir, 'SKILL.md'), validSkillContent);
+
+        const result = await copySkillFromDir(skillsDir, tempDir, 'skills/my-skill', importMetadata);
+
+        expect(result).not.toBeNull();
+        expect(result!.name).toBe('test-skill');
+        expect(result!.file_path).toBe('my-skill/SKILL.md');
+      });
+
+      it('存在しないパスの場合は null を返すこと', async () => {
+        const result = await copySkillFromDir(
+          skillsDir,
+          tempDir,
+          'non-existent-skill',
+          importMetadata
+        );
+
+        expect(result).toBeNull();
+      });
+    });
+
+    describe('異常系（セキュリティ）', () => {
+      it('パストラバーサル攻撃パターン (../../../etc/passwd) でエラーが発生すること', async () => {
+        await expect(
+          copySkillFromDir(skillsDir, tempDir, '../../../etc/passwd', importMetadata)
+        ).rejects.toThrow('Security error');
+      });
+
+      it('パストラバーサル攻撃パターン (skill/../../../etc/passwd) でエラーが発生すること', async () => {
+        // スキルディレクトリを作成（存在するパスを経由）
+        const skillDir = join(tempDir, 'skill');
+        await mkdir(skillDir, { recursive: true });
+
+        await expect(
+          copySkillFromDir(skillsDir, tempDir, 'skill/../../../etc/passwd', importMetadata)
+        ).rejects.toThrow('Security error');
+      });
+
+      it('絶対パス (/etc/passwd) でエラーが発生すること', async () => {
+        await expect(
+          copySkillFromDir(skillsDir, tempDir, '/etc/passwd', importMetadata)
+        ).rejects.toThrow('Security error');
+      });
+
+      it('絶対パス (/tmp/malicious) でエラーが発生すること', async () => {
+        await expect(
+          copySkillFromDir(skillsDir, tempDir, '/tmp/malicious', importMetadata)
+        ).rejects.toThrow('Security error');
+      });
     });
   });
 });
