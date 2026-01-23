@@ -53,15 +53,33 @@ import { skillService } from '@/services';
 import { useUser } from '@/hooks/useUser';
 import type { SkillInfo, SkillDetail } from '@repo/types';
 
+/** プリセットリポジトリの型 */
+interface PresetRepo {
+  label: string;
+  url: string;
+  defaultPath: string;
+  defaultBranch: string;
+}
+
 /** プリセットリポジトリ */
-const PRESET_REPOS = [
-  {
-    label: 'Anthropic',
-    url: 'https://github.com/anthropics/skills',
-  },
+const PRESET_REPOS: PresetRepo[] = [
   {
     label: 'Databricks',
     url: 'https://github.com/mats16/briclaude',
+    defaultPath: 'skills',
+    defaultBranch: 'main',
+  },
+  {
+    label: 'Anthropic',
+    url: 'https://github.com/anthropics/skills',
+    defaultPath: 'skills',
+    defaultBranch: 'main',
+  },
+  {
+    label: 'Awesome Claude Skills',
+    url: 'https://github.com/ComposioHQ/awesome-claude-skills',
+    defaultPath: '',
+    defaultBranch: 'master',
   },
 ];
 
@@ -187,8 +205,13 @@ export function SkillsContent() {
   };
 
   // リポジトリURLを選択/入力
-  const handleSelectRepo = (url: string) => {
-    setImportForm(f => ({ ...f, repository_url: url }));
+  const handleSelectRepo = (url: string, defaultPath: string, defaultBranch: string) => {
+    setImportForm(f => ({
+      ...f,
+      repository_url: url,
+      path: defaultPath,
+      branch: defaultBranch,
+    }));
     setAvailableSkills([]);
     setSelectedSkillNames(new Set());
     setImportError(null);
@@ -211,7 +234,7 @@ export function SkillsContent() {
       if (!response.ok) throw new Error('Failed to fetch');
       const data: GitHubContent[] = await response.json();
       const skillNames = data
-        .filter(item => item.type === 'dir')
+        .filter(item => item.type === 'dir' && !item.name.startsWith('.'))
         .map(item => item.name)
         .sort();
       setAvailableSkills(skillNames);
@@ -248,10 +271,12 @@ export function SkillsContent() {
   const handleImport = async () => {
     setIsImporting(true);
     setImportError(null);
-    // 選択されたスキルのパス配列を構築
+    // 選択されたスキルのパス配列を構築（空文字を除外してパスを結合）
     const paths =
       selectedSkillNames.size > 0
-        ? Array.from(selectedSkillNames).map(name => `${importForm.path}/${name}`)
+        ? Array.from(selectedSkillNames).map(name =>
+            [importForm.path, name].filter(Boolean).join('/')
+          )
         : [importForm.path];
     try {
       await skillService.importFromGit({
@@ -667,7 +692,13 @@ export function SkillsContent() {
                                   <CommandItem
                                     key={repo.url}
                                     value={repo.url}
-                                    onSelect={() => handleSelectRepo(repo.url)}
+                                    onSelect={() =>
+                                      handleSelectRepo(
+                                        repo.url,
+                                        repo.defaultPath,
+                                        repo.defaultBranch
+                                      )
+                                    }
                                   >
                                     <Check
                                       className={cn(
