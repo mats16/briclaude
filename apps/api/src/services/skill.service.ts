@@ -633,22 +633,28 @@ export async function importSkillsFromGit(
     );
 
     // 2. sparse-checkout を設定して必要なパスのみをチェックアウト
-    await spawnAsync('git', ['sparse-checkout', 'init', '--cone'], {
-      cwd: tempDir,
-      timeout: 10000,
-    });
+    try {
+      await spawnAsync('git', ['sparse-checkout', 'init', '--cone'], {
+        cwd: tempDir,
+        timeout: 10000,
+      });
 
-    // sparse-checkout set に全パスを渡す
-    await spawnAsync('git', ['sparse-checkout', 'set', ...paths], {
-      cwd: tempDir,
-      timeout: 10000,
-    });
+      // sparse-checkout set に全パスを渡す
+      await spawnAsync('git', ['sparse-checkout', 'set', ...paths], {
+        cwd: tempDir,
+        timeout: 10000,
+      });
 
-    // 3. チェックアウト実行（必要なファイルのみダウンロード）
-    await spawnAsync('git', ['checkout'], {
-      cwd: tempDir,
-      timeout: 60000,
-    });
+      // 3. チェックアウト実行（必要なファイルのみダウンロード）
+      await spawnAsync('git', ['checkout'], {
+        cwd: tempDir,
+        timeout: 60000,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error('Git sparse-checkout failed', { paths, error: message });
+      throw new Error(`Failed to checkout specified paths from repository. Please verify the paths exist in the repository.`);
+    }
 
     await ensureDirectory(skillsDir);
 

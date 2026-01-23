@@ -210,6 +210,28 @@ const userSkillsRoute: FastifyPluginAsync = async fastify => {
       });
     }
 
+    // バリデーション: パス配列のサイズ制限（DoS対策）
+    const MAX_PATHS = 20;
+    if (paths.length > MAX_PATHS) {
+      return reply.status(400).send({
+        error: 'BadRequest',
+        message: `Too many paths specified. Maximum is ${MAX_PATHS}.`,
+        statusCode: 400,
+      });
+    }
+
+    // バリデーション: 各パスが有効な文字列であることを確認
+    const invalidPaths = paths.filter(
+      p => typeof p !== 'string' || p.trim() === '' || p.includes('\0')
+    );
+    if (invalidPaths.length > 0) {
+      return reply.status(400).send({
+        error: 'BadRequest',
+        message: 'Invalid path in paths array: each path must be a non-empty string',
+        statusCode: 400,
+      });
+    }
+
     // バリデーション: URLフォーマット（HTTPSまたはSSH）
     const isHttps = repository_url.startsWith('https://');
     const isSsh = repository_url.startsWith('git@');
