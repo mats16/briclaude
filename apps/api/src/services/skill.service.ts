@@ -1,5 +1,5 @@
 import { readdir, readFile, writeFile, rm, stat, cp } from 'node:fs/promises';
-import { join, basename, resolve, normalize } from 'node:path';
+import { join, basename } from 'node:path';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
@@ -17,6 +17,7 @@ import type {
 import type { UserContext } from '../lib/user-context.js';
 import type { AuthProvider } from '../lib/databricks-auth.js';
 import { ensureDirectory, removeDirectory } from '../utils/directory.js';
+import { validatePathWithinBase } from '../utils/path-validation.js';
 
 /**
  * サービス層用のシンプルなロガー
@@ -82,21 +83,6 @@ function validateBranchName(branch: string): void {
       throw new Error('Invalid branch name: contains forbidden pattern');
     }
   }
-}
-
-/**
- * パストラバーサルのチェック
- * resolvedPath が baseDir 内に収まることを確認
- */
-function validatePathWithinBase(baseDir: string, targetPath: string): string {
-  const normalizedBase = normalize(resolve(baseDir));
-  const normalizedTarget = normalize(resolve(baseDir, targetPath));
-
-  if (!normalizedTarget.startsWith(normalizedBase + '/') && normalizedTarget !== normalizedBase) {
-    throw new Error('Path traversal detected: target path is outside base directory');
-  }
-
-  return normalizedTarget;
 }
 
 /**
@@ -480,7 +466,7 @@ async function copySkillFromDir(
   importMetadata: SkillMetadata
 ): Promise<SkillInfo | null> {
   // インポート対象パスの確認（パストラバーサル対策）
-  const sourcePath = validatePathWithinBase(tempDir, importPath);
+  const sourcePath = await validatePathWithinBase(importPath, tempDir);
 
   let sourceStats;
   try {
@@ -907,7 +893,9 @@ export async function restoreSkillsFromWorkspace(ctx: UserContext): Promise<Skil
   }
 
   // 1. ローカルの既存ディレクトリを削除
-  await removeDirectory(localSkillsDir, ctx.userHome);
+  // セキュリティ: ユーザーホーム配下であることを検証
+  const safeSkillsDir = await validatePathWithinBase(localSkillsDir, ctx.userHome);
+  await removeDirectory(safeSkillsDir);
 
   // 2. ローカルディレクトリを再作成
   await ensureDirectory(localSkillsDir);
@@ -933,7 +921,6 @@ export const __testing = {
   generateSkillFileContent,
   extractAuthorFromGitUrl,
   validateBranchName,
-  validatePathWithinBase,
   validateSkillName,
   getWorkspaceSkillsPath,
 };

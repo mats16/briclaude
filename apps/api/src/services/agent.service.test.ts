@@ -6,7 +6,6 @@ const {
   generateAgentFileContent,
   extractAuthorFromGitUrl,
   validateBranchName,
-  validatePathWithinBase,
   validateAgentName,
   getWorkspaceAgentsPath,
 } = __testing;
@@ -297,38 +296,6 @@ description: Test
     it('should reject very long branch name', () => {
       const longName = 'a'.repeat(256);
       expect(() => validateBranchName(longName)).toThrow('must be 1-255 characters');
-    });
-  });
-
-  describe('validatePathWithinBase', () => {
-    it('should accept path within base directory', () => {
-      const result = validatePathWithinBase('/base/dir', 'subdir/file.md');
-
-      expect(result).toBe('/base/dir/subdir/file.md');
-    });
-
-    it('should reject path traversal with ../', () => {
-      expect(() => validatePathWithinBase('/base/dir', '../etc/passwd')).toThrow(
-        'Path traversal detected'
-      );
-    });
-
-    it('should reject absolute path outside base', () => {
-      expect(() => validatePathWithinBase('/base/dir', '/etc/passwd')).toThrow(
-        'Path traversal detected'
-      );
-    });
-
-    it('should accept deeply nested path', () => {
-      const result = validatePathWithinBase('/base', 'a/b/c/d/e/file.md');
-
-      expect(result).toBe('/base/a/b/c/d/e/file.md');
-    });
-
-    it('should normalize path with redundant separators', () => {
-      const result = validatePathWithinBase('/base/dir', 'subdir//file.md');
-
-      expect(result).toBe('/base/dir/subdir/file.md');
     });
   });
 
