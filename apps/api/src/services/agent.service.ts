@@ -410,15 +410,7 @@ export async function createAgent(
       : undefined;
 
   // ファイル作成
-  logger.warn('[DEBUG] frontmatter object', {
-    frontmatter,
-    hasTool: 'tools' in frontmatter,
-    toolsValue: frontmatter.tools,
-  });
   const fileContent = generateAgentFileContent(frontmatter, content);
-  logger.warn('[DEBUG] generated file content preview', {
-    preview: fileContent.slice(0, 300),
-  });
   await writeFile(agentFilePath, fileContent, 'utf-8');
 
   const stats = await stat(agentFilePath);
