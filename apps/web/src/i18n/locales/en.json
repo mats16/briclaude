@@ -182,6 +182,7 @@
       "description": "Backup skills to Databricks Workspace",
       "warning": "All existing skills in Workspace will be deleted and replaced with current skills.",
       "submit": "Start Backup",
+      "success": "Skills backed up successfully",
       "error": "Backup failed"
     },
     "restoreDialog": {
@@ -189,6 +190,7 @@
       "description": "Restore skills from Databricks Workspace",
       "warning": "All existing local skills will be deleted and replaced with Workspace skills.",
       "submit": "Start Restore",
+      "success": "Skills restored successfully",
       "error": "Restore failed"
     }
   },

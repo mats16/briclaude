@@ -8,6 +8,7 @@ const {
   validateBranchName,
   validatePathWithinBase,
   validateSkillName,
+  getWorkspaceSkillsPath,
 } = __testing;
 
 describe('skill.service', () => {
@@ -334,6 +335,26 @@ description: Test
     it('should reject very long skill name', () => {
       const longName = 'a'.repeat(256);
       expect(() => validateSkillName(longName)).toThrow('must be 1-255 characters');
+    });
+  });
+
+  describe('getWorkspaceSkillsPath', () => {
+    it('should generate correct Workspace path for user', () => {
+      const result = getWorkspaceSkillsPath('test-user');
+
+      expect(result).toBe('/Workspace/Users/test-user/.claude/skills');
+    });
+
+    it('should handle email-style username', () => {
+      const result = getWorkspaceSkillsPath('user@example.com');
+
+      expect(result).toBe('/Workspace/Users/user@example.com/.claude/skills');
+    });
+
+    it('should handle username with special characters', () => {
+      const result = getWorkspaceSkillsPath('user.name-123');
+
+      expect(result).toBe('/Workspace/Users/user.name-123/.claude/skills');
     });
   });
 });

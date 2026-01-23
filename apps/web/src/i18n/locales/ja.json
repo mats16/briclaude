@@ -182,6 +182,7 @@
       "description": "スキルを Databricks Workspace にバックアップします",
       "warning": "Workspace 上の既存スキルは全て削除され、現在のスキルで置き換えられます。",
       "submit": "バックアップ開始",
+      "success": "バックアップが完了しました",
       "error": "バックアップに失敗しました"
     },
     "restoreDialog": {
@@ -189,6 +190,7 @@
       "description": "Databricks Workspace からスキルをリストアします",
       "warning": "ローカルの既存スキルは全て削除され、Workspace のスキルで置き換えられます。",
       "submit": "リストア開始",
+      "success": "リストアが完了しました",
       "error": "リストアに失敗しました"
     }
   },

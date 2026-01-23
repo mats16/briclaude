@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import {
   Plus,
   GitBranch,
@@ -351,6 +352,8 @@ export function SkillsContent() {
     try {
       await skillService.backup();
       setShowBackupDialog(false);
+      toast.success(t('skills.backupDialog.success'));
+      await fetchSkills();
     } catch (err) {
       setBackupError(err instanceof Error ? err.message : t('skills.backupDialog.error'));
     } finally {
@@ -365,6 +368,7 @@ export function SkillsContent() {
     try {
       await skillService.restore();
       setShowRestoreDialog(false);
+      toast.success(t('skills.restoreDialog.success'));
       await fetchSkills();
     } catch (err) {
       setRestoreError(err instanceof Error ? err.message : t('skills.restoreDialog.error'));
