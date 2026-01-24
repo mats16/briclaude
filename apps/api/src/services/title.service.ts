@@ -51,10 +51,10 @@ const FALLBACK_TITLE = 'General coding session';
 const FALLBACK_APP_BASE = 'session';
 const REQUEST_TIMEOUT_MS = 30000; // 30 seconds
 const APP_NAME_PREFIX = 'claude-';
-const RANDOM_SUFFIX_LENGTH = 8;
+const RANDOM_SUFFIX_LENGTH = 6;
 const MAX_APP_NAME_LENGTH = 30;
-// claude- (7) + base + - (1) + suffix (8) = 16 + base, so base max = 14
-const MAX_APP_BASE_LENGTH = 14;
+// claude- (7) + base + - (1) + suffix (6) = 14 + base, so base max = 16
+const MAX_APP_BASE_LENGTH = 16;
 
 /**
  * Cleans up the generated title by removing common LLM artifacts.

@@ -101,7 +101,7 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.title).toBe('React Component Development');
-      expect(body.app_name).toMatch(/^claude-react-comp-[a-f0-9]{8}$/);
+      expect(body.app_name).toMatch(/^claude-react-comp-[a-f0-9]{6}$/);
 
       // Verify OpenAI was called with correct parameters including response_format
       expect(mockCreate).toHaveBeenCalledWith({
@@ -234,7 +234,7 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.title).toBe('SP Token Test');
-      expect(body.app_name).toMatch(/^claude-sp-test-[a-f0-9]{8}$/);
+      expect(body.app_name).toMatch(/^claude-sp-test-[a-f0-9]{6}$/);
     });
 
     it('should use PAT auth provider when available', async () => {
@@ -269,7 +269,7 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.title).toBe('PAT Priority Test');
-      expect(body.app_name).toMatch(/^claude-pat-test-[a-f0-9]{8}$/);
+      expect(body.app_name).toMatch(/^claude-pat-test-[a-f0-9]{6}$/);
 
       // Verify that getToken was called
       expect(mockAccessToken).toHaveBeenCalled();
@@ -319,7 +319,7 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.title).toBe('General coding session');
-      expect(body.app_name).toMatch(/^claude-session-[a-f0-9]{8}$/);
+      expect(body.app_name).toMatch(/^claude-session-[a-f0-9]{6}$/);
     });
 
     it('should return fallback title and app_name when LLM returns null choices', async () => {
@@ -340,7 +340,7 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.title).toBe('General coding session');
-      expect(body.app_name).toMatch(/^claude-session-[a-f0-9]{8}$/);
+      expect(body.app_name).toMatch(/^claude-session-[a-f0-9]{6}$/);
     });
 
     it('should return fallback when LLM returns invalid JSON', async () => {
@@ -367,7 +367,7 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.title).toBe('General coding session');
-      expect(body.app_name).toMatch(/^claude-session-[a-f0-9]{8}$/);
+      expect(body.app_name).toMatch(/^claude-session-[a-f0-9]{6}$/);
     });
 
     it('should clean up LLM artifacts - remove surrounding quotes from title', async () => {
@@ -394,7 +394,7 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.title).toBe('Python Data Analysis');
-      expect(body.app_name).toMatch(/^claude-python-data-[a-f0-9]{8}$/);
+      expect(body.app_name).toMatch(/^claude-python-data-[a-f0-9]{6}$/);
     });
 
     it('should clean up LLM artifacts - remove markdown formatting', async () => {
@@ -499,7 +499,7 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.title).toBe('React Component Implementation');
-      expect(body.app_name).toMatch(/^claude-react-impl-[a-f0-9]{8}$/);
+      expect(body.app_name).toMatch(/^claude-react-impl-[a-f0-9]{6}$/);
 
       // Verify the Japanese message was passed to the LLM
       expect(mockCreate).toHaveBeenCalledWith(
@@ -566,7 +566,7 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       // Should convert to lowercase kebab-case
-      expect(body.app_name).toMatch(/^claude-my-app-name-[a-f0-9]{8}$/);
+      expect(body.app_name).toMatch(/^claude-my-app-name-[a-f0-9]{6}$/);
     });
 
     it('should truncate long app_name_base to ensure app_name is 30 chars or less', async () => {
@@ -593,7 +593,7 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.app_name.length).toBeLessThanOrEqual(30);
-      expect(body.app_name).toMatch(/^claude-[a-z0-9-]+-[a-f0-9]{8}$/);
+      expect(body.app_name).toMatch(/^claude-[a-z0-9-]+-[a-f0-9]{6}$/);
     });
 
     it('should use fallback app_name_base when LLM returns invalid characters only', async () => {
@@ -620,7 +620,7 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       // Should use fallback "session" when cleaned result is empty
-      expect(body.app_name).toMatch(/^claude-session-[a-f0-9]{8}$/);
+      expect(body.app_name).toMatch(/^claude-session-[a-f0-9]{6}$/);
     });
   });
 });
