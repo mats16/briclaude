@@ -15,7 +15,7 @@ Generate a session title and app identifier based on the user's first message.
 
 <app_base_rules>
 - Lowercase, kebab-case (e.g., "react-form", "api-test")
-- 2-12 characters only
+- 2-16 characters only
 - Alphanumeric and hyphens only
 - Describe the project or technology briefly
 </app_base_rules>
@@ -38,7 +38,7 @@ const TITLE_GENERATION_SCHEMA = {
       },
       app_name_base: {
         type: 'string',
-        description: 'A short kebab-case identifier (2-12 characters)',
+        description: 'A short kebab-case identifier (2-16 characters)',
       },
     },
     required: ['title', 'app_name_base'],
