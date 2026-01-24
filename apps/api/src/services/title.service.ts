@@ -23,12 +23,28 @@ Generate a session title and app identifier based on the user's first message.
 
 <input_message>
 {{MESSAGE}}
-</input_message>
+</input_message>`;
 
-<output_format>
-Respond with only a JSON object (no markdown code blocks):
-{"title": "Your generated title here", "app_base": "short-name"}
-</output_format>`;
+// JSON Schema for structured output
+const TITLE_GENERATION_SCHEMA = {
+  name: 'title_generation',
+  strict: true,
+  schema: {
+    type: 'object',
+    properties: {
+      title: {
+        type: 'string',
+        description: 'A concise session title (3-6 words)',
+      },
+      app_base: {
+        type: 'string',
+        description: 'A short kebab-case identifier (2-12 characters)',
+      },
+    },
+    required: ['title', 'app_base'],
+    additionalProperties: false,
+  },
+} as const;
 
 const MAX_TOKENS = 100;
 const FALLBACK_TITLE = 'General coding session';
@@ -69,13 +85,11 @@ function cleanTitle(rawTitle: string): string {
 
 /**
  * Parses the JSON response from the LLM.
- * Extracts title and app_base from the JSON structure.
+ * Extracts title and app_base from the structured output.
  */
 function parseJsonResponse(response: string): { title: string; appBase: string } {
   try {
-    // Remove markdown code blocks if present
-    const cleaned = response.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
-    const parsed = JSON.parse(cleaned) as { title?: string; app_base?: string };
+    const parsed = JSON.parse(response) as { title?: string; app_base?: string };
 
     return {
       title: parsed.title ? cleanTitle(parsed.title) : FALLBACK_TITLE,
@@ -164,7 +178,7 @@ export class TitleService {
 
   /**
    * Generates a title and app_name for a coding session based on the first message.
-   * Uses a single LLM call with XML-structured prompt and JSON response.
+   * Uses a single LLM call with XML-structured prompt and structured JSON output.
    * @throws Error if the LLM call fails
    */
   async generateTitle(params: GenerateTitleParams): Promise<GenerateTitleResult> {
@@ -187,6 +201,10 @@ export class TitleService {
           content: prompt,
         },
       ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: TITLE_GENERATION_SCHEMA,
+      },
     });
 
     const rawContent = response.choices[0]?.message?.content;

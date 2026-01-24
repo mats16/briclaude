@@ -103,7 +103,7 @@ describe('title route', () => {
       expect(body.title).toBe('React Component Development');
       expect(body.app_name).toMatch(/^claude-react-comp-[a-f0-9]{8}$/);
 
-      // Verify OpenAI was called with correct parameters
+      // Verify OpenAI was called with correct parameters including response_format
       expect(mockCreate).toHaveBeenCalledWith({
         model: 'databricks-claude-haiku-4-5',
         max_tokens: 100,
@@ -113,6 +113,21 @@ describe('title route', () => {
             content: expect.stringContaining('Help me create a React component'),
           },
         ],
+        response_format: {
+          type: 'json_schema',
+          json_schema: expect.objectContaining({
+            name: 'title_generation',
+            strict: true,
+            schema: expect.objectContaining({
+              type: 'object',
+              properties: expect.objectContaining({
+                title: expect.any(Object),
+                app_base: expect.any(Object),
+              }),
+              required: ['title', 'app_base'],
+            }),
+          }),
+        },
       });
     });
 
@@ -353,33 +368,6 @@ describe('title route', () => {
       const body = response.json();
       expect(body.title).toBe('General coding session');
       expect(body.app_name).toMatch(/^claude-session-[a-f0-9]{8}$/);
-    });
-
-    it('should handle JSON wrapped in markdown code blocks', async () => {
-      mockCreate.mockResolvedValue({
-        choices: [
-          {
-            message: {
-              content: '```json\n{"title": "Markdown Wrapped", "app_base": "markdown"}\n```',
-            },
-          },
-        ],
-      });
-
-      await registerPlugins();
-
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/generate_title',
-        payload: {
-          first_session_message: 'Test message',
-        },
-      });
-
-      expect(response.statusCode).toBe(200);
-      const body = response.json();
-      expect(body.title).toBe('Markdown Wrapped');
-      expect(body.app_name).toMatch(/^claude-markdown-[a-f0-9]{8}$/);
     });
 
     it('should clean up LLM artifacts - remove surrounding quotes from title', async () => {
