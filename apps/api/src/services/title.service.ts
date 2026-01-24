@@ -36,12 +36,12 @@ const TITLE_GENERATION_SCHEMA = {
         type: 'string',
         description: 'A concise session title (3-6 words)',
       },
-      app_base: {
+      app_name_base: {
         type: 'string',
         description: 'A short kebab-case identifier (2-12 characters)',
       },
     },
-    required: ['title', 'app_base'],
+    required: ['title', 'app_name_base'],
     additionalProperties: false,
   },
 } as const;
@@ -87,18 +87,18 @@ function cleanTitle(rawTitle: string): string {
  * Parses the JSON response from the LLM.
  * Extracts title and app_base from the structured output.
  */
-function parseJsonResponse(response: string): { title: string; appBase: string } {
+function parseJsonResponse(response: string): { title: string; appNameBase: string } {
   try {
-    const parsed = JSON.parse(response) as { title?: string; app_base?: string };
+    const parsed = JSON.parse(response) as { title?: string; app_name_base?: string };
 
     return {
       title: parsed.title ? cleanTitle(parsed.title) : FALLBACK_TITLE,
-      appBase: parsed.app_base ? cleanAppBase(parsed.app_base) : FALLBACK_APP_BASE,
+      appNameBase: parsed.app_name_base ? cleanAppBase(parsed.app_name_base) : FALLBACK_APP_BASE,
     };
   } catch {
     return {
       title: FALLBACK_TITLE,
-      appBase: FALLBACK_APP_BASE,
+      appNameBase: FALLBACK_APP_BASE,
     };
   }
 }
@@ -216,11 +216,11 @@ export class TitleService {
       };
     }
 
-    const { title, appBase } = parseJsonResponse(rawContent);
+    const { title, appNameBase } = parseJsonResponse(rawContent);
 
     return {
       title: title || FALLBACK_TITLE,
-      appName: constructAppName(appBase),
+      appName: constructAppName(appNameBase),
     };
   }
 }

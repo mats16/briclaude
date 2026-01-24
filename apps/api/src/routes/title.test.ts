@@ -82,7 +82,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: '{"title": "React Component Development", "app_base": "react-comp"}',
+              content: '{"title": "React Component Development", "app_name_base": "react-comp"}',
             },
           },
         ],
@@ -122,9 +122,9 @@ describe('title route', () => {
               type: 'object',
               properties: expect.objectContaining({
                 title: expect.any(Object),
-                app_base: expect.any(Object),
+                app_name_base: expect.any(Object),
               }),
-              required: ['title', 'app_base'],
+              required: ['title', 'app_name_base'],
             }),
           }),
         },
@@ -215,7 +215,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: '{"title": "SP Token Test", "app_base": "sp-test"}',
+              content: '{"title": "SP Token Test", "app_name_base": "sp-test"}',
             },
           },
         ],
@@ -250,7 +250,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: '{"title": "PAT Priority Test", "app_base": "pat-test"}',
+              content: '{"title": "PAT Priority Test", "app_name_base": "pat-test"}',
             },
           },
         ],
@@ -375,7 +375,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: '{"title": "\\"Python Data Analysis\\"", "app_base": "python-data"}',
+              content: '{"title": "\\"Python Data Analysis\\"", "app_name_base": "python-data"}',
             },
           },
         ],
@@ -402,7 +402,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: '{"title": "**React Component** Development", "app_base": "react-comp"}',
+              content: '{"title": "**React Component** Development", "app_name_base": "react-comp"}',
             },
           },
         ],
@@ -428,7 +428,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: '{"title": "`API Integration`", "app_base": "api-int"}',
+              content: '{"title": "`API Integration`", "app_name_base": "api-int"}',
             },
           },
         ],
@@ -454,7 +454,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: '{"title": "  Python Data Analysis  ", "app_base": "python"}',
+              content: '{"title": "  Python Data Analysis  ", "app_name_base": "python"}',
             },
           },
         ],
@@ -480,7 +480,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: '{"title": "React Component Implementation", "app_base": "react-impl"}',
+              content: '{"title": "React Component Implementation", "app_name_base": "react-impl"}',
             },
           },
         ],
@@ -519,7 +519,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: '{"title": "Test Title", "app_base": "test"}',
+              content: '{"title": "Test Title", "app_name_base": "test"}',
             },
           },
         ],
@@ -542,12 +542,12 @@ describe('title route', () => {
       );
     });
 
-    it('should clean and validate app_base with special characters', async () => {
+    it('should clean and validate app_name_base with special characters', async () => {
       mockCreate.mockResolvedValue({
         choices: [
           {
             message: {
-              content: '{"title": "Test Title", "app_base": "My App Name!"}',
+              content: '{"title": "Test Title", "app_name_base": "My App Name!"}',
             },
           },
         ],
@@ -569,12 +569,12 @@ describe('title route', () => {
       expect(body.app_name).toMatch(/^claude-my-app-name-[a-f0-9]{8}$/);
     });
 
-    it('should truncate long app_base to ensure app_name is 30 chars or less', async () => {
+    it('should truncate long app_name_base to ensure app_name is 30 chars or less', async () => {
       mockCreate.mockResolvedValue({
         choices: [
           {
             message: {
-              content: '{"title": "Test Title", "app_base": "very-long-app-base-name-here"}',
+              content: '{"title": "Test Title", "app_name_base": "very-long-app-base-name-here"}',
             },
           },
         ],
@@ -596,12 +596,12 @@ describe('title route', () => {
       expect(body.app_name).toMatch(/^claude-[a-z0-9-]+-[a-f0-9]{8}$/);
     });
 
-    it('should use fallback app_base when LLM returns invalid characters only', async () => {
+    it('should use fallback app_name_base when LLM returns invalid characters only', async () => {
       mockCreate.mockResolvedValue({
         choices: [
           {
             message: {
-              content: '{"title": "Test Title", "app_base": "!!!@@@###"}',
+              content: '{"title": "Test Title", "app_name_base": "!!!@@@###"}',
             },
           },
         ],
