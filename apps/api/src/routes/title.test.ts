@@ -77,15 +77,12 @@ describe('title route', () => {
   }
 
   describe('POST /generate_title', () => {
-    it('should return generated title without app_name by default', async () => {
+    it('should return generated title and app_name from LLM', async () => {
       mockCreate.mockResolvedValue({
         choices: [
           {
             message: {
-              content: `<result>
-<title>React Component Development</title>
-<app_base>react-comp</app_base>
-</result>`,
+              content: '{"title": "React Component Development", "app_base": "react-comp"}',
             },
           },
         ],
@@ -98,37 +95,6 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Help me create a React component',
-        },
-      });
-
-      expect(response.statusCode).toBe(200);
-      const body = response.json();
-      expect(body.title).toBe('React Component Development');
-      expect(body.app_name).toBeUndefined();
-    });
-
-    it('should return generated title and app_name when include_app_name is true', async () => {
-      mockCreate.mockResolvedValue({
-        choices: [
-          {
-            message: {
-              content: `<result>
-<title>React Component Development</title>
-<app_base>react-comp</app_base>
-</result>`,
-            },
-          },
-        ],
-      });
-
-      await registerPlugins();
-
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/generate_title',
-        payload: {
-          first_session_message: 'Help me create a React component',
-          include_app_name: true,
         },
       });
 
@@ -234,10 +200,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: `<result>
-<title>SP Token Test</title>
-<app_base>sp-test</app_base>
-</result>`,
+              content: '{"title": "SP Token Test", "app_base": "sp-test"}',
             },
           },
         ],
@@ -250,7 +213,6 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Test with SP token',
-          include_app_name: true,
         },
       });
 
@@ -273,10 +235,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: `<result>
-<title>PAT Priority Test</title>
-<app_base>pat-test</app_base>
-</result>`,
+              content: '{"title": "PAT Priority Test", "app_base": "pat-test"}',
             },
           },
         ],
@@ -289,7 +248,6 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Test PAT priority',
-          include_app_name: true,
         },
       });
 
@@ -340,7 +298,6 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Help me with something',
-          include_app_name: true,
         },
       });
 
@@ -362,7 +319,6 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Test message',
-          include_app_name: true,
         },
       });
 
@@ -372,15 +328,66 @@ describe('title route', () => {
       expect(body.app_name).toMatch(/^claude-session-[a-f0-9]{8}$/);
     });
 
+    it('should return fallback when LLM returns invalid JSON', async () => {
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: 'not valid json',
+            },
+          },
+        ],
+      });
+
+      await registerPlugins();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/generate_title',
+        payload: {
+          first_session_message: 'Test message',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.title).toBe('General coding session');
+      expect(body.app_name).toMatch(/^claude-session-[a-f0-9]{8}$/);
+    });
+
+    it('should handle JSON wrapped in markdown code blocks', async () => {
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: '```json\n{"title": "Markdown Wrapped", "app_base": "markdown"}\n```',
+            },
+          },
+        ],
+      });
+
+      await registerPlugins();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/generate_title',
+        payload: {
+          first_session_message: 'Test message',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.title).toBe('Markdown Wrapped');
+      expect(body.app_name).toMatch(/^claude-markdown-[a-f0-9]{8}$/);
+    });
+
     it('should clean up LLM artifacts - remove surrounding quotes from title', async () => {
       mockCreate.mockResolvedValue({
         choices: [
           {
             message: {
-              content: `<result>
-<title>"Python Data Analysis"</title>
-<app_base>python-data</app_base>
-</result>`,
+              content: '{"title": "\\"Python Data Analysis\\"", "app_base": "python-data"}',
             },
           },
         ],
@@ -393,7 +400,6 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Analyze this CSV file',
-          include_app_name: true,
         },
       });
 
@@ -408,10 +414,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: `<result>
-<title>**React Component** Development</title>
-<app_base>react-comp</app_base>
-</result>`,
+              content: '{"title": "**React Component** Development", "app_base": "react-comp"}',
             },
           },
         ],
@@ -437,10 +440,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: `<result>
-<title>\`API Integration\`</title>
-<app_base>api-int</app_base>
-</result>`,
+              content: '{"title": "`API Integration`", "app_base": "api-int"}',
             },
           },
         ],
@@ -466,10 +466,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: `<result>
-<title>  Python Data Analysis  </title>
-<app_base>python</app_base>
-</result>`,
+              content: '{"title": "  Python Data Analysis  ", "app_base": "python"}',
             },
           },
         ],
@@ -495,10 +492,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: `<result>
-<title>React Component Implementation</title>
-<app_base>react-impl</app_base>
-</result>`,
+              content: '{"title": "React Component Implementation", "app_base": "react-impl"}',
             },
           },
         ],
@@ -511,7 +505,6 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Reactコンポーネントを作成してください',
-          include_app_name: true,
         },
       });
 
@@ -538,10 +531,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: `<result>
-<title>Test Title</title>
-<app_base>test</app_base>
-</result>`,
+              content: '{"title": "Test Title", "app_base": "test"}',
             },
           },
         ],
@@ -569,10 +559,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: `<result>
-<title>Test Title</title>
-<app_base>My App Name!</app_base>
-</result>`,
+              content: '{"title": "Test Title", "app_base": "My App Name!"}',
             },
           },
         ],
@@ -585,7 +572,6 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Test message',
-          include_app_name: true,
         },
       });
 
@@ -600,10 +586,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: `<result>
-<title>Test Title</title>
-<app_base>very-long-app-base-name-here</app_base>
-</result>`,
+              content: '{"title": "Test Title", "app_base": "very-long-app-base-name-here"}',
             },
           },
         ],
@@ -616,7 +599,6 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Test message',
-          include_app_name: true,
         },
       });
 
@@ -631,10 +613,7 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: `<result>
-<title>Test Title</title>
-<app_base>!!!@@@###</app_base>
-</result>`,
+              content: '{"title": "Test Title", "app_base": "!!!@@@###"}',
             },
           },
         ],
@@ -647,7 +626,6 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Test message',
-          include_app_name: true,
         },
       });
 

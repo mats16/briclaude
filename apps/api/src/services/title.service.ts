@@ -26,11 +26,8 @@ Generate a session title and app identifier based on the user's first message.
 </input_message>
 
 <output_format>
-Respond with exactly this XML structure:
-<result>
-<title>Your generated title here</title>
-<app_base>short-name</app_base>
-</result>
+Respond with only a JSON object (no markdown code blocks):
+{"title": "Your generated title here", "app_base": "short-name"}
 </output_format>`;
 
 const MAX_TOKENS = 100;
@@ -71,17 +68,25 @@ function cleanTitle(rawTitle: string): string {
 }
 
 /**
- * Parses the XML response from the LLM.
- * Extracts title and app_base from the XML structure.
+ * Parses the JSON response from the LLM.
+ * Extracts title and app_base from the JSON structure.
  */
-function parseXmlResponse(response: string): { title: string; appBase: string } {
-  const titleMatch = response.match(/<title>([\s\S]*?)<\/title>/);
-  const appBaseMatch = response.match(/<app_base>([\s\S]*?)<\/app_base>/);
+function parseJsonResponse(response: string): { title: string; appBase: string } {
+  try {
+    // Remove markdown code blocks if present
+    const cleaned = response.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+    const parsed = JSON.parse(cleaned) as { title?: string; app_base?: string };
 
-  return {
-    title: titleMatch ? cleanTitle(titleMatch[1]) : FALLBACK_TITLE,
-    appBase: appBaseMatch ? cleanAppBase(appBaseMatch[1]) : FALLBACK_APP_BASE,
-  };
+    return {
+      title: parsed.title ? cleanTitle(parsed.title) : FALLBACK_TITLE,
+      appBase: parsed.app_base ? cleanAppBase(parsed.app_base) : FALLBACK_APP_BASE,
+    };
+  } catch {
+    return {
+      title: FALLBACK_TITLE,
+      appBase: FALLBACK_APP_BASE,
+    };
+  }
 }
 
 /**
@@ -159,7 +164,7 @@ export class TitleService {
 
   /**
    * Generates a title and app_name for a coding session based on the first message.
-   * Uses a single LLM call with XML-structured prompt and response.
+   * Uses a single LLM call with XML-structured prompt and JSON response.
    * @throws Error if the LLM call fails
    */
   async generateTitle(params: GenerateTitleParams): Promise<GenerateTitleResult> {
@@ -193,7 +198,7 @@ export class TitleService {
       };
     }
 
-    const { title, appBase } = parseXmlResponse(rawContent);
+    const { title, appBase } = parseJsonResponse(rawContent);
 
     return {
       title: title || FALLBACK_TITLE,
