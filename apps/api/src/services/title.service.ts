@@ -2,6 +2,18 @@ import OpenAI from 'openai';
 import crypto from 'node:crypto';
 
 // Constants for title generation
+// Constants
+const MAX_TOKENS = 100;
+const FALLBACK_TITLE = 'General coding session';
+const FALLBACK_APP_BASE = 'session';
+const REQUEST_TIMEOUT_MS = 30000; // 30 seconds
+const APP_NAME_PREFIX = 'claude-';
+const RANDOM_SUFFIX_LENGTH = 6;
+const MAX_APP_NAME_LENGTH = 30;
+// claude- (7) + base + - (1) + suffix (6) = 14 + base, so base max = 16
+const MAX_APP_BASE_LENGTH = 16;
+
+// Prompt for title generation
 const TITLE_GENERATION_PROMPT = `<task>
 Generate a session title and app identifier based on the user's first message.
 </task>
@@ -13,12 +25,12 @@ Generate a session title and app identifier based on the user's first message.
 - No quotes, markdown, or extra formatting
 </title_rules>
 
-<app_base_rules>
+<app_name_base_rules>
 - Lowercase, kebab-case (e.g., "react-form", "api-test")
-- 2-16 characters only
+- 2-${MAX_APP_BASE_LENGTH} characters only
 - Alphanumeric and hyphens only
 - Describe the project or technology briefly
-</app_base_rules>
+</app_name_base_rules>
 </instructions>
 
 <input_message>
@@ -38,23 +50,15 @@ const TITLE_GENERATION_SCHEMA = {
       },
       app_name_base: {
         type: 'string',
-        description: 'A short kebab-case identifier (2-16 characters)',
+        description: `A short kebab-case identifier (2-${MAX_APP_BASE_LENGTH} characters)`,
+        minLength: 2,
+        maxLength: MAX_APP_BASE_LENGTH,
       },
     },
     required: ['title', 'app_name_base'],
     additionalProperties: false,
   },
-} as const;
-
-const MAX_TOKENS = 100;
-const FALLBACK_TITLE = 'General coding session';
-const FALLBACK_APP_BASE = 'session';
-const REQUEST_TIMEOUT_MS = 30000; // 30 seconds
-const APP_NAME_PREFIX = 'claude-';
-const RANDOM_SUFFIX_LENGTH = 6;
-const MAX_APP_NAME_LENGTH = 30;
-// claude- (7) + base + - (1) + suffix (6) = 14 + base, so base max = 16
-const MAX_APP_BASE_LENGTH = 16;
+};
 
 /**
  * Cleans up the generated title by removing common LLM artifacts.
@@ -220,7 +224,7 @@ export class TitleService {
     const { title, appNameBase } = parseJsonResponse(rawContent);
 
     return {
-      title: title || FALLBACK_TITLE,
+      title,
       appName: constructAppName(appNameBase),
     };
   }
