@@ -1,7 +1,6 @@
 import OpenAI from 'openai';
 import crypto from 'node:crypto';
 
-// Constants for title generation
 // Constants
 const MAX_TOKENS = 100;
 const FALLBACK_TITLE = 'General coding session';
@@ -10,8 +9,8 @@ const REQUEST_TIMEOUT_MS = 30000; // 30 seconds
 const APP_NAME_PREFIX = 'claude-';
 const RANDOM_SUFFIX_LENGTH = 6;
 const MAX_APP_NAME_LENGTH = 30;
-// claude- (7) + base + - (1) + suffix (6) = 14 + base, so base max = 16
-const MAX_APP_BASE_LENGTH = 16;
+// Derived: MAX_APP_NAME_LENGTH - APP_NAME_PREFIX.length - 1 (separator) - RANDOM_SUFFIX_LENGTH
+const MAX_APP_BASE_LENGTH = MAX_APP_NAME_LENGTH - APP_NAME_PREFIX.length - 1 - RANDOM_SUFFIX_LENGTH;
 
 // Prompt for title generation
 const TITLE_GENERATION_PROMPT = `<task>
@@ -109,25 +108,25 @@ function parseJsonResponse(response: string): { title: string; appNameBase: stri
 
 /**
  * Cleans and validates the app_base string.
- * - Converts to lowercase
- * - Replaces invalid characters with hyphens
- * - Trims to max length
- * - Removes leading/trailing hyphens
+ *
+ * Processing order:
+ * 1. Trim whitespace and convert to lowercase
+ * 2. Replace invalid characters with hyphens
+ * 3. Normalize consecutive hyphens to single hyphen
+ * 4. Remove leading/trailing hyphens
+ * 5. Truncate to max length (and remove any trailing hyphens from truncation)
  */
 function cleanAppBase(rawAppBase: string): string {
-  let cleaned = rawAppBase
+  const cleaned = rawAppBase
     .trim()
     .toLowerCase()
-    // Replace any non-alphanumeric characters (except hyphen) with hyphen
-    .replace(/[^a-z0-9-]/g, '-')
-    // Replace multiple consecutive hyphens with single hyphen
-    .replace(/-+/g, '-')
-    // Remove leading/trailing hyphens
-    .replace(/^-+|-+$/g, '');
+    .replace(/[^a-z0-9-]/g, '-') // Replace invalid chars with hyphen
+    .replace(/-+/g, '-') // Normalize consecutive hyphens
+    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
 
-  // Truncate to max length
+  // Truncate if needed, then remove any trailing hyphens caused by truncation
   if (cleaned.length > MAX_APP_BASE_LENGTH) {
-    cleaned = cleaned.slice(0, MAX_APP_BASE_LENGTH).replace(/-+$/, '');
+    return cleaned.slice(0, MAX_APP_BASE_LENGTH).replace(/-+$/, '') || FALLBACK_APP_BASE;
   }
 
   return cleaned || FALLBACK_APP_BASE;
@@ -146,15 +145,11 @@ function generateRandomSuffix(): string {
  */
 function constructAppName(appNameBase: string): string {
   const suffix = generateRandomSuffix();
-  // claude- (7) + base + - (1) + suffix (6) = 14 + base.length
-  const maxBaseLength = MAX_APP_NAME_LENGTH - APP_NAME_PREFIX.length - 1 - RANDOM_SUFFIX_LENGTH;
 
   let base = appNameBase;
-  if (base.length > maxBaseLength) {
-    base = base.slice(0, maxBaseLength);
+  if (base.length > MAX_APP_BASE_LENGTH) {
+    base = base.slice(0, MAX_APP_BASE_LENGTH).replace(/-+$/, '');
   }
-  // Remove trailing hyphens after potential truncation
-  base = base.replace(/-+$/, '');
 
   return `${APP_NAME_PREFIX}${base}-${suffix}`;
 }
