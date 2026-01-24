@@ -41,12 +41,12 @@ const titleRoute: FastifyPluginAsync = async fastify => {
     }
 
     try {
-      const title = await titleService.generateTitle({
+      const result = await titleService.generateTitle({
         firstSessionMessage: first_session_message,
         accessToken,
       });
 
-      return reply.send({ title });
+      return reply.send({ title: result.title, app_name: result.appName });
     } catch (error) {
       fastify.log.error(error, 'Failed to generate title');
 

@@ -1,13 +1,47 @@
 import OpenAI from 'openai';
+import crypto from 'node:crypto';
 
 // Constants for title generation
-const TITLE_GENERATION_PROMPT = `Generate a short, concise title (3-6 words) for a coding session based on the following first message. Respond with only the title, no quotes, markdown, or extra text.
+const TITLE_GENERATION_PROMPT = `<task>
+Generate a session title and app identifier based on the user's first message.
+</task>
 
-Message: `;
+<instructions>
+<title_rules>
+- 3-6 words, concise and descriptive
+- Capture the main purpose of the session
+- No quotes, markdown, or extra formatting
+</title_rules>
 
-const MAX_TOKENS = 50;
+<app_base_rules>
+- Lowercase, kebab-case (e.g., "react-form", "api-test")
+- 2-12 characters only
+- Alphanumeric and hyphens only
+- Describe the project or technology briefly
+</app_base_rules>
+</instructions>
+
+<input_message>
+{{MESSAGE}}
+</input_message>
+
+<output_format>
+Respond with exactly this XML structure:
+<result>
+<title>Your generated title here</title>
+<app_base>short-name</app_base>
+</result>
+</output_format>`;
+
+const MAX_TOKENS = 100;
 const FALLBACK_TITLE = 'General coding session';
+const FALLBACK_APP_BASE = 'session';
 const REQUEST_TIMEOUT_MS = 30000; // 30 seconds
+const APP_NAME_PREFIX = 'claude-';
+const RANDOM_SUFFIX_LENGTH = 8;
+const MAX_APP_NAME_LENGTH = 30;
+// claude- (7) + base + - (1) + suffix (8) = 16 + base, so base max = 14
+const MAX_APP_BASE_LENGTH = 14;
 
 /**
  * Cleans up the generated title by removing common LLM artifacts.
@@ -36,6 +70,71 @@ function cleanTitle(rawTitle: string): string {
   return cleaned.trim();
 }
 
+/**
+ * Parses the XML response from the LLM.
+ * Extracts title and app_base from the XML structure.
+ */
+function parseXmlResponse(response: string): { title: string; appBase: string } {
+  const titleMatch = response.match(/<title>([\s\S]*?)<\/title>/);
+  const appBaseMatch = response.match(/<app_base>([\s\S]*?)<\/app_base>/);
+
+  return {
+    title: titleMatch ? cleanTitle(titleMatch[1]) : FALLBACK_TITLE,
+    appBase: appBaseMatch ? cleanAppBase(appBaseMatch[1]) : FALLBACK_APP_BASE,
+  };
+}
+
+/**
+ * Cleans and validates the app_base string.
+ * - Converts to lowercase
+ * - Replaces invalid characters with hyphens
+ * - Trims to max length
+ * - Removes leading/trailing hyphens
+ */
+function cleanAppBase(rawAppBase: string): string {
+  let cleaned = rawAppBase
+    .trim()
+    .toLowerCase()
+    // Replace any non-alphanumeric characters (except hyphen) with hyphen
+    .replace(/[^a-z0-9-]/g, '-')
+    // Replace multiple consecutive hyphens with single hyphen
+    .replace(/-+/g, '-')
+    // Remove leading/trailing hyphens
+    .replace(/^-+|-+$/g, '');
+
+  // Truncate to max length
+  if (cleaned.length > MAX_APP_BASE_LENGTH) {
+    cleaned = cleaned.slice(0, MAX_APP_BASE_LENGTH).replace(/-+$/, '');
+  }
+
+  return cleaned || FALLBACK_APP_BASE;
+}
+
+/**
+ * Generates a random hex suffix for app_name.
+ */
+function generateRandomSuffix(): string {
+  return crypto.randomBytes(RANDOM_SUFFIX_LENGTH / 2).toString('hex');
+}
+
+/**
+ * Constructs the full app_name from the base.
+ * Format: claude-{base}-{8-char-hex}
+ */
+function constructAppName(appBase: string): string {
+  const suffix = generateRandomSuffix();
+  const appName = `${APP_NAME_PREFIX}${appBase}-${suffix}`;
+
+  // Ensure we don't exceed max length (should not happen with proper base length)
+  if (appName.length > MAX_APP_NAME_LENGTH) {
+    const excessLength = appName.length - MAX_APP_NAME_LENGTH;
+    const truncatedBase = appBase.slice(0, appBase.length - excessLength).replace(/-+$/, '');
+    return `${APP_NAME_PREFIX}${truncatedBase}-${suffix}`;
+  }
+
+  return appName;
+}
+
 export interface TitleServiceConfig {
   databricksHost: string;
   model: string;
@@ -46,6 +145,11 @@ export interface GenerateTitleParams {
   accessToken: string;
 }
 
+export interface GenerateTitleResult {
+  title: string;
+  appName: string;
+}
+
 export class TitleService {
   private readonly config: TitleServiceConfig;
 
@@ -54,10 +158,11 @@ export class TitleService {
   }
 
   /**
-   * Generates a title for a coding session based on the first message.
+   * Generates a title and app_name for a coding session based on the first message.
+   * Uses a single LLM call with XML-structured prompt and response.
    * @throws Error if the LLM call fails
    */
-  async generateTitle(params: GenerateTitleParams): Promise<string> {
+  async generateTitle(params: GenerateTitleParams): Promise<GenerateTitleResult> {
     const { firstSessionMessage, accessToken } = params;
 
     const client = new OpenAI({
@@ -66,20 +171,33 @@ export class TitleService {
       timeout: REQUEST_TIMEOUT_MS,
     });
 
+    const prompt = TITLE_GENERATION_PROMPT.replace('{{MESSAGE}}', firstSessionMessage);
+
     const response = await client.chat.completions.create({
       model: this.config.model,
       max_tokens: MAX_TOKENS,
       messages: [
         {
           role: 'user',
-          content: TITLE_GENERATION_PROMPT + firstSessionMessage,
+          content: prompt,
         },
       ],
     });
 
-    const rawTitle = response.choices[0]?.message?.content;
-    const generatedTitle = rawTitle ? cleanTitle(rawTitle) : FALLBACK_TITLE;
+    const rawContent = response.choices[0]?.message?.content;
 
-    return generatedTitle || FALLBACK_TITLE;
+    if (!rawContent) {
+      return {
+        title: FALLBACK_TITLE,
+        appName: constructAppName(FALLBACK_APP_BASE),
+      };
+    }
+
+    const { title, appBase } = parseXmlResponse(rawContent);
+
+    return {
+      title: title || FALLBACK_TITLE,
+      appName: constructAppName(appBase),
+    };
   }
 }

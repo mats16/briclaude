@@ -77,12 +77,15 @@ describe('title route', () => {
   }
 
   describe('POST /generate_title', () => {
-    it('should return generated title from LLM', async () => {
+    it('should return generated title and app_name from LLM', async () => {
       mockCreate.mockResolvedValue({
         choices: [
           {
             message: {
-              content: 'React Component Development',
+              content: `<result>
+<title>React Component Development</title>
+<app_base>react-comp</app_base>
+</result>`,
             },
           },
         ],
@@ -101,11 +104,12 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.title).toBe('React Component Development');
+      expect(body.app_name).toMatch(/^claude-react-comp-[a-f0-9]{8}$/);
 
       // Verify OpenAI was called with correct parameters
       expect(mockCreate).toHaveBeenCalledWith({
         model: 'databricks-claude-haiku-4-5',
-        max_tokens: 50,
+        max_tokens: 100,
         messages: [
           {
             role: 'user',
@@ -199,7 +203,10 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: 'SP Token Test',
+              content: `<result>
+<title>SP Token Test</title>
+<app_base>sp-test</app_base>
+</result>`,
             },
           },
         ],
@@ -218,6 +225,7 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.title).toBe('SP Token Test');
+      expect(body.app_name).toMatch(/^claude-sp-test-[a-f0-9]{8}$/);
     });
 
     it('should use PAT auth provider when available', async () => {
@@ -233,7 +241,10 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: 'PAT Priority Test',
+              content: `<result>
+<title>PAT Priority Test</title>
+<app_base>pat-test</app_base>
+</result>`,
             },
           },
         ],
@@ -252,6 +263,7 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.title).toBe('PAT Priority Test');
+      expect(body.app_name).toMatch(/^claude-pat-test-[a-f0-9]{8}$/);
 
       // Verify that getToken was called
       expect(mockAccessToken).toHaveBeenCalled();
@@ -277,7 +289,7 @@ describe('title route', () => {
       expect(body.statusCode).toBe(500);
     });
 
-    it('should return fallback title when LLM returns empty content', async () => {
+    it('should return fallback title and app_name when LLM returns empty content', async () => {
       mockCreate.mockResolvedValue({
         choices: [
           {
@@ -301,9 +313,10 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.title).toBe('General coding session');
+      expect(body.app_name).toMatch(/^claude-session-[a-f0-9]{8}$/);
     });
 
-    it('should return fallback title when LLM returns null choices', async () => {
+    it('should return fallback title and app_name when LLM returns null choices', async () => {
       mockCreate.mockResolvedValue({
         choices: [],
       });
@@ -321,14 +334,18 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.title).toBe('General coding session');
+      expect(body.app_name).toMatch(/^claude-session-[a-f0-9]{8}$/);
     });
 
-    it('should clean up LLM artifacts - remove surrounding quotes', async () => {
+    it('should clean up LLM artifacts - remove surrounding quotes from title', async () => {
       mockCreate.mockResolvedValue({
         choices: [
           {
             message: {
-              content: '"Python Data Analysis"',
+              content: `<result>
+<title>"Python Data Analysis"</title>
+<app_base>python-data</app_base>
+</result>`,
             },
           },
         ],
@@ -347,6 +364,7 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.title).toBe('Python Data Analysis');
+      expect(body.app_name).toMatch(/^claude-python-data-[a-f0-9]{8}$/);
     });
 
     it('should clean up LLM artifacts - remove markdown formatting', async () => {
@@ -354,7 +372,10 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: '**React Component** Development',
+              content: `<result>
+<title>**React Component** Development</title>
+<app_base>react-comp</app_base>
+</result>`,
             },
           },
         ],
@@ -380,7 +401,10 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: '`API Integration`',
+              content: `<result>
+<title>\`API Integration\`</title>
+<app_base>api-int</app_base>
+</result>`,
             },
           },
         ],
@@ -406,7 +430,10 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: '  Python Data Analysis  ',
+              content: `<result>
+<title>  Python Data Analysis  </title>
+<app_base>python</app_base>
+</result>`,
             },
           },
         ],
@@ -432,7 +459,10 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: 'React Component Implementation',
+              content: `<result>
+<title>React Component Implementation</title>
+<app_base>react-impl</app_base>
+</result>`,
             },
           },
         ],
@@ -451,6 +481,7 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.title).toBe('React Component Implementation');
+      expect(body.app_name).toMatch(/^claude-react-impl-[a-f0-9]{8}$/);
 
       // Verify the Japanese message was passed to the LLM
       expect(mockCreate).toHaveBeenCalledWith(
@@ -470,7 +501,10 @@ describe('title route', () => {
         choices: [
           {
             message: {
-              content: 'Test Title',
+              content: `<result>
+<title>Test Title</title>
+<app_base>test</app_base>
+</result>`,
             },
           },
         ],
@@ -491,6 +525,96 @@ describe('title route', () => {
           model: 'databricks-claude-haiku-4-5',
         })
       );
+    });
+
+    it('should clean and validate app_base with special characters', async () => {
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: `<result>
+<title>Test Title</title>
+<app_base>My App Name!</app_base>
+</result>`,
+            },
+          },
+        ],
+      });
+
+      await registerPlugins();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/generate_title',
+        payload: {
+          first_session_message: 'Test message',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      // Should convert to lowercase kebab-case
+      expect(body.app_name).toMatch(/^claude-my-app-name-[a-f0-9]{8}$/);
+    });
+
+    it('should truncate long app_base to ensure app_name is 30 chars or less', async () => {
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: `<result>
+<title>Test Title</title>
+<app_base>very-long-app-base-name-here</app_base>
+</result>`,
+            },
+          },
+        ],
+      });
+
+      await registerPlugins();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/generate_title',
+        payload: {
+          first_session_message: 'Test message',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.app_name.length).toBeLessThanOrEqual(30);
+      expect(body.app_name).toMatch(/^claude-[a-z0-9-]+-[a-f0-9]{8}$/);
+    });
+
+    it('should use fallback app_base when LLM returns invalid characters only', async () => {
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: `<result>
+<title>Test Title</title>
+<app_base>!!!@@@###</app_base>
+</result>`,
+            },
+          },
+        ],
+      });
+
+      await registerPlugins();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/generate_title',
+        payload: {
+          first_session_message: 'Test message',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      // Should use fallback "session" when cleaned result is empty
+      expect(body.app_name).toMatch(/^claude-session-[a-f0-9]{8}$/);
     });
   });
 });
