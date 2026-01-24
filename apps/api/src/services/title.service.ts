@@ -60,6 +60,18 @@ const TITLE_GENERATION_SCHEMA = {
 };
 
 /**
+ * Escapes XML special characters to prevent prompt injection.
+ */
+function escapeXml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
  * Cleans up the generated title by removing common LLM artifacts.
  * - Removes surrounding quotes (single, double, backticks)
  * - Removes markdown formatting
@@ -190,7 +202,7 @@ export class TitleService {
       timeout: REQUEST_TIMEOUT_MS,
     });
 
-    const prompt = TITLE_GENERATION_PROMPT.replace('{{MESSAGE}}', firstSessionMessage);
+    const prompt = TITLE_GENERATION_PROMPT.replace('{{MESSAGE}}', escapeXml(firstSessionMessage));
 
     const response = await client.chat.completions.create({
       model: this.config.model,
