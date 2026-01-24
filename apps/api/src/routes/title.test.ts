@@ -77,7 +77,7 @@ describe('title route', () => {
   }
 
   describe('POST /generate_title', () => {
-    it('should return generated title and app_name from LLM', async () => {
+    it('should return generated title without app_name by default', async () => {
       mockCreate.mockResolvedValue({
         choices: [
           {
@@ -98,6 +98,37 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Help me create a React component',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.title).toBe('React Component Development');
+      expect(body.app_name).toBeUndefined();
+    });
+
+    it('should return generated title and app_name when include_app_name is true', async () => {
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: `<result>
+<title>React Component Development</title>
+<app_base>react-comp</app_base>
+</result>`,
+            },
+          },
+        ],
+      });
+
+      await registerPlugins();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/generate_title',
+        payload: {
+          first_session_message: 'Help me create a React component',
+          include_app_name: true,
         },
       });
 
@@ -219,6 +250,7 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Test with SP token',
+          include_app_name: true,
         },
       });
 
@@ -257,6 +289,7 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Test PAT priority',
+          include_app_name: true,
         },
       });
 
@@ -307,6 +340,7 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Help me with something',
+          include_app_name: true,
         },
       });
 
@@ -328,6 +362,7 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Test message',
+          include_app_name: true,
         },
       });
 
@@ -358,6 +393,7 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Analyze this CSV file',
+          include_app_name: true,
         },
       });
 
@@ -475,6 +511,7 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Reactコンポーネントを作成してください',
+          include_app_name: true,
         },
       });
 
@@ -548,6 +585,7 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Test message',
+          include_app_name: true,
         },
       });
 
@@ -578,6 +616,7 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Test message',
+          include_app_name: true,
         },
       });
 
@@ -608,6 +647,7 @@ describe('title route', () => {
         url: '/api/generate_title',
         payload: {
           first_session_message: 'Test message',
+          include_app_name: true,
         },
       });
 

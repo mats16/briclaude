@@ -13,7 +13,7 @@ const titleRoute: FastifyPluginAsync = async fastify => {
     Body: GenerateTitleRequest;
     Reply: GenerateTitleResponse | ApiError;
   }>('/generate_title', async (request, reply) => {
-    const { first_session_message } = request.body;
+    const { first_session_message, include_app_name } = request.body;
 
     // Validation
     if (!first_session_message || typeof first_session_message !== 'string') {
@@ -46,7 +46,11 @@ const titleRoute: FastifyPluginAsync = async fastify => {
         accessToken,
       });
 
-      return reply.send({ title: result.title, app_name: result.appName });
+      const response: GenerateTitleResponse = { title: result.title };
+      if (include_app_name) {
+        response.app_name = result.appName;
+      }
+      return reply.send(response);
     } catch (error) {
       fastify.log.error(error, 'Failed to generate title');
 
