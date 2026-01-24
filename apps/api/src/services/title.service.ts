@@ -138,20 +138,21 @@ function generateRandomSuffix(): string {
 
 /**
  * Constructs the full app_name from the base.
- * Format: claude-{base}-{8-char-hex}
+ * Format: claude-{base}-{6-char-hex}
  */
-function constructAppName(appBase: string): string {
+function constructAppName(appNameBase: string): string {
   const suffix = generateRandomSuffix();
-  const appName = `${APP_NAME_PREFIX}${appBase}-${suffix}`;
+  // claude- (7) + base + - (1) + suffix (6) = 14 + base.length
+  const maxBaseLength = MAX_APP_NAME_LENGTH - APP_NAME_PREFIX.length - 1 - RANDOM_SUFFIX_LENGTH;
 
-  // Ensure we don't exceed max length (should not happen with proper base length)
-  if (appName.length > MAX_APP_NAME_LENGTH) {
-    const excessLength = appName.length - MAX_APP_NAME_LENGTH;
-    const truncatedBase = appBase.slice(0, appBase.length - excessLength).replace(/-+$/, '');
-    return `${APP_NAME_PREFIX}${truncatedBase}-${suffix}`;
+  let base = appNameBase;
+  if (base.length > maxBaseLength) {
+    base = base.slice(0, maxBaseLength);
   }
+  // Remove trailing hyphens after potential truncation
+  base = base.replace(/-+$/, '');
 
-  return appName;
+  return `${APP_NAME_PREFIX}${base}-${suffix}`;
 }
 
 export interface TitleServiceConfig {
