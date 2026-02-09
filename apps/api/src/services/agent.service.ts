@@ -754,10 +754,10 @@ export async function updateAgent(
 
 /**
  * Workspace上のエージェントパスを生成
- * /Workspace/Users/{userName}/.claude/agents
+ * /Workspace/Users/{userName}/.assistant/agents
  */
 function getWorkspaceAgentsPath(userName: string): string {
-  return `/Workspace/Users/${userName}/.claude/agents`;
+  return `/Workspace/Users/${userName}/.assistant/agents`;
 }
 
 /**
@@ -818,7 +818,7 @@ function spawnDatabricksCli(
 
 /**
  * エージェントを Workspace にバックアップ
- * ローカルの .claude/agents/ → /Workspace/Users/{user}/.claude/agents/
+ * ローカルの .claude/agents/ → /Workspace/Users/{user}/.assistant/agents/
  */
 export async function backupAgentsToWorkspace(ctx: UserContext): Promise<AgentBackupResponse> {
   const localAgentsDir = getAgentsDir(ctx);
@@ -872,7 +872,7 @@ export async function backupAgentsToWorkspace(ctx: UserContext): Promise<AgentBa
 
 /**
  * Workspace からエージェントをリストア
- * /Workspace/Users/{user}/.claude/agents/ → ローカルの .claude/agents/
+ * /Workspace/Users/{user}/.assistant/agents/ → ローカルの .claude/agents/
  */
 export async function restoreAgentsFromWorkspace(ctx: UserContext): Promise<AgentRestoreResponse> {
   const localAgentsDir = getAgentsDir(ctx);

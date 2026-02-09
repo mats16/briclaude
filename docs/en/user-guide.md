@@ -188,7 +188,7 @@ You can backup skills to Databricks Workspace and restore them later. This enabl
 Skills are backed up to the following path:
 
 ```
-/Workspace/Users/{username}/.claude/skills/
+/Workspace/Users/{username}/.assistant/skills/
 ```
 
 #### How to Use

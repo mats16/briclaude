@@ -314,19 +314,19 @@ description: Test
     it('should generate correct Workspace path for user', () => {
       const result = getWorkspaceSkillsPath('test-user');
 
-      expect(result).toBe('/Workspace/Users/test-user/.claude/skills');
+      expect(result).toBe('/Workspace/Users/test-user/.assistant/skills');
     });
 
     it('should handle email-style username', () => {
       const result = getWorkspaceSkillsPath('user@example.com');
 
-      expect(result).toBe('/Workspace/Users/user@example.com/.claude/skills');
+      expect(result).toBe('/Workspace/Users/user@example.com/.assistant/skills');
     });
 
     it('should handle username with special characters', () => {
       const result = getWorkspaceSkillsPath('user.name-123');
 
-      expect(result).toBe('/Workspace/Users/user.name-123/.claude/skills');
+      expect(result).toBe('/Workspace/Users/user.name-123/.assistant/skills');
     });
   });
 
@@ -387,7 +387,12 @@ This is a test skill content.
         await mkdir(nestedSkillDir, { recursive: true });
         await writeFile(join(nestedSkillDir, 'SKILL.md'), validSkillContent);
 
-        const result = await copySkillFromDir(skillsDir, tempDir, 'skills/my-skill', importMetadata);
+        const result = await copySkillFromDir(
+          skillsDir,
+          tempDir,
+          'skills/my-skill',
+          importMetadata
+        );
 
         expect(result).not.toBeNull();
         expect(result!.name).toBe('test-skill');
