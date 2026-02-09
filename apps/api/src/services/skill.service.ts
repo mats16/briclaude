@@ -770,10 +770,10 @@ export async function updateSkill(
 
 /**
  * Workspace上のスキルパスを生成
- * /Workspace/Users/{userName}/.claude/skills
+ * /Workspace/Users/{userName}/.assistant/skills
  */
 function getWorkspaceSkillsPath(userName: string): string {
-  return `/Workspace/Users/${userName}/.claude/skills`;
+  return `/Workspace/Users/${userName}/.assistant/skills`;
 }
 
 /**
@@ -834,7 +834,7 @@ function spawnDatabricksCli(
 
 /**
  * スキルを Workspace にバックアップ
- * ローカルの .claude/skills/ → /Workspace/Users/{user}/.claude/skills/
+ * ローカルの .claude/skills/ → /Workspace/Users/{user}/.assistant/skills/
  */
 export async function backupSkillsToWorkspace(ctx: UserContext): Promise<SkillBackupResponse> {
   const localSkillsDir = getSkillsDir(ctx);
@@ -888,7 +888,7 @@ export async function backupSkillsToWorkspace(ctx: UserContext): Promise<SkillBa
 
 /**
  * Workspace からスキルをリストア
- * /Workspace/Users/{user}/.claude/skills/ → ローカルの .claude/skills/
+ * /Workspace/Users/{user}/.assistant/skills/ → ローカルの .claude/skills/
  */
 export async function restoreSkillsFromWorkspace(ctx: UserContext): Promise<SkillRestoreResponse> {
   const localSkillsDir = getSkillsDir(ctx);

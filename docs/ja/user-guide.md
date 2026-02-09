@@ -188,7 +188,7 @@ ${userHome}/.claude/skills/
 スキルは以下のパスにバックアップされます:
 
 ```
-/Workspace/Users/{ユーザー名}/.claude/skills/
+/Workspace/Users/{ユーザー名}/.assistant/skills/
 ```
 
 #### 操作方法

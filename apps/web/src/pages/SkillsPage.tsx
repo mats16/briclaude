@@ -65,8 +65,8 @@ interface PresetRepo {
 const PRESET_REPOS: PresetRepo[] = [
   {
     label: 'Databricks',
-    url: 'https://github.com/mats16/briclaude',
-    defaultPath: 'skills',
+    url: 'https://github.com/databricks-solutions/ai-dev-kit',
+    defaultPath: 'databricks-skills',
     defaultBranch: 'main',
   },
   {
@@ -76,10 +76,16 @@ const PRESET_REPOS: PresetRepo[] = [
     defaultBranch: 'main',
   },
   {
-    label: 'Awesome Claude Skills',
-    url: 'https://github.com/ComposioHQ/awesome-claude-skills',
-    defaultPath: '',
-    defaultBranch: 'master',
+    label: 'Microsoft',
+    url: 'https://github.com/microsoft/skills',
+    defaultPath: 'skills',
+    defaultBranch: 'main',
+  },
+  {
+    label: 'Briclaude',
+    url: 'https://github.com/mats16/briclaude',
+    defaultPath: 'skills',
+    defaultBranch: 'main',
   },
 ];
 
@@ -101,8 +107,8 @@ export function SkillsContent() {
   const { t } = useTranslation();
   const { user } = useUser();
   const workspacePath = user?.name
-    ? `/Workspace/Users/${user.name}/.claude/skills`
-    : '/Workspace/Users/{username}/.claude/skills';
+    ? `/Workspace/Users/${user.name}/.assistant/skills`
+    : '/Workspace/Users/{username}/.assistant/skills';
   const [skills, setSkills] = useState<SkillInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

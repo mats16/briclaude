@@ -368,19 +368,19 @@ description: Test
     it('should generate correct Workspace path for user', () => {
       const result = getWorkspaceAgentsPath('test-user');
 
-      expect(result).toBe('/Workspace/Users/test-user/.claude/agents');
+      expect(result).toBe('/Workspace/Users/test-user/.assistant/agents');
     });
 
     it('should handle email-style username', () => {
       const result = getWorkspaceAgentsPath('user@example.com');
 
-      expect(result).toBe('/Workspace/Users/user@example.com/.claude/agents');
+      expect(result).toBe('/Workspace/Users/user@example.com/.assistant/agents');
     });
 
     it('should handle username with special characters', () => {
       const result = getWorkspaceAgentsPath('user.name-123');
 
-      expect(result).toBe('/Workspace/Users/user.name-123/.claude/agents');
+      expect(result).toBe('/Workspace/Users/user.name-123/.assistant/agents');
     });
   });
 

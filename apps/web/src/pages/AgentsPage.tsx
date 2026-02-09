@@ -112,8 +112,8 @@ export function AgentsContent() {
   const { t } = useTranslation();
   const { user } = useUser();
   const workspacePath = user?.name
-    ? `/Workspace/Users/${user.name}/.claude/agents`
-    : '/Workspace/Users/{username}/.claude/agents';
+    ? `/Workspace/Users/${user.name}/.assistant/agents`
+    : '/Workspace/Users/{username}/.assistant/agents';
   const [agents, setAgents] = useState<AgentInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
