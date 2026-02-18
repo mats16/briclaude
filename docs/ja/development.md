@@ -17,15 +17,15 @@
 ┌────────────────────────────────────────────────────────────────┐
 │  ┌─────────────────────┐          ┌─────────────────────────┐ │
 │  │ Vite Dev Server     │ headers  │ Fastify Backend         │ │
-│  │ (port 3000)         │─────────▶│ (port 8000)             │ │
+│  │ (port 3003)         │─────────▶│ (port 8003)             │ │
 │  │ ├─ React HMR        │ emulated │ └─ /api/* (API routes)  │ │
 │  │ └─ /api/* proxy     │          │                         │ │
 │  └─────────────────────┘          └─────────────────────────┘ │
 └────────────────────────────────────────────────────────────────┘
 ```
 
-- **Vite Dev Server (port 3000)**: Hot Module Replacement 機能付きで React フロントエンドを配信
-- **Fastify Backend (port 8000)**: API リクエストを処理
+- **Vite Dev Server (port 3003)**: Hot Module Replacement 機能付きで React フロントエンドを配信
+- **Fastify Backend (port 8003)**: API リクエストを処理
 - **API プロキシ**: Vite が自動的に `/api/*` リクエストをバックエンドにプロキシし、認証ヘッダーを注入
 
 ## 1. リポジトリのセットアップ
@@ -107,7 +107,7 @@ cp .env.example .env
 
 ```bash
 # サーバー
-PORT=8000
+PORT=8003
 NODE_ENV=development
 
 # データベース（必須）
@@ -159,8 +159,8 @@ npm run dev
 ```
 
 これにより、フロントエンドとバックエンドの両方が開発モードで起動します:
-- フロントエンド: http://localhost:3000
-- バックエンド: http://localhost:8000
+- フロントエンド: http://localhost:3003
+- バックエンド: http://localhost:8003
 
 ### 4.2 個別のアプリを起動
 
@@ -174,7 +174,7 @@ npm run dev --filter=@repo/api
 
 ### 4.3 アプリケーションへのアクセス
 
-ブラウザで http://localhost:3000 を開いてください。
+ブラウザで http://localhost:3003 を開いてください。
 
 ## 5. 開発コマンド
 
@@ -218,8 +218,8 @@ npm run db:studio     # Drizzle Studio を開く（データベース GUI）
 
 ### 仕組み
 
-1. Vite 開発サーバーがポート 3000 でリクエストを受信
-2. `/api/*` リクエストの場合、Vite がバックエンド（ポート 8000）にプロキシ
+1. Vite 開発サーバーがポート 3003 でリクエストを受信
+2. `/api/*` リクエストの場合、Vite がバックエンド（ポート 8003）にプロキシ
 3. Vite が `.env` の値を使用して Databricks スタイルのヘッダーを注入
 4. バックエンドが本番環境と同様にヘッダーからユーザー情報を読み取り
 
@@ -265,7 +265,7 @@ briclaude/
 
 ```bash
 # ポートを使用しているプロセスを検索
-lsof -i :3000  # または :8000
+lsof -i :3003  # または :8003
 
 # プロセスを終了
 kill -9 <PID>
@@ -307,7 +307,7 @@ npm run clean && npm install
 
 ### API プロキシが動作しない
 
-1. バックエンドがポート 8000 で起動していることを確認
+1. バックエンドがポート 8003 で起動していることを確認
 2. `apps/web/vite.config.ts` の Vite 設定を確認
 3. ブラウザコンソールで CORS エラーがないことを確認
 

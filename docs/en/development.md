@@ -17,15 +17,15 @@ In local development, the application runs with two servers:
 ┌────────────────────────────────────────────────────────────────┐
 │  ┌─────────────────────┐          ┌─────────────────────────┐ │
 │  │ Vite Dev Server     │ headers  │ Fastify Backend         │ │
-│  │ (port 3000)         │─────────▶│ (port 8000)             │ │
+│  │ (port 3003)         │─────────▶│ (port 8003)             │ │
 │  │ ├─ React HMR        │ emulated │ └─ /api/* (API routes)  │ │
 │  │ └─ /api/* proxy     │          │                         │ │
 │  └─────────────────────┘          └─────────────────────────┘ │
 └────────────────────────────────────────────────────────────────┘
 ```
 
-- **Vite Dev Server (port 3000)**: Serves the React frontend with Hot Module Replacement
-- **Fastify Backend (port 8000)**: Handles API requests
+- **Vite Dev Server (port 3003)**: Serves the React frontend with Hot Module Replacement
+- **Fastify Backend (port 8003)**: Handles API requests
 - **API Proxy**: Vite automatically proxies `/api/*` requests to the backend and injects authentication headers
 
 ## 1. Repository Setup
@@ -107,7 +107,7 @@ Edit `.env` with your configuration:
 
 ```bash
 # Server
-PORT=8000
+PORT=8003
 NODE_ENV=development
 
 # Database (required)
@@ -159,8 +159,8 @@ npm run dev
 ```
 
 This starts both frontend and backend in development mode:
-- Frontend: http://localhost:3000
-- Backend: http://localhost:8000
+- Frontend: http://localhost:3003
+- Backend: http://localhost:8003
 
 ### 4.2 Start Individual Apps
 
@@ -174,7 +174,7 @@ npm run dev --filter=@repo/api
 
 ### 4.3 Access the Application
 
-Open http://localhost:3000 in your browser.
+Open http://localhost:3003 in your browser.
 
 ## 5. Development Commands
 
@@ -218,8 +218,8 @@ In production, Databricks Apps proxy handles authentication and forwards user in
 
 ### How It Works
 
-1. Vite dev server receives requests at port 3000
-2. For `/api/*` requests, Vite proxies to backend (port 8000)
+1. Vite dev server receives requests at port 3003
+2. For `/api/*` requests, Vite proxies to backend (port 8003)
 3. Vite injects Databricks-style headers using values from `.env`
 4. Backend reads user info from headers as it would in production
 
@@ -265,7 +265,7 @@ briclaude/
 
 ```bash
 # Find process using port
-lsof -i :3000  # or :8000
+lsof -i :3003  # or :8003
 
 # Kill process
 kill -9 <PID>
@@ -307,7 +307,7 @@ npm run clean && npm install
 
 ### API Proxy Not Working
 
-1. Ensure backend is running on port 8000
+1. Ensure backend is running on port 8003
 2. Check Vite config in `apps/web/vite.config.ts`
 3. Verify no CORS errors in browser console
 
