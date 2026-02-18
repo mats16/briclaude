@@ -85,12 +85,12 @@ const schema = {
     },
     ANTHROPIC_DEFAULT_OPUS_MODEL: {
       type: 'string',
-      default: 'databricks-claude-opus-4-5',
+      default: 'databricks-claude-opus-4-6',
       description: 'The default OPUS model for the Anthropic API.',
     },
     ANTHROPIC_DEFAULT_SONNET_MODEL: {
       type: 'string',
-      default: 'databricks-claude-sonnet-4-5',
+      default: 'databricks-claude-sonnet-4-6',
       description: 'The default SONNET model for the Anthropic API.',
     },
     ANTHROPIC_DEFAULT_HAIKU_MODEL: {

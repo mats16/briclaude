@@ -1,5 +1,5 @@
 import { readdir, readFile, writeFile, rm, stat, cp } from 'node:fs/promises';
-import { join, basename } from 'node:path';
+import { join, basename, isAbsolute } from 'node:path';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
@@ -472,6 +472,11 @@ async function copySkillFromDir(
   importPath: string,
   importMetadata: SkillMetadata
 ): Promise<SkillInfo | null> {
+  // 絶対パスを拒否（join() で無害化される前にチェック）
+  if (isAbsolute(importPath)) {
+    throw new Error(`Security error: Absolute import path is not allowed: ${importPath}`);
+  }
+
   // インポート対象パスの確認（パストラバーサル対策）
   const fullImportPath = join(tempDir, importPath);
   const sourcePath = await validatePathWithinBase(fullImportPath, tempDir);

@@ -134,8 +134,8 @@ WAREHOUSE_ID=your-warehouse-id
 
 # Anthropic API（デフォルトは Databricks サービングエンドポイント）
 ANTHROPIC_BASE_URL=https://your-workspace.databricks.com/serving-endpoints/anthropic
-ANTHROPIC_DEFAULT_OPUS_MODEL=databricks-claude-opus-4-5
-ANTHROPIC_DEFAULT_SONNET_MODEL=databricks-claude-sonnet-4-5
+ANTHROPIC_DEFAULT_OPUS_MODEL=databricks-claude-opus-4-6
+ANTHROPIC_DEFAULT_SONNET_MODEL=databricks-claude-sonnet-4-6
 ANTHROPIC_DEFAULT_HAIKU_MODEL=databricks-claude-haiku-4-5
 
 # ユーザーディレクトリ
