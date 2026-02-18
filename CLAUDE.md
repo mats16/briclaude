@@ -53,7 +53,7 @@ This application runs differently in production and development environments.
 ┌────────────────────────────────────────────────────────────────┐
 │  ┌─────────────────────┐          ┌─────────────────────────┐ │
 │  │ Vite Dev Server     │ headers  │ Fastify Backend         │ │
-│  │ (port 3000)         │─────────▶│ (port 8000)             │ │
+│  │ (port 3003)         │─────────▶│ (port 8003)             │ │
 │  │ ├─ React HMR        │ emulated │ └─ /api/* (API routes)  │ │
 │  │ └─ /api/* proxy     │          │                         │ │
 │  └─────────────────────┘          └─────────────────────────┘ │

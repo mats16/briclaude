@@ -152,6 +152,3 @@ vite.config.ts.timestamp-*
 
 # Application temporary files
 tmp/
-
-# Port detection file (local development only)
-.api-port
