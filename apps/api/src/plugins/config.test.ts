@@ -47,12 +47,11 @@ describe('config plugin', () => {
       process.env.DATABRICKS_HOST = 'test.databricks.com';
       // Set NODE_ENV to 'test' to prevent loading .env file
       process.env.NODE_ENV = 'test';
-
       await app.register(configPlugin);
 
       // Verify default values
       expect(app.config.NODE_ENV).toBe('test');
-      expect(app.config.PORT).toBe(8000);
+      expect(app.config.PORT).toBe(8003);
       expect(app.config.DATABRICKS_APP_PORT).toBe(8000);
       expect(app.config.DATABRICKS_APP_NAME).toBe('');
       expect(app.config.DATABRICKS_WORKSPACE_ID).toBe('');
