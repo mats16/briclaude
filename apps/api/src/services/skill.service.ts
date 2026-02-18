@@ -474,9 +474,7 @@ async function copySkillFromDir(
 ): Promise<SkillInfo | null> {
   // 絶対パスを拒否（join() で無害化される前にチェック）
   if (isAbsolute(importPath)) {
-    throw new Error(
-      `Security error: Absolute import path is not allowed: ${importPath}`
-    );
+    throw new Error(`Security error: Absolute import path is not allowed: ${importPath}`);
   }
 
   // インポート対象パスの確認（パストラバーサル対策）
