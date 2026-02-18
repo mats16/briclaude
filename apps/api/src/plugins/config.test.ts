@@ -114,8 +114,8 @@ describe('config plugin', () => {
 
       await app.register(configPlugin);
 
-      expect(app.config.ANTHROPIC_DEFAULT_OPUS_MODEL).toBe('databricks-claude-opus-4-5');
-      expect(app.config.ANTHROPIC_DEFAULT_SONNET_MODEL).toBe('databricks-claude-sonnet-4-5');
+      expect(app.config.ANTHROPIC_DEFAULT_OPUS_MODEL).toBe('databricks-claude-opus-4-6');
+      expect(app.config.ANTHROPIC_DEFAULT_SONNET_MODEL).toBe('databricks-claude-sonnet-4-6');
       expect(app.config.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBe('databricks-claude-haiku-4-5');
     });
   });

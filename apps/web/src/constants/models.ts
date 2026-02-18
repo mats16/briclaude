@@ -9,14 +9,14 @@ export interface ClaudeModel {
 export const SESSION_MODELS: ClaudeModel[] = [
   {
     id: 'opus',
-    name: 'Opus 4.5',
-    shortName: 'Opus 4.5',
+    name: 'Opus 4.6',
+    shortName: 'Opus 4.6',
     descriptionKey: 'sidebar.model.opusDesc',
   },
   {
     id: 'sonnet',
-    name: 'Sonnet 4.5',
-    shortName: 'Sonnet 4.5',
+    name: 'Sonnet 4.6',
+    shortName: 'Sonnet 4.6',
     descriptionKey: 'sidebar.model.sonnetDesc',
   },
   {
@@ -30,8 +30,8 @@ export const SESSION_MODELS: ClaudeModel[] = [
 // サイドバーのエージェント選択用
 export const AGENT_MODELS: ClaudeModel[] = [
   { id: 'claude-agent-databricks', name: 'claude-agent-databricks' },
-  { id: 'claude-opus-4-5', name: 'Claude Opus 4.5' },
-  { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5' },
+  { id: 'claude-opus-4-6', name: 'Claude Opus 4.6' },
+  { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6' },
   { id: 'claude-haiku', name: 'Claude Haiku' },
 ];
 
