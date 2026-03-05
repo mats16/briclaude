@@ -78,6 +78,8 @@ export class TitleService {
     });
 
     const rawTitle = response.choices[0]?.message?.content;
-    return (rawTitle ? cleanTitle(rawTitle) : FALLBACK_TITLE) || FALLBACK_TITLE;
+    const title = rawTitle ? cleanTitle(rawTitle) : FALLBACK_TITLE;
+
+    return title || FALLBACK_TITLE;
   }
 }
