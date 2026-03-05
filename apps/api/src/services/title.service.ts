@@ -36,6 +36,37 @@ function cleanTitle(rawTitle: string): string {
   return cleaned.trim();
 }
 
+const FALLBACK_APP_NAME = 'general-coding-session';
+const APP_NAME_MAX_LENGTH = 30;
+
+/**
+ * Converts a title string into a Databricks Apps-compatible slug.
+ * - Lowercase, alphanumeric + hyphens only
+ * - Prefixed with 'a-' if first character is not a letter
+ * - Max 30 characters, trimmed at hyphen boundary
+ * - Falls back to 'general-coding-session' if empty
+ */
+export function slugifyTitle(title: string): string {
+  let slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  // Prefix with 'a-' if first character is not a letter
+  if (slug && !/^[a-z]/.test(slug)) {
+    slug = `a-${slug}`;
+  }
+
+  // Trim to max length, avoiding trailing hyphen
+  if (slug.length > APP_NAME_MAX_LENGTH) {
+    slug = slug.slice(0, APP_NAME_MAX_LENGTH).replace(/-+$/, '');
+  }
+
+  return slug || FALLBACK_APP_NAME;
+}
+
 export interface TitleServiceConfig {
   databricksHost: string;
   model: string;
@@ -57,7 +88,7 @@ export class TitleService {
    * Generates a title for a coding session based on the first message.
    * @throws Error if the LLM call fails
    */
-  async generateTitle(params: GenerateTitleParams): Promise<string> {
+  async generateTitle(params: GenerateTitleParams): Promise<{ title: string; appName: string }> {
     const { firstSessionMessage, accessToken } = params;
 
     const client = new OpenAI({
@@ -78,8 +109,9 @@ export class TitleService {
     });
 
     const rawTitle = response.choices[0]?.message?.content;
-    const generatedTitle = rawTitle ? cleanTitle(rawTitle) : FALLBACK_TITLE;
+    const title = (rawTitle ? cleanTitle(rawTitle) : FALLBACK_TITLE) || FALLBACK_TITLE;
+    const appName = slugifyTitle(title);
 
-    return generatedTitle || FALLBACK_TITLE;
+    return { title, appName };
   }
 }

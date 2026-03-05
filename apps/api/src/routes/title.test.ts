@@ -3,6 +3,7 @@ import Fastify, { FastifyInstance } from 'fastify';
 import configPlugin from '../plugins/config.js';
 import requestDecoratorPlugin from '../plugins/request-decorator.js';
 import titleRoute from './title.js';
+import { slugifyTitle } from '../services/title.service.js';
 
 // Create mock function for chat.completions.create
 const mockCreate = vi.fn();
@@ -101,6 +102,7 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.title).toBe('React Component Development');
+      expect(body.app_name).toBe('react-component-development');
 
       // Verify OpenAI was called with correct parameters
       expect(mockCreate).toHaveBeenCalledWith({
@@ -301,6 +303,7 @@ describe('title route', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.title).toBe('General coding session');
+      expect(body.app_name).toBe('general-coding-session');
     });
 
     it('should return fallback title when LLM returns null choices', async () => {
@@ -492,5 +495,45 @@ describe('title route', () => {
         })
       );
     });
+  });
+});
+
+describe('slugifyTitle', () => {
+  it('should convert a simple title to a slug', () => {
+    expect(slugifyTitle('React Component Development')).toBe('react-component-development');
+  });
+
+  it('should remove special characters', () => {
+    expect(slugifyTitle('Hello, World! @#$%')).toBe('hello-world');
+  });
+
+  it('should prefix with a- when starting with a digit', () => {
+    expect(slugifyTitle('123 Setup')).toBe('a-123-setup');
+  });
+
+  it('should enforce max 30 character limit', () => {
+    const longTitle = 'This Is A Very Long Title That Exceeds The Limit';
+    const result = slugifyTitle(longTitle);
+    expect(result.length).toBeLessThanOrEqual(30);
+    expect(result).not.toMatch(/-$/);
+  });
+
+  it('should not end with a hyphen after truncation', () => {
+    // "abcdefghijklmnopqrstuvwxyz-ab-cd" → truncated to 30 chars then trailing hyphen removed
+    const result = slugifyTitle('abcdefghijklmnopqrstuvwxyz ab cd');
+    expect(result).not.toMatch(/-$/);
+    expect(result.length).toBeLessThanOrEqual(30);
+  });
+
+  it('should return fallback for empty input', () => {
+    expect(slugifyTitle('')).toBe('general-coding-session');
+  });
+
+  it('should return fallback when input has only special characters', () => {
+    expect(slugifyTitle('!!!@@@###')).toBe('general-coding-session');
+  });
+
+  it('should collapse multiple spaces and hyphens', () => {
+    expect(slugifyTitle('hello   ---   world')).toBe('hello-world');
   });
 });

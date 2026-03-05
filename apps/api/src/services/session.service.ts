@@ -278,7 +278,7 @@ export async function createSession(
     if (outcome.type === 'databricks_apps') {
       return {
         ...outcome,
-        name: `app-${sessionId.getSuffix()}`,
+        name: outcome.name || `app-${sessionId.getSuffix()}`,
       };
     }
     return outcome;

@@ -49,7 +49,7 @@ export const sessionService = {
     return apiClient<SessionEventsResponse>(url);
   },
 
-  async generateTitle(message: string): Promise<string | null> {
+  async generateTitle(message: string): Promise<{ title: string; appName: string } | null> {
     try {
       const response = await apiClient<GenerateTitleResponse>('/api/generate_title', {
         method: 'POST',
@@ -57,7 +57,7 @@ export const sessionService = {
           first_session_message: message,
         } satisfies GenerateTitleRequest),
       });
-      return response.title;
+      return { title: response.title, appName: response.app_name };
     } catch {
       return null;
     }

@@ -117,7 +117,7 @@ export function MainArea({
 
       // タイトル生成用にテキストを抽出
       const textContent = extractTextFromContent(content);
-      const title = await sessionService.generateTitle(textContent);
+      const titleResult = await sessionService.generateTitle(textContent);
 
       // outcomes の構築
       const outcomes: SessionOutcome[] = [];
@@ -129,11 +129,14 @@ export function MainArea({
         });
       }
       if (enableDatabricksApps) {
-        outcomes.push({ type: 'databricks_apps' });
+        outcomes.push({
+          type: 'databricks_apps',
+          name: titleResult?.appName,
+        });
       }
 
       const request: SessionCreateRequest = {
-        title: title ?? undefined,
+        title: titleResult?.title ?? undefined,
         events: [
           {
             type: 'event',
