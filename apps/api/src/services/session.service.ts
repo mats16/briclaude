@@ -390,11 +390,11 @@ export async function createSession(
           ...authProvider.getEnvVars(),
         },
         sandbox: {
-          enabled: false,
-          //autoAllowBashIfSandboxed: true,
-          //network: {
-          //  allowedDomains: ['*'],
-          //},
+          enabled: true,
+          autoAllowBashIfSandboxed: true,
+          network: {
+            allowedDomains: ['*'],
+          },
         },
       },
     });
@@ -726,11 +726,11 @@ export async function sendMessageToSession(
           ...authProvider.getEnvVars(),
         },
         sandbox: {
-          enabled: false,
-          //autoAllowBashIfSandboxed: true,
-          //network: {
-          //  allowedDomains: ['*'],
-          //},
+          enabled: true,
+          autoAllowBashIfSandboxed: true,
+          network: {
+            allowedDomains: ['*'],
+          },
         },
       },
     });
