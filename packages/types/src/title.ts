@@ -8,5 +8,4 @@ export interface GenerateTitleRequest {
 
 export interface GenerateTitleResponse {
   title: string;
-  app_name: string;
 }

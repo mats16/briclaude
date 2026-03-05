@@ -26,7 +26,6 @@ import type {
 import { ClaudeSettings } from '../models/claude-settings.model.js';
 import { buildSystemPromptConfig } from '../utils/system-prompt.helper.js';
 import { sessions } from '../db/schema.js';
-import { createDbAppsMcpServer } from '../lib/mcp-databricks-apps.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 import { ensureDirectory, removeDirectory } from '../utils/directory.js';
 import { validatePathWithinBase } from '../utils/path-validation.js';
@@ -331,8 +330,8 @@ export async function createSession(
       prompt = typeof userContent === 'string' ? userContent : '';
     }
 
-    // outcomes に基づいて systemPrompt を構築
-    const systemPromptConfig = buildSystemPromptConfig(session_context.outcomes);
+    // outcomes に基づいて systemPrompt を構築（name がセット済みの outcomes を使用）
+    const systemPromptConfig = buildSystemPromptConfig(outcomes);
 
     // AbortController を作成（abort 用）
     const abortController = new AbortController();
@@ -351,12 +350,6 @@ export async function createSession(
         },
       };
     }
-
-    // apps: Databricks Apps MCP サーバーを追加
-    mcpServers.apps = createDbAppsMcpServer({
-      authProvider,
-      sessionId,
-    });
 
     const response = query({
       prompt,
@@ -383,6 +376,9 @@ export async function createSession(
           // Session
           SESSION_ID: sessionId.toString(),
           DATABRICKS_WORKSPACE_PATH: workspaceSources[0]?.path,
+          DATABRICKS_APP_NAME: (
+            outcomes.find(o => o.type === 'databricks_apps') as DatabricksAppsOutcome | undefined
+          )?.name,
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
           ANTHROPIC_AUTH_TOKEN: await authProvider.getToken(),
@@ -394,11 +390,11 @@ export async function createSession(
           ...authProvider.getEnvVars(),
         },
         sandbox: {
-          enabled: true,
-          autoAllowBashIfSandboxed: true,
-          network: {
-            allowedDomains: ['*'],
-          },
+          enabled: false,
+          //autoAllowBashIfSandboxed: true,
+          //network: {
+          //  allowedDomains: ['*'],
+          //},
         },
       },
     });
@@ -672,6 +668,10 @@ export async function sendMessageToSession(
       (s): s is DatabricksWorkspaceSource => s.type === 'databricks_workspace'
     )?.path;
 
+    const appName = sessionContext.outcomes?.find(
+      (o): o is DatabricksAppsOutcome => o.type === 'databricks_apps'
+    )?.name;
+
     // MCP サーバーを構築（固定で設定、allowedTools で制御）
     const mcpServers: Record<string, McpServerConfig> = {};
 
@@ -686,12 +686,6 @@ export async function sendMessageToSession(
         },
       };
     }
-
-    // apps: Databricks Apps MCP サーバーを追加
-    mcpServers.apps = createDbAppsMcpServer({
-      authProvider,
-      sessionId,
-    });
 
     const response = query({
       prompt,
@@ -720,6 +714,7 @@ export async function sendMessageToSession(
           CLAUDE_CODE_SESSION_ID: sessionRow.sdkSessionId,
           SESSION_ID: sessionId.toString(),
           DATABRICKS_WORKSPACE_PATH: workspacePath,
+          DATABRICKS_APP_NAME: appName,
           // Claude Code
           ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
           ANTHROPIC_AUTH_TOKEN: await authProvider.getToken(),
@@ -731,11 +726,11 @@ export async function sendMessageToSession(
           ...authProvider.getEnvVars(),
         },
         sandbox: {
-          enabled: true,
-          autoAllowBashIfSandboxed: true,
-          network: {
-            allowedDomains: ['*'],
-          },
+          enabled: false,
+          //autoAllowBashIfSandboxed: true,
+          //network: {
+          //  allowedDomains: ['*'],
+          //},
         },
       },
     });

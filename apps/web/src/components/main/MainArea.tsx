@@ -131,12 +131,11 @@ export function MainArea({
       if (enableDatabricksApps) {
         outcomes.push({
           type: 'databricks_apps',
-          name: titleResult?.appName,
         });
       }
 
       const request: SessionCreateRequest = {
-        title: titleResult?.title ?? undefined,
+        title: titleResult ?? undefined,
         events: [
           {
             type: 'event',
