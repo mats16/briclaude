@@ -37,7 +37,6 @@ const createPayload = (overrides = {}) => ({
   type: 'system',
   subtype: 'init' as string | null,
   message: { type: 'system', subtype: 'init' } as unknown as SDKMessage,
-  createdAt: new Date().toISOString(),
   ...overrides,
 });
 
@@ -169,7 +168,7 @@ describe('EventBatcher', () => {
     await batcher.flush();
 
     expect(fastify.log.error).toHaveBeenCalledWith(
-      expect.objectContaining({ failureCount: 1, batchSize: 2 }),
+      expect.objectContaining({ failureCount: 1, batchSize: 2, lostEventCount: 2 }),
       'Some events failed to persist'
     );
   });

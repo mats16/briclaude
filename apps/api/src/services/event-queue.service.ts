@@ -104,8 +104,16 @@ export class EventBatcher {
         const failures = results.filter(r => r.status === 'rejected');
         if (failures.length > 0) {
           const errors = failures.map(f => (f as PromiseRejectedResult).reason);
+          // 失敗グループに含まれるイベント数を算出
+          const failedUserIds = [...eventsByUser.keys()].filter(
+            (_, i) => results[i].status === 'rejected'
+          );
+          const lostEventCount = failedUserIds.reduce(
+            (sum, uid) => sum + (eventsByUser.get(uid)?.length ?? 0),
+            0
+          );
           this.fastify.log.error(
-            { errors, batchSize: batch.length, failureCount: failures.length },
+            { errors, batchSize: batch.length, failureCount: failures.length, lostEventCount },
             'Some events failed to persist'
           );
         }
@@ -188,7 +196,6 @@ export function enqueueSessionEvent(
     type: params.type,
     subtype: params.subtype,
     message: params.message,
-    createdAt: new Date().toISOString(),
   };
 
   fastify.eventBatcher.add(payload);

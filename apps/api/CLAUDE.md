@@ -22,7 +22,6 @@ src/
 ├── plugins/           # Fastify plugins
 │   ├── config.ts      # Environment variables (@fastify/env)
 │   ├── database.ts    # Database connection (Drizzle)
-│   ├── (event-batcher is in event-queue.service.ts)
 │   ├── request-context.ts  # Request context
 │   ├── request-decorator.ts # Request decorator
 │   └── static.ts      # Static file serving

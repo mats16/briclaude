@@ -10,5 +10,4 @@ export interface SessionEventJobPayload {
   type: string;
   subtype: string | null;
   message: SDKMessage;
-  createdAt: string;
 }
