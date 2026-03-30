@@ -98,9 +98,6 @@ describe('session.service', () => {
         ANTHROPIC_DEFAULT_SONNET_MODEL: 'sonnet',
         ANTHROPIC_DEFAULT_HAIKU_MODEL: 'haiku',
       },
-      boss: {
-        send: vi.fn().mockResolvedValue('job-id'),
-      },
     } as unknown as FastifyInstance;
   };
 

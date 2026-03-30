@@ -109,36 +109,16 @@ const schema = {
       default: '/usr/local/bin:/usr/bin:/bin',
       description: 'The system PATH for the app user.',
     },
-    // pg-boss (Job Queue)
-    PGBOSS_RETRY_LIMIT: {
-      type: 'integer',
-      default: 3,
-      description: 'Max retry attempts for failed jobs.',
-    },
-    PGBOSS_RETRY_DELAY: {
-      type: 'integer',
-      default: 5,
-      description: 'Initial retry delay in seconds (exponential backoff).',
-    },
-    PGBOSS_EXPIRE_IN_SECONDS: {
-      type: 'integer',
-      default: 1800, // 30 minutes
-      description: 'Job timeout in seconds.',
-    },
-    PGBOSS_RETENTION_SECONDS: {
-      type: 'integer',
-      default: 604800, // 7 days
-      description: 'Completed job retention in seconds.',
-    },
-    PGBOSS_BATCH_SIZE: {
+    // Event Persistence (In-Memory Batcher)
+    EVENT_PERSIST_BATCH_SIZE: {
       type: 'integer',
       default: 10,
-      description: 'Number of jobs to process per worker cycle.',
+      description: 'Number of events to buffer before flushing to DB.',
     },
-    PGBOSS_POLLING_INTERVAL_SECONDS: {
-      type: 'integer',
-      default: 2,
-      description: 'Worker polling interval in seconds.',
+    EVENT_PERSIST_INTERVAL: {
+      type: 'number',
+      default: 5.0,
+      description: 'Maximum seconds between flushes to DB.',
     },
   },
 };
@@ -177,13 +157,9 @@ declare module 'fastify' {
       // System
       HOME: string;
       PATH: string;
-      // pg-boss (Job Queue)
-      PGBOSS_RETRY_LIMIT: number;
-      PGBOSS_RETRY_DELAY: number;
-      PGBOSS_EXPIRE_IN_SECONDS: number;
-      PGBOSS_RETENTION_SECONDS: number;
-      PGBOSS_BATCH_SIZE: number;
-      PGBOSS_POLLING_INTERVAL_SECONDS: number;
+      // Event Persistence (In-Memory Batcher)
+      EVENT_PERSIST_BATCH_SIZE: number;
+      EVENT_PERSIST_INTERVAL: number;
     };
   }
 }

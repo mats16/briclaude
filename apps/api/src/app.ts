@@ -2,7 +2,6 @@ import Fastify from 'fastify';
 import compress from '@fastify/compress';
 import configPlugin from './plugins/config.js';
 import databasePlugin from './plugins/database.js';
-import pgBossPlugin from './plugins/pg-boss.js';
 import websocketPlugin from './plugins/websocket.js';
 import requestDecoratorPlugin from './plugins/request-decorator.js';
 import staticPlugin from './plugins/static.js';
@@ -17,7 +16,7 @@ import jobsRoute from './routes/jobs.js';
 import userSkillsRoute from './routes/user-skills.js';
 import userAgentsRoute from './routes/user-agents.js';
 import sessionAppRoute from './routes/session-app.js';
-import { registerEventWorker } from './services/event-queue.service.js';
+import { startEventBatcher } from './services/event-queue.service.js';
 
 export async function build() {
   const app = Fastify({
@@ -30,11 +29,8 @@ export async function build() {
   // データベースプラグイン（configの後、他のプラグインの前）
   await app.register(databasePlugin);
 
-  // pg-boss プラグイン（databaseの後）
-  await app.register(pgBossPlugin);
-
-  // イベントキューワーカーを登録
-  await registerEventWorker(app);
+  // イベントバッチャー（databaseの後）
+  await startEventBatcher(app);
 
   // WebSocket プラグイン
   await app.register(websocketPlugin);

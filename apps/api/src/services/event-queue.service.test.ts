@@ -1,257 +1,255 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
-import { enqueueSessionEvent, registerEventWorker } from './event-queue.service.js';
-import { SESSION_EVENTS_QUEUE } from '../types/event-queue.types.js';
+import { EventBatcher, enqueueSessionEvent } from './event-queue.service.js';
 
-describe('event-queue.service', () => {
-  // Mock FastifyInstance
-  const createMockFastify = () => {
-    const mockBoss = {
-      send: vi.fn().mockResolvedValue('job-id-123'),
-      createQueue: vi.fn().mockResolvedValue(undefined),
-      work: vi.fn().mockResolvedValue('worker-id-123'),
-    };
+// insertSessionEventInTx をモック
+vi.mock('../db/helpers.js', () => ({
+  insertSessionEventInTx: vi.fn().mockResolvedValue({ uuid: 'inserted' }),
+}));
 
-    const mockWithUserContext = vi.fn().mockImplementation(async (_userId, callback) => {
-      const mockTx = {};
-      return callback(mockTx);
-    });
+import { insertSessionEventInTx } from '../db/helpers.js';
 
-    return {
-      boss: mockBoss,
-      withUserContext: mockWithUserContext,
-      log: {
-        info: vi.fn(),
-        error: vi.fn(),
-      },
-      config: {
-        PGBOSS_RETRY_LIMIT: 3,
-        PGBOSS_RETRY_DELAY: 5,
-        PGBOSS_EXPIRE_IN_SECONDS: 1800,
-        PGBOSS_RETENTION_SECONDS: 604800,
-        PGBOSS_BATCH_SIZE: 10,
-        PGBOSS_POLLING_INTERVAL_SECONDS: 2,
-      },
-    } as unknown as FastifyInstance;
-  };
-
-  describe('enqueueSessionEvent', () => {
-    let fastify: FastifyInstance;
-
-    beforeEach(() => {
-      fastify = createMockFastify();
-    });
-
-    it('should enqueue event to pg-boss with correct payload', async () => {
-      const message = {
-        type: 'system',
-        subtype: 'init',
-        uuid: 'event-uuid-123',
-        session_id: 'sdk-session-123',
-      } as unknown as SDKMessage;
-
-      await enqueueSessionEvent(fastify, {
-        userId: 'user-123',
-        sessionId: 'session_01abc123',
-        sessionUUID: '019bdf24-b923-7aaa-918c-8ce71422def0',
-        eventUuid: 'event-uuid-123',
-        type: 'system',
-        subtype: 'init',
-        message,
-      });
-
-      expect(fastify.boss.send).toHaveBeenCalledWith(
-        SESSION_EVENTS_QUEUE,
-        expect.objectContaining({
-          userId: 'user-123',
-          sessionId: '019bdf24-b923-7aaa-918c-8ce71422def0',
-          eventUuid: 'event-uuid-123',
-          type: 'system',
-          subtype: 'init',
-          message,
-        }),
-        { singletonKey: 'session_01abc123' }
-      );
-    });
-
-    it('should use singletonKey for session ordering', async () => {
-      const message = {
-        type: 'assistant',
-        uuid: 'event-uuid-456',
-        session_id: 'sdk-session-123',
-      } as unknown as SDKMessage;
-
-      await enqueueSessionEvent(fastify, {
-        userId: 'user-123',
-        sessionId: 'session_01xyz789',
-        sessionUUID: '019bdf24-b923-7aaa-918c-8ce71422def0',
-        eventUuid: 'event-uuid-456',
-        type: 'assistant',
-        subtype: null,
-        message,
-      });
-
-      expect(fastify.boss.send).toHaveBeenCalledWith(SESSION_EVENTS_QUEUE, expect.anything(), {
-        singletonKey: 'session_01xyz789',
-      });
-    });
-
-    it('should throw error and log when enqueue fails', async () => {
-      const error = new Error('Queue connection failed');
-      (fastify.boss.send as ReturnType<typeof vi.fn>).mockRejectedValueOnce(error);
-
-      const message = {
-        type: 'system',
-        uuid: 'event-uuid-789',
-        session_id: 'sdk-session-123',
-      } as unknown as SDKMessage;
-
-      await expect(
-        enqueueSessionEvent(fastify, {
-          userId: 'user-123',
-          sessionId: 'session_01fail',
-          sessionUUID: '019bdf24-b923-7aaa-918c-8ce71422def0',
-          eventUuid: 'event-uuid-789',
-          type: 'system',
-          subtype: null,
-          message,
-        })
-      ).rejects.toThrow('Queue connection failed');
-
-      expect(fastify.log.error).toHaveBeenCalledWith(
-        expect.objectContaining({
-          sessionId: 'session_01fail',
-          eventUuid: 'event-uuid-789',
-        }),
-        'Failed to enqueue session event'
-      );
-    });
-
-    it('should handle null subtype', async () => {
-      const message = {
-        type: 'user',
-        uuid: 'event-uuid-null',
-        session_id: 'sdk-session-123',
-      } as unknown as SDKMessage;
-
-      await enqueueSessionEvent(fastify, {
-        userId: 'user-123',
-        sessionId: 'session_01null',
-        sessionUUID: '019bdf24-b923-7aaa-918c-8ce71422def0',
-        eventUuid: 'event-uuid-null',
-        type: 'user',
-        subtype: null,
-        message,
-      });
-
-      expect(fastify.boss.send).toHaveBeenCalledWith(
-        SESSION_EVENTS_QUEUE,
-        expect.objectContaining({
-          subtype: null,
-        }),
-        expect.anything()
-      );
-    });
+const createMockFastify = () => {
+  const mockWithUserContext = vi.fn().mockImplementation(async (_userId, callback) => {
+    const mockTx = {};
+    return callback(mockTx);
   });
 
-  describe('registerEventWorker', () => {
-    let fastify: ReturnType<typeof createMockFastify>;
+  return {
+    withUserContext: mockWithUserContext,
+    log: {
+      info: vi.fn(),
+      error: vi.fn(),
+    },
+    config: {
+      EVENT_PERSIST_BATCH_SIZE: 10,
+      EVENT_PERSIST_INTERVAL: 5.0,
+    },
+    eventBatcher: null as unknown as EventBatcher,
+  } as unknown as FastifyInstance;
+};
 
-    beforeEach(() => {
-      fastify = createMockFastify();
+const createPayload = (overrides = {}) => ({
+  userId: 'user-123',
+  sessionId: '019bdf24-b923-7aaa-918c-8ce71422def0',
+  eventUuid: `event-${Math.random().toString(36).slice(2)}`,
+  type: 'system',
+  subtype: 'init' as string | null,
+  message: { type: 'system', subtype: 'init' } as unknown as SDKMessage,
+  ...overrides,
+});
+
+describe('EventBatcher', () => {
+  let fastify: FastifyInstance;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    fastify = createMockFastify();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should log on start', () => {
+    const batcher = new EventBatcher(fastify, 10, 5000);
+    batcher.start();
+
+    expect(fastify.log.info).toHaveBeenCalledWith(
+      { batchSize: 10, intervalMs: 5000 },
+      'EventBatcher started'
+    );
+  });
+
+  it('should add events to buffer', () => {
+    const batcher = new EventBatcher(fastify, 10, 5000);
+    const payload = createPayload();
+
+    batcher.add(payload);
+
+    // バッファに追加されたことを間接的にテスト（flush で確認）
+    expect(insertSessionEventInTx).not.toHaveBeenCalled();
+  });
+
+  it('should flush events to DB', async () => {
+    const batcher = new EventBatcher(fastify, 10, 5000);
+    const payload = createPayload();
+
+    batcher.add(payload);
+    await batcher.flush();
+
+    expect(fastify.withUserContext).toHaveBeenCalledWith('user-123', expect.any(Function));
+    expect(insertSessionEventInTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        uuid: payload.eventUuid,
+        sessionId: payload.sessionId,
+        type: 'system',
+        subtype: 'init',
+      })
+    );
+  });
+
+  it('should clear buffer after flush', async () => {
+    const batcher = new EventBatcher(fastify, 10, 5000);
+    batcher.add(createPayload());
+    await batcher.flush();
+
+    vi.clearAllMocks();
+
+    // 2回目の flush は no-op（バッファ空）
+    await batcher.flush();
+    expect(insertSessionEventInTx).not.toHaveBeenCalled();
+  });
+
+  it('should be no-op when buffer is empty', async () => {
+    const batcher = new EventBatcher(fastify, 10, 5000);
+
+    await batcher.flush();
+
+    expect(fastify.withUserContext).not.toHaveBeenCalled();
+  });
+
+  it('should trigger flush when batch size is reached', async () => {
+    const batcher = new EventBatcher(fastify, 3, 5000);
+
+    batcher.add(createPayload());
+    batcher.add(createPayload());
+
+    // まだ flush されていない
+    expect(insertSessionEventInTx).not.toHaveBeenCalled();
+
+    // 3件目で flush がトリガーされる
+    batcher.add(createPayload());
+
+    // flush は非同期なので await する
+    await vi.runAllTimersAsync();
+
+    expect(insertSessionEventInTx).toHaveBeenCalledTimes(3);
+  });
+
+  it('should group events by userId into single transaction', async () => {
+    const batcher = new EventBatcher(fastify, 10, 5000);
+
+    batcher.add(createPayload({ userId: 'user-1' }));
+    batcher.add(createPayload({ userId: 'user-1' }));
+    batcher.add(createPayload({ userId: 'user-2' }));
+
+    await batcher.flush();
+
+    // user-1 は1トランザクション、user-2 は1トランザクション
+    expect(fastify.withUserContext).toHaveBeenCalledTimes(2);
+    expect(insertSessionEventInTx).toHaveBeenCalledTimes(3);
+  });
+
+  it('should flush different users in parallel', async () => {
+    const batcher = new EventBatcher(fastify, 10, 5000);
+
+    batcher.add(createPayload({ userId: 'user-1' }));
+    batcher.add(createPayload({ userId: 'user-2' }));
+    batcher.add(createPayload({ userId: 'user-3' }));
+
+    await batcher.flush();
+
+    expect(fastify.withUserContext).toHaveBeenCalledTimes(3);
+  });
+
+  it('should log errors for failed events without throwing', async () => {
+    const error = new Error('DB insert failed');
+    (insertSessionEventInTx as ReturnType<typeof vi.fn>).mockRejectedValueOnce(error);
+
+    const batcher = new EventBatcher(fastify, 10, 5000);
+    batcher.add(createPayload());
+    batcher.add(createPayload());
+
+    // 例外を投げない
+    await batcher.flush();
+
+    expect(fastify.log.error).toHaveBeenCalledWith(
+      expect.objectContaining({ failureCount: 1, batchSize: 2, lostEventCount: 2 }),
+      'Some events failed to persist'
+    );
+  });
+
+  it('should flush on interval timer', async () => {
+    const batcher = new EventBatcher(fastify, 10, 5000);
+    batcher.start();
+
+    batcher.add(createPayload());
+
+    // 5秒経過でタイマーが発火
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(insertSessionEventInTx).toHaveBeenCalledTimes(1);
+  });
+
+  it('should shutdown: clear timer and flush remaining', async () => {
+    const batcher = new EventBatcher(fastify, 10, 5000);
+    batcher.start();
+
+    batcher.add(createPayload());
+    batcher.add(createPayload());
+
+    await batcher.shutdown();
+
+    expect(insertSessionEventInTx).toHaveBeenCalledTimes(2);
+    expect(fastify.log.info).toHaveBeenCalledWith('EventBatcher shut down');
+  });
+});
+
+describe('enqueueSessionEvent', () => {
+  it('should call eventBatcher.add with correct payload', () => {
+    const mockAdd = vi.fn();
+    const fastify = {
+      eventBatcher: { add: mockAdd },
+    } as unknown as FastifyInstance;
+
+    const message = {
+      type: 'assistant',
+      uuid: 'msg-uuid',
+    } as unknown as SDKMessage;
+
+    enqueueSessionEvent(fastify, {
+      userId: 'user-123',
+      sessionId: 'session_01abc123',
+      sessionUUID: '019bdf24-b923-7aaa-918c-8ce71422def0',
+      eventUuid: 'event-uuid-123',
+      type: 'assistant',
+      subtype: null,
+      message,
     });
 
-    it('should create queue with config settings', async () => {
-      await registerEventWorker(fastify as unknown as FastifyInstance);
+    expect(mockAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-123',
+        sessionId: '019bdf24-b923-7aaa-918c-8ce71422def0',
+        eventUuid: 'event-uuid-123',
+        type: 'assistant',
+        subtype: null,
+        message,
+      })
+    );
+  });
 
-      expect(fastify.boss.createQueue).toHaveBeenCalledWith(SESSION_EVENTS_QUEUE, {
-        retryLimit: 3,
-        retryDelay: 5,
-        retryBackoff: true,
-        expireInSeconds: 1800,
-        retentionSeconds: 604800,
-      });
+  it('should use sessionUUID (not sessionId) for DB payload', () => {
+    const mockAdd = vi.fn();
+    const fastify = {
+      eventBatcher: { add: mockAdd },
+    } as unknown as FastifyInstance;
+
+    enqueueSessionEvent(fastify, {
+      userId: 'user-123',
+      sessionId: 'session_01xyz',
+      sessionUUID: 'uuid-for-db',
+      eventUuid: 'event-1',
+      type: 'user',
+      subtype: null,
+      message: {} as SDKMessage,
     });
 
-    it('should use custom config values when provided', async () => {
-      const customFastify = {
-        ...createMockFastify(),
-        config: {
-          PGBOSS_RETRY_LIMIT: 5,
-          PGBOSS_RETRY_DELAY: 10,
-          PGBOSS_EXPIRE_IN_SECONDS: 3600,
-          PGBOSS_RETENTION_SECONDS: 86400,
-          PGBOSS_BATCH_SIZE: 20,
-          PGBOSS_POLLING_INTERVAL_SECONDS: 5,
-        },
-      };
-
-      await registerEventWorker(customFastify as unknown as FastifyInstance);
-
-      expect(customFastify.boss.createQueue).toHaveBeenCalledWith(SESSION_EVENTS_QUEUE, {
-        retryLimit: 5,
-        retryDelay: 10,
-        retryBackoff: true,
-        expireInSeconds: 3600,
-        retentionSeconds: 86400,
-      });
-    });
-
-    it('should log queue creation', async () => {
-      await registerEventWorker(fastify as unknown as FastifyInstance);
-
-      expect(fastify.log.info).toHaveBeenCalledWith(
-        { queue: SESSION_EVENTS_QUEUE },
-        'Event queue created'
-      );
-    });
-
-    it('should register worker using work() method', async () => {
-      await registerEventWorker(fastify as unknown as FastifyInstance);
-
-      expect(fastify.boss.work).toHaveBeenCalledWith(
-        SESSION_EVENTS_QUEUE,
-        {
-          batchSize: 10,
-          pollingIntervalSeconds: 2,
-        },
-        expect.any(Function)
-      );
-    });
-
-    it('should use custom batchSize and pollingIntervalSeconds from config', async () => {
-      const customFastify = {
-        ...createMockFastify(),
-        config: {
-          PGBOSS_RETRY_LIMIT: 3,
-          PGBOSS_RETRY_DELAY: 5,
-          PGBOSS_EXPIRE_IN_SECONDS: 1800,
-          PGBOSS_RETENTION_SECONDS: 604800,
-          PGBOSS_BATCH_SIZE: 25,
-          PGBOSS_POLLING_INTERVAL_SECONDS: 10,
-        },
-      };
-
-      await registerEventWorker(customFastify as unknown as FastifyInstance);
-
-      expect(customFastify.boss.work).toHaveBeenCalledWith(
-        SESSION_EVENTS_QUEUE,
-        {
-          batchSize: 25,
-          pollingIntervalSeconds: 10,
-        },
-        expect.any(Function)
-      );
-    });
-
-    it('should log worker registration with workerId', async () => {
-      await registerEventWorker(fastify as unknown as FastifyInstance);
-
-      expect(fastify.log.info).toHaveBeenCalledWith(
-        { workerId: 'worker-id-123' },
-        'Event queue worker registered'
-      );
-    });
+    const payload = mockAdd.mock.calls[0][0];
+    expect(payload.sessionId).toBe('uuid-for-db');
   });
 });
