@@ -1,7 +1,7 @@
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 
 /**
- * pg-boss キューに送信するジョブペイロード
+ * イベントバッチバッファのアイテム型
  */
 export interface SessionEventJobPayload {
   userId: string;
@@ -12,8 +12,3 @@ export interface SessionEventJobPayload {
   message: SDKMessage;
   createdAt: string;
 }
-
-/**
- * セッションイベント挿入用のキュー名
- */
-export const SESSION_EVENTS_QUEUE = 'session-events-insert';

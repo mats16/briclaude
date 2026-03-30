@@ -62,54 +62,42 @@ const SESSION_SELECT_COLUMNS = {
 } as const;
 
 /**
- * イベントを pg-boss キューに追加し、成功した場合のみ WebSocket にブロードキャストする
+ * イベントをバッチバッファに追加し、WebSocket にブロードキャストする
  *
- * データ整合性を保証するため、キュー追加を先に実行:
- * 1. pg-boss キューに追加（永続化保証）
- * 2. 成功した場合のみ WebSocket にブロードキャスト
- * 3. 失敗した場合はエラーメッセージをブロードキャスト
+ * 1. バッチバッファに追加（非同期で DB 永続化）
+ * 2. WebSocket にブロードキャスト
  *
  * @param sessionId - SessionId オブジェクト
  */
-async function saveAndBroadcastEvent(
+function saveAndBroadcastEvent(
   fastify: FastifyInstance,
   userId: string,
   sessionId: SessionId,
   message: SDKMessage
-): Promise<void> {
+): void {
   const eventUuid = 'uuid' in message ? (message.uuid as string) : crypto.randomUUID();
   const eventSubtype = 'subtype' in message ? (message.subtype as string | undefined) : undefined;
 
-  try {
-    // 1. pg-boss キューに追加（永続化保証）
-    await enqueueSessionEvent(fastify, {
-      userId,
-      sessionId: sessionId.toString(),
-      sessionUUID: sessionId.toUUID(),
-      eventUuid,
-      type: message.type,
-      subtype: eventSubtype ?? null,
-      message,
-    });
+  // 1. バッチバッファに追加（バッチサイズ到達 or インターバル経過で DB 永続化）
+  enqueueSessionEvent(fastify, {
+    userId,
+    sessionId: sessionId.toString(),
+    sessionUUID: sessionId.toUUID(),
+    eventUuid,
+    type: message.type,
+    subtype: eventSubtype ?? null,
+    message,
+  });
 
-    // 2. 成功した場合のみ WebSocket にブロードキャスト
-    wsManager.broadcast(sessionId.toString(), message);
-  } catch {
-    // 3. 失敗した場合はエラーメッセージをブロードキャスト
-    // エラーログは enqueueSessionEvent 内で出力済み
-    wsManager.broadcast(sessionId.toString(), {
-      type: 'error',
-      code: 'EVENT_PERSIST_FAILED',
-      message: `Failed to persist event: ${message.type}`,
-    });
-  }
+  // 2. WebSocket にブロードキャスト
+  wsManager.broadcast(sessionId.toString(), message);
 }
 
 /**
  * すべてのイベントをバックグラウンドで処理する
  * - init イベント: status='running' に更新、sdkSessionId を設定、初回 user message を broadcast
  * - result イベント: sessions.status を 'idle' に更新
- * - すべてのイベント: WebSocket 送信 & pg-boss 経由で DB 保存
+ * - すべてのイベント: WebSocket 送信 & バッチ経由で DB 保存
  *
  * @param response - SDK からのイベントストリーム
  * @param fastify - Fastify インスタンス
@@ -128,8 +116,8 @@ async function processAllEvents(
 
   try {
     for await (const message of response) {
-      // WebSocket 送信 & pg-boss 経由で DB 保存
-      await saveAndBroadcastEvent(fastify, userId, sessionId, message);
+      // バッチバッファに追加 & WebSocket 送信
+      saveAndBroadcastEvent(fastify, userId, sessionId, message);
 
       // init イベント時に status='running' に更新、sdkSessionId を設定、初回 user message を broadcast
       if (message.type === 'system' && message.subtype === 'init') {
@@ -159,7 +147,7 @@ async function processAllEvents(
             session_id: sessionId.toString(),
             isReplay: true,
           };
-          await saveAndBroadcastEvent(fastify, userId, sessionId, userMessageReplay);
+          saveAndBroadcastEvent(fastify, userId, sessionId, userMessageReplay);
         }
       }
     }
@@ -875,7 +863,6 @@ export async function executeAbort(
   abortController.abort();
 
   // 2. user メッセージを送信（画面表示用）
-  // pg-boss の singletonKey でセッション単位の順序が保証される
   const userMessage = {
     type: 'user',
     uuid: crypto.randomUUID(),
@@ -886,10 +873,9 @@ export async function executeAbort(
       content: [{ type: 'text', text: '[Request aborted by user]' }],
     },
   } as SDKUserMessage;
-  await saveAndBroadcastEvent(fastify, userId, sessionId, userMessage);
+  saveAndBroadcastEvent(fastify, userId, sessionId, userMessage);
 
   // 3. result イベントを送信
-  // pg-boss の singletonKey でセッション単位の順序が保証される
   const resultMessage = {
     type: 'result',
     subtype: 'error_during_execution',
@@ -897,7 +883,7 @@ export async function executeAbort(
     session_id: sessionIdStr,
     is_error: false,
   } as SDKResultMessage;
-  await saveAndBroadcastEvent(fastify, userId, sessionId, resultMessage);
+  saveAndBroadcastEvent(fastify, userId, sessionId, resultMessage);
 
   // 4. セッション状態を idle に更新
   await fastify.withUserContext(userId, async tx => {

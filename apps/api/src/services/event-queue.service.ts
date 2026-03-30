@@ -1,19 +1,173 @@
 import type { FastifyInstance } from 'fastify';
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
-import { SESSION_EVENTS_QUEUE, type SessionEventJobPayload } from '../types/event-queue.types.js';
+import type { SessionEventJobPayload } from '../types/event-queue.types.js';
 import { insertSessionEventInTx } from '../db/helpers.js';
 
+declare module 'fastify' {
+  interface FastifyInstance {
+    eventBatcher: EventBatcher;
+  }
+}
+
 /**
- * セッションイベントをキューに追加する
+ * インメモリバッチバッファによるイベント永続化
  *
- * singletonKey でセッション単位の順序を保証しつつ、
- * pg-boss が永続化・リトライを保証する。
+ * バッファにイベントを蓄積し、以下の条件で DB にフラッシュする:
+ * - バッチサイズ到達（EVENT_PERSIST_BATCH_SIZE、デフォルト: 10）
+ * - インターバル経過（EVENT_PERSIST_INTERVAL、デフォルト: 5.0 秒）
+ */
+export class EventBatcher {
+  private buffer: SessionEventJobPayload[] = [];
+  private timer: ReturnType<typeof setInterval> | null = null;
+  private flushing = false;
+  private flushPromise: Promise<void> = Promise.resolve();
+
+  constructor(
+    private readonly fastify: FastifyInstance,
+    private readonly batchSize: number,
+    private readonly intervalMs: number
+  ) {}
+
+  /**
+   * 定期フラッシュタイマーを開始する
+   */
+  start(): void {
+    this.timer = setInterval(() => {
+      this.flush().catch(err => {
+        this.fastify.log.error({ err }, 'Periodic event flush failed');
+      });
+    }, this.intervalMs);
+    // プロセス終了を阻害しない
+    this.timer.unref();
+    this.fastify.log.info(
+      { batchSize: this.batchSize, intervalMs: this.intervalMs },
+      'EventBatcher started'
+    );
+  }
+
+  /**
+   * イベントをバッファに追加する
+   * バッチサイズ到達時は即時フラッシュをトリガーする
+   */
+  add(payload: SessionEventJobPayload): void {
+    this.buffer.push(payload);
+    if (this.buffer.length >= this.batchSize) {
+      this.flush().catch(err => {
+        this.fastify.log.error({ err }, 'Batch-size event flush failed');
+      });
+    }
+  }
+
+  /**
+   * バッファ内の全イベントを DB にフラッシュする
+   *
+   * - バッファを swap してから INSERT（新イベントは新バッファに入る）
+   * - 同一ユーザーのイベントは1トランザクションにまとめる
+   * - flushing フラグで並行フラッシュを防止
+   */
+  async flush(): Promise<void> {
+    if (this.flushing || this.buffer.length === 0) return;
+
+    this.flushing = true;
+    const batch = this.buffer;
+    this.buffer = [];
+
+    const doFlush = async () => {
+      try {
+        // ユーザーごとにグループ化して同一トランザクションで処理
+        const eventsByUser = new Map<string, SessionEventJobPayload[]>();
+        for (const event of batch) {
+          const events = eventsByUser.get(event.userId);
+          if (events) {
+            events.push(event);
+          } else {
+            eventsByUser.set(event.userId, [event]);
+          }
+        }
+
+        const results = await Promise.allSettled(
+          [...eventsByUser.entries()].map(async ([userId, events]) => {
+            await this.fastify.withUserContext(userId, async tx => {
+              for (const event of events) {
+                await insertSessionEventInTx(tx, {
+                  uuid: event.eventUuid,
+                  sessionId: event.sessionId,
+                  type: event.type,
+                  subtype: event.subtype,
+                  message: event.message,
+                });
+              }
+            });
+          })
+        );
+
+        const failures = results.filter(r => r.status === 'rejected');
+        if (failures.length > 0) {
+          const errors = failures.map(f => (f as PromiseRejectedResult).reason);
+          this.fastify.log.error(
+            { errors, batchSize: batch.length, failureCount: failures.length },
+            'Some events failed to persist'
+          );
+        }
+      } finally {
+        this.flushing = false;
+      }
+    };
+
+    this.flushPromise = doFlush();
+    await this.flushPromise;
+  }
+
+  /**
+   * タイマーを停止し、残りのイベントをフラッシュする（グレースフルシャットダウン用）
+   */
+  async shutdown(): Promise<void> {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+    // 実行中のフラッシュを待機してから残りをフラッシュ
+    await this.flushPromise;
+    await this.flush();
+    this.fastify.log.info('EventBatcher shut down');
+  }
+}
+
+/**
+ * EventBatcher を初期化し、Fastify インスタンスにデコレートする
+ *
+ * - `fastify.eventBatcher` としてアクセス可能
+ * - `onClose` フックでグレースフルシャットダウン
+ *
+ * @param fastify - Fastify インスタンス（config, db プラグイン登録済み）
+ */
+export async function startEventBatcher(fastify: FastifyInstance): Promise<void> {
+  const batcher = new EventBatcher(
+    fastify,
+    fastify.config.EVENT_PERSIST_BATCH_SIZE,
+    fastify.config.EVENT_PERSIST_INTERVAL * 1000
+  );
+
+  batcher.start();
+
+  fastify.decorate('eventBatcher', batcher);
+
+  fastify.addHook('onClose', async () => {
+    fastify.log.info('Shutting down EventBatcher...');
+    await batcher.shutdown();
+  });
+}
+
+/**
+ * セッションイベントをバッチバッファに追加する
+ *
+ * バッファに追加するだけの同期処理。
+ * 実際の DB 永続化は EventBatcher がバッチサイズ到達 or インターバル経過時に行う。
  *
  * @param fastify - Fastify インスタンス
  * @param params - イベントパラメータ
- * @returns Promise<void> - 呼び出し元でエラーハンドリング可能
  */
-export async function enqueueSessionEvent(
+export function enqueueSessionEvent(
   fastify: FastifyInstance,
   params: {
     userId: string;
@@ -26,7 +180,7 @@ export async function enqueueSessionEvent(
     subtype: string | null;
     message: SDKMessage;
   }
-): Promise<void> {
+): void {
   const payload: SessionEventJobPayload = {
     userId: params.userId,
     sessionId: params.sessionUUID,
@@ -37,91 +191,5 @@ export async function enqueueSessionEvent(
     createdAt: new Date().toISOString(),
   };
 
-  try {
-    // singletonKey でセッション単位の順序を保証
-    await fastify.boss.send(SESSION_EVENTS_QUEUE, payload, {
-      singletonKey: params.sessionId,
-    });
-  } catch (error: unknown) {
-    fastify.log.error(
-      { sessionId: params.sessionId, eventUuid: params.eventUuid, error },
-      'Failed to enqueue session event'
-    );
-    throw error;
-  }
-}
-
-/**
- * イベントワーカーを登録する
- *
- * pg-boss の work() メソッドを使用してワーカーを登録。
- * pg-boss がポーリング管理、完了/失敗処理、シャットダウンを自動で管理する。
- *
- * ワーカー設定:
- * - バッチサイズ: 設定値（デフォルト: 10）
- *   singletonKey でセッション単位の順序は保証されるため、
- *   異なるセッションのイベントは並列処理可能
- * - ポーリング間隔: 設定値（デフォルト: 2秒）
- *
- * @param fastify - Fastify インスタンス
- */
-export async function registerEventWorker(fastify: FastifyInstance): Promise<void> {
-  const {
-    PGBOSS_RETRY_LIMIT,
-    PGBOSS_RETRY_DELAY,
-    PGBOSS_EXPIRE_IN_SECONDS,
-    PGBOSS_RETENTION_SECONDS,
-    PGBOSS_BATCH_SIZE,
-    PGBOSS_POLLING_INTERVAL_SECONDS,
-  } = fastify.config;
-
-  // キューを作成（存在しない場合）
-  await fastify.boss.createQueue(SESSION_EVENTS_QUEUE, {
-    retryLimit: PGBOSS_RETRY_LIMIT,
-    retryDelay: PGBOSS_RETRY_DELAY,
-    retryBackoff: true,
-    expireInSeconds: PGBOSS_EXPIRE_IN_SECONDS,
-    retentionSeconds: PGBOSS_RETENTION_SECONDS,
-  });
-  fastify.log.info({ queue: SESSION_EVENTS_QUEUE }, 'Event queue created');
-
-  // work() でワーカーを登録
-  // pg-boss がポーリング、完了/失敗処理、シャットダウン時の停止を自動管理
-  const workerId = await fastify.boss.work<SessionEventJobPayload>(
-    SESSION_EVENTS_QUEUE,
-    {
-      batchSize: PGBOSS_BATCH_SIZE,
-      pollingIntervalSeconds: PGBOSS_POLLING_INTERVAL_SECONDS,
-    },
-    async jobs => {
-      // 並列処理（異なるセッションのジョブ）
-      const results = await Promise.allSettled(
-        jobs.map(async job => {
-          const { userId, sessionId, eventUuid, type, subtype, message } = job.data;
-          await fastify.withUserContext(userId, async tx => {
-            await insertSessionEventInTx(tx, {
-              uuid: eventUuid,
-              sessionId,
-              type,
-              subtype,
-              message,
-            });
-          });
-        })
-      );
-
-      // 失敗があれば例外をスローしてリトライ
-      const failures = results.filter(r => r.status === 'rejected');
-      if (failures.length > 0) {
-        const errors = failures.map(f => (f as PromiseRejectedResult).reason);
-        fastify.log.error(
-          { errors, jobCount: jobs.length, failureCount: failures.length },
-          'Some jobs failed in batch'
-        );
-        throw new Error(`${failures.length}/${jobs.length} jobs failed`);
-      }
-    }
-  );
-
-  fastify.log.info({ workerId }, 'Event queue worker registered');
+  fastify.eventBatcher.add(payload);
 }
