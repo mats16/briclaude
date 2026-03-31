@@ -204,6 +204,136 @@ async function processAllEvents(
 }
 
 /**
+ * SDK query() 呼び出し〜バックグラウンドイベント処理のパイプラインパラメータ
+ */
+interface StartQueryPipelineParams {
+  fastify: FastifyInstance;
+  ctx: UserContext;
+  sessionId: SessionId;
+  /** テキストの場合は string、構造化コンテンツの場合は SDKUserMessage */
+  prompt: string | SDKUserMessage;
+  sessionContext: SessionContextResponse;
+  /** resume 用の SDK session ID（新規セッションの場合は undefined） */
+  sdkSessionId: string | undefined;
+  /** init イベント後に broadcast する初回ユーザーイベント（createSession 時のみ） */
+  initialUserEvent: SessionCreateEventData | undefined;
+}
+
+/**
+ * SDK query() を呼び出し、バックグラウンドでイベント処理を開始する
+ *
+ * createSession と sendMessageToSession で共通のパイプライン。
+ * sdkSessionId の有無で新規セッション / resume を切り替える。
+ * エラー時は session status を 'error' に更新して throw する。
+ */
+async function startQueryPipeline(params: StartQueryPipelineParams): Promise<void> {
+  const {
+    fastify,
+    ctx,
+    sessionId,
+    prompt: rawPrompt,
+    sessionContext,
+    sdkSessionId,
+    initialUserEvent,
+  } = params;
+  const { userId, userHome } = ctx;
+
+  try {
+    // Prompt: 構造化コンテンツは AsyncIterable にラップ、文字列はそのまま
+    let prompt: string | AsyncIterable<SDKUserMessage>;
+    if (typeof rawPrompt === 'string') {
+      prompt = rawPrompt;
+    } else if (Array.isArray(rawPrompt.message.content)) {
+      prompt = singleMessageIterable(rawPrompt);
+    } else {
+      prompt = rawPrompt.message.content as string;
+    }
+
+    const systemPromptConfig = buildSystemPromptConfig(sessionContext.outcomes);
+    const abortController = new AbortController();
+    const authProvider = await ctx.getAuthProvider();
+
+    // MCP サーバーを構築
+    const mcpServers: Record<string, McpServerConfig> = {};
+    const oboToken = ctx.oboAccessToken;
+    if (oboToken) {
+      mcpServers.sql = {
+        type: 'http',
+        url: `https://${fastify.config.DATABRICKS_HOST}/api/2.0/mcp/sql`,
+        headers: {
+          Authorization: `Bearer ${oboToken}`,
+        },
+      };
+    }
+    mcpServers.apps = createDbAppsMcpServer({ authProvider, sessionId });
+
+    const workspacePath = sessionContext.sources.find(
+      (s): s is DatabricksWorkspaceSource => s.type === 'databricks_workspace'
+    )?.path;
+
+    const response = query({
+      prompt,
+      options: {
+        abortController,
+        ...(sdkSessionId ? { resume: sdkSessionId } : {}),
+        cwd: sessionContext.cwd,
+        model: sessionContext.model,
+        maxTurns: 100,
+        settingSources: ['user', 'project', 'local'],
+        permissionMode: 'bypassPermissions',
+        systemPrompt: systemPromptConfig,
+        mcpServers,
+        tools: {
+          type: 'preset',
+          preset: 'claude_code',
+        },
+        allowedTools: sessionContext.allowed_tools,
+        // WebSearch は Anthropic API に依存しているため固定で無効化
+        disallowedTools: ['WebSearch', ...(sessionContext.disallowed_tools ?? [])],
+        env: {
+          PATH: fastify.config.PATH,
+          HOME: userHome,
+          CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
+          ...(sdkSessionId ? { CLAUDE_CODE_SESSION_ID: sdkSessionId } : {}),
+          SESSION_ID: sessionId.toString(),
+          ...(workspacePath ? { DATABRICKS_WORKSPACE_PATH: workspacePath } : {}),
+          ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
+          ANTHROPIC_AUTH_TOKEN: await authProvider.getToken(),
+          ANTHROPIC_CUSTOM_HEADERS: 'x-databricks-disable-beta-headers: true',
+          ANTHROPIC_DEFAULT_OPUS_MODEL: fastify.config.ANTHROPIC_DEFAULT_OPUS_MODEL,
+          ANTHROPIC_DEFAULT_SONNET_MODEL: fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL,
+          ANTHROPIC_DEFAULT_HAIKU_MODEL: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
+          ...authProvider.getEnvVars(),
+        },
+        sandbox: {
+          enabled: true,
+          autoAllowBashIfSandboxed: true,
+          network: {
+            allowedDomains: ['*'],
+          },
+        },
+      },
+    });
+
+    sessionAbortControllers.set(sessionId.toString(), abortController);
+
+    // バックグラウンド処理開始（await しない）
+    processAllEvents(response, fastify, userId, sessionId, initialUserEvent).catch(error => {
+      fastify.log.error(
+        { sessionId: sessionId.toString(), error },
+        'Background event processing failed'
+      );
+    });
+  } catch (error) {
+    fastify.log.error({ sessionId: sessionId.toString(), error }, 'SDK query failed');
+    await fastify.withUserContext(userId, async tx => {
+      await tx.update(sessions).set({ status: 'error' }).where(eq(sessions.id, sessionId.toUUID()));
+    });
+    throw error;
+  }
+}
+
+/**
  * 新規セッションを作成する
  *
  * 処理フロー:
@@ -297,119 +427,29 @@ export async function createSession(
     });
   });
 
-  // 7. アクセストークンを取得（PAT → SP フォールバック）
-  const authProvider = await getAuthProvider(fastify, ctx.userId, 'auto');
+  // 7. SDK query パイプラインを開始
+  const prompt: string | SDKUserMessage =
+    Array.isArray(userContent) && userEvent
+      ? {
+          type: 'user',
+          message: { role: 'user', content: userContent },
+          parent_tool_use_id: null,
+          uuid: userEvent.data.uuid as UUID,
+          session_id: sessionId.toString(),
+        }
+      : typeof userContent === 'string'
+        ? userContent
+        : '';
 
-  // 8. claude-agent-sdk で query 実行
-  try {
-    // userContent が配列（構造化コンテンツ）の場合は SDKUserMessage として渡す
-    let prompt: string | AsyncIterable<SDKUserMessage>;
-    if (Array.isArray(userContent) && userEvent) {
-      prompt = singleMessageIterable({
-        type: 'user',
-        message: {
-          role: 'user',
-          content: userContent,
-        },
-        parent_tool_use_id: null,
-        uuid: userEvent.data.uuid as UUID,
-        session_id: sessionId.toString(),
-      });
-    } else {
-      prompt = typeof userContent === 'string' ? userContent : '';
-    }
-
-    // outcomes に基づいて systemPrompt を構築
-    const systemPromptConfig = buildSystemPromptConfig(session_context.outcomes);
-
-    // AbortController を作成（abort 用）
-    const abortController = new AbortController();
-
-    // MCP サーバーを構築（固定で設定、allowedTools で制御）
-    const mcpServers: Record<string, McpServerConfig> = {};
-
-    // sql: OBO token がある場合に有効（ユーザーの Databricks 権限で SQL 実行）
-    const oboToken = ctx.oboAccessToken;
-    if (oboToken) {
-      mcpServers.sql = {
-        type: 'http',
-        url: `https://${fastify.config.DATABRICKS_HOST}/api/2.0/mcp/sql`,
-        headers: {
-          Authorization: `Bearer ${oboToken}`,
-        },
-      };
-    }
-
-    // apps: Databricks Apps MCP サーバーを追加
-    mcpServers.apps = createDbAppsMcpServer({
-      authProvider,
-      sessionId,
-    });
-
-    const response = query({
-      prompt,
-      options: {
-        abortController,
-        cwd: sessionContext.cwd,
-        model: session_context.model,
-        maxTurns: 100,
-        settingSources: ['user', 'project', 'local'],
-        permissionMode: 'bypassPermissions',
-        systemPrompt: systemPromptConfig,
-        mcpServers,
-        tools: {
-          type: 'preset',
-          preset: 'claude_code',
-        },
-        allowedTools: sessionContext.allowed_tools,
-        // WebSearch は Anthropic API に依存しているため固定で無効化
-        disallowedTools: ['WebSearch', ...(sessionContext.disallowed_tools ?? [])],
-        env: {
-          PATH: fastify.config.PATH,
-          HOME: userHome,
-          CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
-          // Session
-          SESSION_ID: sessionId.toString(),
-          DATABRICKS_WORKSPACE_PATH: workspaceSources[0]?.path,
-          // Claude Code
-          ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
-          ANTHROPIC_AUTH_TOKEN: await authProvider.getToken(),
-          ANTHROPIC_CUSTOM_HEADERS: 'x-databricks-disable-beta-headers: true',
-          ANTHROPIC_DEFAULT_OPUS_MODEL: fastify.config.ANTHROPIC_DEFAULT_OPUS_MODEL,
-          ANTHROPIC_DEFAULT_SONNET_MODEL: fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL,
-          ANTHROPIC_DEFAULT_HAIKU_MODEL: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
-          // Databricks
-          ...authProvider.getEnvVars(),
-        },
-        sandbox: {
-          enabled: true,
-          autoAllowBashIfSandboxed: true,
-          network: {
-            allowedDomains: ['*'],
-          },
-        },
-      },
-    });
-
-    // AbortController を登録（abort 用）
-    sessionAbortControllers.set(sessionId.toString(), abortController);
-
-    // 8. バックグラウンド処理開始（await しない）
-    // 初回 user message は init イベント受信時に broadcast される
-    processAllEvents(response, fastify, userId, sessionId, userEvent?.data).catch(error => {
-      fastify.log.error(
-        { sessionId: sessionId.toString(), error },
-        'Background event processing failed'
-      );
-    });
-  } catch (error) {
-    // SDK呼び出し失敗時: sessions status を 'error' に更新
-    fastify.log.error({ sessionId: sessionId.toString(), error }, 'SDK query failed');
-    await fastify.withUserContext(userId, async tx => {
-      await tx.update(sessions).set({ status: 'error' }).where(eq(sessions.id, sessionId.toUUID()));
-    });
-    throw error;
-  }
+  await startQueryPipeline({
+    fastify,
+    ctx,
+    sessionId,
+    prompt,
+    sessionContext,
+    sdkSessionId: undefined,
+    initialUserEvent: userEvent?.data,
+  });
 
   // 9. 即座にレスポンス返却（TypeID 形式）
   return {
@@ -634,118 +674,16 @@ export async function sendMessageToSession(
   // WebSocket でユーザーメッセージをブロードキャスト
   wsManager.broadcast(sessionId.toString(), userMessage);
 
-  // 5. アクセストークンを取得（PAT → SP フォールバック）
-  const authProvider = await getAuthProvider(fastify, ctx.userId, 'auto');
-
-  const { userHome } = ctx;
-
-  // 6. claude-agent-sdk で query 実行（resume オプション使用）
-  try {
-    // content が配列（構造化コンテンツ）の場合は SDKUserMessage として渡す
-    const messageContent = userMessage.message.content;
-    let prompt: string | AsyncIterable<SDKUserMessage>;
-    if (Array.isArray(messageContent)) {
-      prompt = singleMessageIterable(userMessage);
-    } else {
-      prompt = messageContent;
-    }
-
-    // outcomes に基づいて systemPrompt を構築
-    const systemPromptConfig = buildSystemPromptConfig(sessionContext.outcomes);
-
-    // AbortController を作成（abort 用）
-    const abortController = new AbortController();
-
-    const workspacePath = sessionContext.sources.find(
-      (s): s is DatabricksWorkspaceSource => s.type === 'databricks_workspace'
-    )?.path;
-
-    // MCP サーバーを構築（固定で設定、allowedTools で制御）
-    const mcpServers: Record<string, McpServerConfig> = {};
-
-    // sql: OBO token がある場合に有効（ユーザーの Databricks 権限で SQL 実行）
-    const oboToken = ctx.oboAccessToken;
-    if (oboToken) {
-      mcpServers.sql = {
-        type: 'http',
-        url: `https://${fastify.config.DATABRICKS_HOST}/api/2.0/mcp/sql`,
-        headers: {
-          Authorization: `Bearer ${oboToken}`,
-        },
-      };
-    }
-
-    // apps: Databricks Apps MCP サーバーを追加
-    mcpServers.apps = createDbAppsMcpServer({
-      authProvider,
-      sessionId,
-    });
-
-    const response = query({
-      prompt,
-      options: {
-        abortController,
-        resume: sessionRow.sdkSessionId,
-        cwd: sessionContext.cwd,
-        model: sessionContext.model as 'opus' | 'sonnet' | 'haiku',
-        maxTurns: 100,
-        settingSources: ['user', 'project', 'local'],
-        permissionMode: 'bypassPermissions',
-        systemPrompt: systemPromptConfig,
-        mcpServers,
-        tools: {
-          type: 'preset',
-          preset: 'claude_code',
-        },
-        allowedTools: sessionContext?.allowed_tools,
-        // WebSearch は Anthropic API に依存しているため固定で無効化
-        disallowedTools: ['WebSearch', ...(sessionContext?.disallowed_tools ?? [])],
-        env: {
-          PATH: fastify.config.PATH,
-          HOME: userHome,
-          CLAUDE_CONFIG_DIR: path.join(userHome, '.claude'),
-          // Session
-          CLAUDE_CODE_SESSION_ID: sessionRow.sdkSessionId,
-          SESSION_ID: sessionId.toString(),
-          DATABRICKS_WORKSPACE_PATH: workspacePath,
-          // Claude Code
-          ANTHROPIC_BASE_URL: fastify.config.ANTHROPIC_BASE_URL,
-          ANTHROPIC_AUTH_TOKEN: await authProvider.getToken(),
-          ANTHROPIC_CUSTOM_HEADERS: 'x-databricks-disable-beta-headers: true',
-          ANTHROPIC_DEFAULT_OPUS_MODEL: fastify.config.ANTHROPIC_DEFAULT_OPUS_MODEL,
-          ANTHROPIC_DEFAULT_SONNET_MODEL: fastify.config.ANTHROPIC_DEFAULT_SONNET_MODEL,
-          ANTHROPIC_DEFAULT_HAIKU_MODEL: fastify.config.ANTHROPIC_DEFAULT_HAIKU_MODEL,
-          // Databricks
-          ...authProvider.getEnvVars(),
-        },
-        sandbox: {
-          enabled: true,
-          autoAllowBashIfSandboxed: true,
-          network: {
-            allowedDomains: ['*'],
-          },
-        },
-      },
-    });
-
-    // AbortController を登録（abort 用）
-    sessionAbortControllers.set(sessionId.toString(), abortController);
-
-    // イベント処理（resume の場合も init イベントがあるので同じ処理）
-    processAllEvents(response, fastify, userId, sessionId).catch(error => {
-      fastify.log.error(
-        { sessionId: sessionId.toString(), error },
-        'Background event processing failed'
-      );
-    });
-  } catch (error) {
-    // SDK呼び出し失敗時: sessions status を 'error' に更新
-    fastify.log.error({ sessionId: sessionId.toString(), error }, 'SDK resume query failed');
-    await fastify.withUserContext(userId, async tx => {
-      await tx.update(sessions).set({ status: 'error' }).where(eq(sessions.id, sessionId.toUUID()));
-    });
-    throw error;
-  }
+  // 5. SDK query パイプラインを開始（resume）
+  await startQueryPipeline({
+    fastify,
+    ctx,
+    sessionId,
+    prompt: userMessage,
+    sessionContext,
+    sdkSessionId: sessionRow.sdkSessionId,
+    initialUserEvent: undefined,
+  });
 }
 
 /**
