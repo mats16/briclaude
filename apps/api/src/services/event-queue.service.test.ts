@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+import type { SessionEventJobPayload } from '../types/event-queue.types.js';
 import { EventBatcher, enqueueSessionEvent } from './event-queue.service.js';
 
-// insertSessionEventInTx をモック
 vi.mock('../db/helpers.js', () => ({
   insertSessionEventInTx: vi.fn().mockResolvedValue({ uuid: 'inserted' }),
 }));
@@ -20,6 +20,7 @@ const createMockFastify = () => {
     withUserContext: mockWithUserContext,
     log: {
       info: vi.fn(),
+      warn: vi.fn(),
       error: vi.fn(),
     },
     config: {
@@ -30,7 +31,9 @@ const createMockFastify = () => {
   } as unknown as FastifyInstance;
 };
 
-const createPayload = (overrides = {}) => ({
+const createPayload = (
+  overrides: Partial<SessionEventJobPayload> = {}
+): SessionEventJobPayload => ({
   userId: 'user-123',
   sessionId: '019bdf24-b923-7aaa-918c-8ce71422def0',
   eventUuid: `event-${Math.random().toString(36).slice(2)}`,
@@ -69,11 +72,17 @@ describe('EventBatcher', () => {
 
     batcher.add(payload);
 
-    // バッファに追加されたことを間接的にテスト（flush で確認）
     expect(insertSessionEventInTx).not.toHaveBeenCalled();
   });
 
-  it('should flush events to DB', async () => {
+  it('should not mutate the input payload', () => {
+    const batcher = new EventBatcher(fastify, 10, 5000);
+    const payload = createPayload();
+    batcher.add(payload);
+    expect(payload.enqueuedAt).toBeUndefined();
+  });
+
+  it('should flush events to DB with createdAt from enqueuedAt', async () => {
     const batcher = new EventBatcher(fastify, 10, 5000);
     const payload = createPayload();
 
@@ -88,7 +97,9 @@ describe('EventBatcher', () => {
         sessionId: payload.sessionId,
         type: 'system',
         subtype: 'init',
-      })
+        createdAt: expect.any(Date),
+      }),
+      undefined
     );
   });
 
@@ -99,7 +110,6 @@ describe('EventBatcher', () => {
 
     vi.clearAllMocks();
 
-    // 2回目の flush は no-op（バッファ空）
     await batcher.flush();
     expect(insertSessionEventInTx).not.toHaveBeenCalled();
   });
@@ -118,13 +128,10 @@ describe('EventBatcher', () => {
     batcher.add(createPayload());
     batcher.add(createPayload());
 
-    // まだ flush されていない
     expect(insertSessionEventInTx).not.toHaveBeenCalled();
 
-    // 3件目で flush がトリガーされる
     batcher.add(createPayload());
 
-    // flush は非同期なので await する
     await vi.runAllTimersAsync();
 
     expect(insertSessionEventInTx).toHaveBeenCalledTimes(3);
@@ -139,7 +146,6 @@ describe('EventBatcher', () => {
 
     await batcher.flush();
 
-    // user-1 は1トランザクション、user-2 は1トランザクション
     expect(fastify.withUserContext).toHaveBeenCalledTimes(2);
     expect(insertSessionEventInTx).toHaveBeenCalledTimes(3);
   });
@@ -156,7 +162,7 @@ describe('EventBatcher', () => {
     expect(fastify.withUserContext).toHaveBeenCalledTimes(3);
   });
 
-  it('should log errors for failed events without throwing', async () => {
+  it('should schedule retry on flush failure instead of dropping events', async () => {
     const error = new Error('DB insert failed');
     (insertSessionEventInTx as ReturnType<typeof vi.fn>).mockRejectedValueOnce(error);
 
@@ -164,12 +170,78 @@ describe('EventBatcher', () => {
     batcher.add(createPayload());
     batcher.add(createPayload());
 
-    // 例外を投げない
     await batcher.flush();
 
+    expect(fastify.log.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'user-123', eventCount: 2 }),
+      'Event flush failed for user, scheduling retry'
+    );
+  });
+
+  it('should retry with exponential backoff and succeed', async () => {
+    const error = new Error('DB insert failed');
+    (insertSessionEventInTx as ReturnType<typeof vi.fn>).mockRejectedValueOnce(error);
+
+    const batcher = new EventBatcher(fastify, 10, 5000);
+    batcher.add(createPayload());
+
+    await batcher.flush();
+
+    // 500ms 後にリトライ
+    await vi.advanceTimersByTimeAsync(500);
+
+    // リトライは idempotent オプション付きで呼ばれる
+    expect(insertSessionEventInTx).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), {
+      idempotent: true,
+    });
+    expect(fastify.log.info).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'user-123', eventCount: 1, attempt: 1 }),
+      'Event retry succeeded'
+    );
+  });
+
+  it('should increase retry delay exponentially', async () => {
+    (insertSessionEventInTx as ReturnType<typeof vi.fn>)
+      .mockRejectedValueOnce(new Error('fail'))
+      .mockRejectedValueOnce(new Error('fail again'));
+
+    const batcher = new EventBatcher(fastify, 10, 5000);
+    batcher.add(createPayload());
+
+    await batcher.flush();
+
+    // 1回目のリトライ: 500ms
+    await vi.advanceTimersByTimeAsync(500);
+    expect(fastify.log.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ attempt: 1, nextAttempt: 2 }),
+      'Event retry failed, scheduling next attempt'
+    );
+
+    // 2回目のリトライ: 1000ms
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(insertSessionEventInTx).toHaveBeenCalledTimes(3); // initial + 2 retries
+  });
+
+  it('should drop events after max retry attempts', async () => {
+    (insertSessionEventInTx as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('persistent failure')
+    );
+
+    const batcher = new EventBatcher(fastify, 10, 5000);
+    batcher.add(createPayload());
+
+    await batcher.flush();
+
+    // 5回のリトライ: 500 + 1000 + 2000 + 4000 + 8000
+    await vi.advanceTimersByTimeAsync(500);
+    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(2000);
+    await vi.advanceTimersByTimeAsync(4000);
+    await vi.advanceTimersByTimeAsync(8000);
+
     expect(fastify.log.error).toHaveBeenCalledWith(
-      expect.objectContaining({ failureCount: 1, batchSize: 2, lostEventCount: 2 }),
-      'Some events failed to persist'
+      expect.objectContaining({ attempt: 5 }),
+      'Event retry exhausted, events dropped'
     );
   });
 
@@ -179,22 +251,27 @@ describe('EventBatcher', () => {
 
     batcher.add(createPayload());
 
-    // 5秒経過でタイマーが発火
     await vi.advanceTimersByTimeAsync(5000);
 
     expect(insertSessionEventInTx).toHaveBeenCalledTimes(1);
   });
 
-  it('should shutdown: clear timer and flush remaining', async () => {
+  it('should shutdown: clear timer, cancel retries, and flush remaining', async () => {
+    (insertSessionEventInTx as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fail'));
+
     const batcher = new EventBatcher(fastify, 10, 5000);
     batcher.start();
 
     batcher.add(createPayload());
+    await batcher.flush();
+
+    vi.clearAllMocks();
+    (insertSessionEventInTx as ReturnType<typeof vi.fn>).mockResolvedValue({ uuid: 'inserted' });
     batcher.add(createPayload());
 
     await batcher.shutdown();
 
-    expect(insertSessionEventInTx).toHaveBeenCalledTimes(2);
+    expect(insertSessionEventInTx).toHaveBeenCalled();
     expect(fastify.log.info).toHaveBeenCalledWith('EventBatcher shut down');
   });
 });

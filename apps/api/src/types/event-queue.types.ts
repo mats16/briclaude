@@ -10,4 +10,6 @@ export interface SessionEventJobPayload {
   type: string;
   subtype: string | null;
   message: SDKMessage;
+  /** EventBatcher.add() で割り当てられる。リトライ時も元の時刻を保持する */
+  enqueuedAt?: Date;
 }
