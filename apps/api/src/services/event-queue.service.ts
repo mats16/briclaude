@@ -9,18 +9,29 @@ declare module 'fastify' {
   }
 }
 
+/** リトライ定数 */
+const RETRY_INITIAL_DELAY_MS = 500;
+const RETRY_MAX_DELAY_MS = 30_000;
+const RETRY_MAX_ATTEMPTS = 5;
+
 /**
  * インメモリバッチバッファによるイベント永続化
  *
  * バッファにイベントを蓄積し、以下の条件で DB にフラッシュする:
  * - バッチサイズ到達（EVENT_PERSIST_BATCH_SIZE、デフォルト: 10）
  * - インターバル経過（EVENT_PERSIST_INTERVAL、デフォルト: 5.0 秒）
+ *
+ * 書き込み失敗時はエクスポネンシャルバックオフでリトライする。
+ * add() 時に enqueuedAt を確定させ、リトライ時も元の時刻で DB に書き込む。
  */
 export class EventBatcher {
   private buffer: SessionEventJobPayload[] = [];
   private timer: ReturnType<typeof setInterval> | null = null;
   private flushing = false;
   private flushPromise: Promise<void> = Promise.resolve();
+  private shuttingDown = false;
+  private retryTimers = new Set<ReturnType<typeof setTimeout>>();
+  private activeRetries = new Set<Promise<void>>();
 
   constructor(
     private readonly fastify: FastifyInstance,
@@ -37,7 +48,6 @@ export class EventBatcher {
         this.fastify.log.error({ err }, 'Periodic event flush failed');
       });
     }, this.intervalMs);
-    // プロセス終了を阻害しない
     this.timer.unref();
     this.fastify.log.info(
       { batchSize: this.batchSize, intervalMs: this.intervalMs },
@@ -50,6 +60,7 @@ export class EventBatcher {
    * バッチサイズ到達時は即時フラッシュをトリガーする
    */
   add(payload: SessionEventJobPayload): void {
+    payload.enqueuedAt = new Date();
     this.buffer.push(payload);
     if (this.buffer.length >= this.batchSize) {
       this.flush().catch(err => {
@@ -64,6 +75,7 @@ export class EventBatcher {
    * - バッファを swap してから INSERT（新イベントは新バッファに入る）
    * - 同一ユーザーのイベントは1トランザクションにまとめる
    * - flushing フラグで並行フラッシュを防止
+   * - 失敗したユーザーグループはエクスポネンシャルバックオフでリトライ
    */
   async flush(): Promise<void> {
     if (this.flushing || this.buffer.length === 0) return;
@@ -74,48 +86,27 @@ export class EventBatcher {
 
     const doFlush = async () => {
       try {
-        // ユーザーごとにグループ化して同一トランザクションで処理
-        const eventsByUser = new Map<string, SessionEventJobPayload[]>();
-        for (const event of batch) {
-          const events = eventsByUser.get(event.userId);
-          if (events) {
-            events.push(event);
-          } else {
-            eventsByUser.set(event.userId, [event]);
-          }
-        }
+        const eventsByUser = this.groupByUser(batch);
 
+        const userIds = [...eventsByUser.keys()];
         const results = await Promise.allSettled(
-          [...eventsByUser.entries()].map(async ([userId, events]) => {
-            await this.fastify.withUserContext(userId, async tx => {
-              for (const event of events) {
-                await insertSessionEventInTx(tx, {
-                  uuid: event.eventUuid,
-                  sessionId: event.sessionId,
-                  type: event.type,
-                  subtype: event.subtype,
-                  message: event.message,
-                });
-              }
-            });
+          userIds.map(async userId => {
+            const events = eventsByUser.get(userId)!;
+            await this.writeUserEvents(userId, events);
           })
         );
 
-        const failures = results.filter(r => r.status === 'rejected');
-        if (failures.length > 0) {
-          const errors = failures.map(f => (f as PromiseRejectedResult).reason);
-          // 失敗グループに含まれるイベント数を算出
-          const failedUserIds = [...eventsByUser.keys()].filter(
-            (_, i) => results[i].status === 'rejected'
-          );
-          const lostEventCount = failedUserIds.reduce(
-            (sum, uid) => sum + (eventsByUser.get(uid)?.length ?? 0),
-            0
-          );
-          this.fastify.log.error(
-            { errors, batchSize: batch.length, failureCount: failures.length, lostEventCount },
-            'Some events failed to persist'
-          );
+        for (let i = 0; i < results.length; i++) {
+          if (results[i].status === 'rejected') {
+            const userId = userIds[i];
+            const events = eventsByUser.get(userId)!;
+            const error = (results[i] as PromiseRejectedResult).reason;
+            this.fastify.log.warn(
+              { err: error, userId, eventCount: events.length },
+              'Event flush failed for user, scheduling retry'
+            );
+            this.scheduleRetry(userId, events, 1);
+          }
         }
       } finally {
         this.flushing = false;
@@ -130,24 +121,113 @@ export class EventBatcher {
    * タイマーを停止し、残りのイベントをフラッシュする（グレースフルシャットダウン用）
    */
   async shutdown(): Promise<void> {
+    this.shuttingDown = true;
+
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
     }
+
+    for (const timer of this.retryTimers) {
+      clearTimeout(timer);
+    }
+    this.retryTimers.clear();
+
+    // 実行中のリトライの完了を待機
+    if (this.activeRetries.size > 0) {
+      await Promise.allSettled([...this.activeRetries]);
+    }
+
     // 実行中のフラッシュを待機してから残りをフラッシュ
     await this.flushPromise;
     await this.flush();
     this.fastify.log.info('EventBatcher shut down');
   }
+
+  private groupByUser(events: SessionEventJobPayload[]): Map<string, SessionEventJobPayload[]> {
+    const eventsByUser = new Map<string, SessionEventJobPayload[]>();
+    for (const event of events) {
+      const group = eventsByUser.get(event.userId);
+      if (group) {
+        group.push(event);
+      } else {
+        eventsByUser.set(event.userId, [event]);
+      }
+    }
+    return eventsByUser;
+  }
+
+  private async writeUserEvents(
+    userId: string,
+    events: SessionEventJobPayload[],
+    idempotent = false
+  ): Promise<void> {
+    await this.fastify.withUserContext(userId, async tx => {
+      for (const event of events) {
+        await insertSessionEventInTx(
+          tx,
+          {
+            uuid: event.eventUuid,
+            sessionId: event.sessionId,
+            type: event.type,
+            subtype: event.subtype,
+            message: event.message,
+            createdAt: event.enqueuedAt,
+          },
+          idempotent ? { idempotent: true } : undefined
+        );
+      }
+    });
+  }
+
+  private scheduleRetry(userId: string, events: SessionEventJobPayload[], attempt: number): void {
+    if (this.shuttingDown) return;
+
+    const delay = Math.min(RETRY_INITIAL_DELAY_MS * 2 ** (attempt - 1), RETRY_MAX_DELAY_MS);
+
+    const timer = setTimeout(() => {
+      this.retryTimers.delete(timer);
+      const retryPromise = this.executeRetry(userId, events, attempt);
+      this.activeRetries.add(retryPromise);
+      retryPromise.finally(() => {
+        this.activeRetries.delete(retryPromise);
+      });
+    }, delay);
+    timer.unref();
+
+    this.retryTimers.add(timer);
+  }
+
+  private async executeRetry(
+    userId: string,
+    events: SessionEventJobPayload[],
+    attempt: number
+  ): Promise<void> {
+    try {
+      await this.writeUserEvents(userId, events, true);
+      this.fastify.log.info(
+        { userId, eventCount: events.length, attempt },
+        'Event retry succeeded'
+      );
+    } catch (err) {
+      if (attempt < RETRY_MAX_ATTEMPTS && !this.shuttingDown) {
+        this.fastify.log.warn(
+          { err, userId, eventCount: events.length, attempt, nextAttempt: attempt + 1 },
+          'Event retry failed, scheduling next attempt'
+        );
+        this.scheduleRetry(userId, events, attempt + 1);
+      } else {
+        this.fastify.log.error(
+          { err, userId, eventCount: events.length, attempt },
+          'Event retry exhausted, events dropped'
+        );
+      }
+    }
+  }
 }
 
 /**
  * EventBatcher を初期化し、Fastify インスタンスにデコレートする
- *
- * - `fastify.eventBatcher` としてアクセス可能
- * - `onClose` フックでグレースフルシャットダウン
- *
- * @param fastify - Fastify インスタンス（config, db プラグイン登録済み）
  */
 export async function startEventBatcher(fastify: FastifyInstance): Promise<void> {
   const batcher = new EventBatcher(
@@ -171,9 +251,6 @@ export async function startEventBatcher(fastify: FastifyInstance): Promise<void>
  *
  * バッファに追加するだけの同期処理。
  * 実際の DB 永続化は EventBatcher がバッチサイズ到達 or インターバル経過時に行う。
- *
- * @param fastify - Fastify インスタンス
- * @param params - イベントパラメータ
  */
 export function enqueueSessionEvent(
   fastify: FastifyInstance,
@@ -189,14 +266,12 @@ export function enqueueSessionEvent(
     message: SDKMessage;
   }
 ): void {
-  const payload: SessionEventJobPayload = {
+  fastify.eventBatcher.add({
     userId: params.userId,
     sessionId: params.sessionUUID,
     eventUuid: params.eventUuid,
     type: params.type,
     subtype: params.subtype,
     message: params.message,
-  };
-
-  fastify.eventBatcher.add(payload);
+  } as SessionEventJobPayload);
 }

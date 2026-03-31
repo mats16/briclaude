@@ -19,6 +19,8 @@ export type InsertSessionEventInput = {
   type: string;
   subtype: string | null;
   message: SerializableMessage;
+  /** 明示的な作成日時（省略時は DB の now() を使用） */
+  createdAt?: Date;
 };
 
 /**
@@ -26,19 +28,28 @@ export type InsertSessionEventInput = {
  *
  * @param tx - 既存のトランザクションインスタンス
  * @param event - 挿入するイベント
- * @returns 挿入されたレコード
+ * @param options.idempotent - true の場合 ON CONFLICT DO NOTHING で冪等に挿入（リトライ用）
+ * @returns 挿入されたレコード（idempotent 時に既存レコードがあれば null）
  */
-export async function insertSessionEventInTx(tx: RLSTransaction, event: InsertSessionEventInput) {
-  const [inserted] = await tx
-    .insert(sessionEvents)
-    .values({
-      uuid: event.uuid,
-      sessionId: event.sessionId,
-      type: event.type,
-      subtype: event.subtype,
-      message: event.message,
-    })
-    .returning();
+export async function insertSessionEventInTx(
+  tx: RLSTransaction,
+  event: InsertSessionEventInput,
+  options?: { idempotent?: boolean }
+) {
+  const values = {
+    uuid: event.uuid,
+    sessionId: event.sessionId,
+    type: event.type,
+    subtype: event.subtype,
+    message: event.message,
+    ...(event.createdAt != null && { createdAt: event.createdAt }),
+  };
 
-  return inserted;
+  const query = options?.idempotent
+    ? tx.insert(sessionEvents).values(values).onConflictDoNothing({ target: sessionEvents.uuid })
+    : tx.insert(sessionEvents).values(values);
+
+  const [inserted] = await query.returning();
+
+  return inserted ?? null;
 }
