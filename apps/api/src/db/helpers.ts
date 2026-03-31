@@ -1,5 +1,5 @@
 // apps/api/src/db/helpers.ts
-import { sessionEvents } from './schema.js';
+import { sessionEvents, type SessionEvent } from './schema.js';
 import type { RLSTransaction } from '../plugins/database.js';
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 
@@ -35,7 +35,7 @@ export async function insertSessionEventInTx(
   tx: RLSTransaction,
   event: InsertSessionEventInput,
   options?: { idempotent?: boolean }
-) {
+): Promise<SessionEvent | null> {
   const values = {
     uuid: event.uuid,
     sessionId: event.sessionId,

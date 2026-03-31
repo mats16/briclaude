@@ -60,8 +60,7 @@ export class EventBatcher {
    * バッチサイズ到達時は即時フラッシュをトリガーする
    */
   add(payload: SessionEventJobPayload): void {
-    payload.enqueuedAt = new Date();
-    this.buffer.push(payload);
+    this.buffer.push({ ...payload, enqueuedAt: new Date() });
     if (this.buffer.length >= this.batchSize) {
       this.flush().catch(err => {
         this.fastify.log.error({ err }, 'Batch-size event flush failed');
@@ -183,7 +182,8 @@ export class EventBatcher {
   private scheduleRetry(userId: string, events: SessionEventJobPayload[], attempt: number): void {
     if (this.shuttingDown) return;
 
-    const delay = Math.min(RETRY_INITIAL_DELAY_MS * 2 ** (attempt - 1), RETRY_MAX_DELAY_MS);
+    const baseDelay = Math.min(RETRY_INITIAL_DELAY_MS * 2 ** (attempt - 1), RETRY_MAX_DELAY_MS);
+    const delay = Math.floor(baseDelay * (0.5 + Math.random() * 0.5));
 
     const timer = setTimeout(() => {
       this.retryTimers.delete(timer);
@@ -273,5 +273,5 @@ export function enqueueSessionEvent(
     type: params.type,
     subtype: params.subtype,
     message: params.message,
-  } as SessionEventJobPayload);
+  });
 }

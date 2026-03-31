@@ -75,14 +75,11 @@ describe('EventBatcher', () => {
     expect(insertSessionEventInTx).not.toHaveBeenCalled();
   });
 
-  it('should assign enqueuedAt on add', () => {
+  it('should not mutate the input payload', () => {
     const batcher = new EventBatcher(fastify, 10, 5000);
     const payload = createPayload();
-    expect(payload.enqueuedAt).toBeUndefined();
-
     batcher.add(payload);
-
-    expect(payload.enqueuedAt).toBeInstanceOf(Date);
+    expect(payload.enqueuedAt).toBeUndefined();
   });
 
   it('should flush events to DB with createdAt from enqueuedAt', async () => {
